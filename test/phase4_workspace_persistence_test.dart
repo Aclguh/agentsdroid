@@ -26,8 +26,9 @@ void main() {
       final service = WorkspaceService();
       await service.init(baseDir: docDir);
 
-      expect(await File(service.resolvePath('README.md')).exists(), isTrue);
-      expect(await File(service.resolvePath('main.py')).exists(), isTrue);
+      // Requirement: On clean installation, default directory is empty, no sample README.md or main.py
+      expect(await File(service.resolvePath('README.md')).exists(), isFalse);
+      expect(await File(service.resolvePath('main.py')).exists(), isFalse);
 
       // Create a test file
       await service.writeFile('src/test.py', 'print("test")');
@@ -53,9 +54,9 @@ void main() {
       final service = WorkspaceService();
       await service.init(baseDir: docDir);
 
-      // Initially default project 'agentsdroid' exists
-      expect(await service.listProjects(), contains('agentsdroid'));
-      expect(service.currentProjectName, equals('agentsdroid'));
+      // Initially no custom projects exist; default_project is excluded from listProjects
+      expect(await service.listProjects(), isEmpty);
+      expect(service.currentProjectName, equals('default_project'));
 
       // Create a new project
       await service.createProject('my-mobile-app');
@@ -66,15 +67,17 @@ void main() {
 
       final projects = await service.listProjects();
       expect(projects, contains('my-mobile-app'));
+      expect(projects, isNot(contains('default_project')));
 
       // Switch to project
       await service.switchProject('my-mobile-app');
       expect(service.currentProjectName, equals('my-mobile-app'));
       expect(service.workspaceDir.path.endsWith('my-mobile-app'), isTrue);
 
-      // Switch back
-      await service.switchProject('agentsdroid');
-      expect(service.currentProjectName, equals('agentsdroid'));
+      // Switch back with null (switches to default_project)
+      await service.switchProject(null);
+      expect(service.currentProjectName, equals('default_project'));
+      expect(service.workspaceDir.path.endsWith('default_project'), isTrue);
     });
   });
 

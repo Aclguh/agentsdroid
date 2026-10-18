@@ -6,8 +6,18 @@ import '../../models/agent_event.dart';
 import '../proot/proot_manager.dart';
 
 class WorkspaceService {
+  static const String defaultProjectName = 'default_project';
+
   Directory? _workspacesRootDir;
   Directory? _workspaceDir;
+  PRootManager? _prootManager;
+
+  void attachPRootManager(PRootManager prootManager) {
+    _prootManager = prootManager;
+    if (_workspaceDir != null) {
+      _prootManager!.setWorkspacePath(_workspaceDir!.path);
+    }
+  }
 
   Future<void> init({Directory? baseDir}) async {
     final appDir = baseDir ?? await getApplicationDocumentsDirectory();
@@ -16,18 +26,12 @@ class WorkspaceService {
       await _workspacesRootDir!.create(recursive: true);
     }
 
-    final agentsdroidDir = Directory(p.join(_workspacesRootDir!.path, 'agentsdroid'));
-    final defaultDir = Directory(p.join(_workspacesRootDir!.path, 'default_project'));
-
-    if (await agentsdroidDir.exists()) {
-      _workspaceDir = agentsdroidDir;
-    } else if (await defaultDir.exists()) {
-      _workspaceDir = defaultDir;
-    } else {
-      _workspaceDir = agentsdroidDir;
-      await _workspaceDir!.create(recursive: true);
-      await _createSampleProject();
+    final defaultDir = Directory(p.join(_workspacesRootDir!.path, defaultProjectName));
+    if (!await defaultDir.exists()) {
+      await defaultDir.create(recursive: true);
     }
+    _workspaceDir = defaultDir;
+    _prootManager?.setWorkspacePath(_workspaceDir!.path);
   }
 
   Directory get workspacesRootDir {
@@ -46,32 +50,36 @@ class WorkspaceService {
 
   String get workspacePath => workspaceDir.path;
 
-  String get currentProjectName => _workspaceDir != null ? p.basename(_workspaceDir!.path) : 'agentsdroid';
+  String get currentProjectName => _workspaceDir != null ? p.basename(_workspaceDir!.path) : defaultProjectName;
 
   Future<List<String>> listProjects() async {
     final root = workspacesRootDir;
-    if (!await root.exists()) return ['agentsdroid'];
+    if (!await root.exists()) return [];
 
     final projects = <String>[];
     final entities = root.listSync();
     for (final e in entities) {
       if (e is Directory) {
-        projects.add(p.basename(e.path));
+        final name = p.basename(e.path);
+        if (name != defaultProjectName && !name.startsWith('.')) {
+          projects.add(name);
+        }
       }
-    }
-    if (projects.isEmpty) {
-      projects.add('agentsdroid');
     }
     projects.sort();
     return projects;
   }
 
-  Future<void> switchProject(String projectName) async {
-    final target = Directory(p.join(workspacesRootDir.path, projectName));
+  Future<void> switchProject(String? projectName) async {
+    final targetName = (projectName == null || projectName.isEmpty || projectName == defaultProjectName)
+        ? defaultProjectName
+        : projectName;
+    final target = Directory(p.join(workspacesRootDir.path, targetName));
     if (!await target.exists()) {
       await target.create(recursive: true);
     }
     _workspaceDir = target;
+    _prootManager?.setWorkspacePath(target.path);
   }
 
   Future<void> createProject(String projectName) async {
@@ -261,34 +269,5 @@ class WorkspaceService {
       'git add . && git commit -m "$sanitizedMsg"',
       workingDir: '/workspace',
     );
-  }
-
-  Future<void> _createSampleProject() async {
-    final readme = File(p.join(workspacePath, 'README.md'));
-    if (!await readme.exists()) {
-      await readme.writeAsString('''# Welcome to AgentsDroid!
-
-This is your mobile coding workspace running entirely on Android.
-
-### Features
-- Native AI Agent support with direct tool calls
-- In-app PRoot Linux environment support
-- Safe file modification & review with native Diff cards
-
-Try asking AgentsDroid:
-"Please read the main.py file and add a function to calculate Fibonacci numbers."
-''');
-    }
-
-    final mainPy = File(p.join(workspacePath, 'main.py'));
-    if (!await mainPy.exists()) {
-      await mainPy.writeAsString('''# AgentsDroid Mobile Workspace Demo
-def greet(name: str):
-    print(f"Hello, {name}! AgentsDroid is ready.")
-
-if __name__ == "__main__":
-    greet("Developer")
-''');
-    }
   }
 }

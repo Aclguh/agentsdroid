@@ -185,6 +185,7 @@ class _ChatScreenState extends State<ChatScreen> {
       title: '新会话',
       projectName: null,
     );
+    await widget.workspace.switchProject(null);
     if (mounted) {
       setState(() {
         _messages.clear();
@@ -334,14 +335,17 @@ class _ChatScreenState extends State<ChatScreen> {
     _persistCurrentSession();
     _coordinator.resetSession();
 
-    if (projectName != null) {
-      await widget.workspace.switchProject(projectName);
-    }
+    final actualProject = (projectName != null &&
+            projectName.isNotEmpty &&
+            projectName != WorkspaceService.defaultProjectName)
+        ? projectName
+        : null;
+    await widget.workspace.switchProject(actualProject);
 
     final defaultTitle = l10n.sessionUntitled;
     final newSession = await _sessionService.createSession(
       title: defaultTitle,
-      projectName: projectName,
+      projectName: actualProject,
     );
     if (!mounted) return;
 
@@ -377,9 +381,12 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!mounted) return;
 
     if (session != null) {
-      if (session.projectName != null && session.projectName!.isNotEmpty) {
-        await widget.workspace.switchProject(session.projectName!);
-      }
+      final actualProject = (session.projectName != null &&
+              session.projectName!.isNotEmpty &&
+              session.projectName != WorkspaceService.defaultProjectName)
+          ? session.projectName
+          : null;
+      await widget.workspace.switchProject(actualProject);
       if (!mounted) return;
 
       setState(() {
@@ -616,7 +623,9 @@ class _ChatScreenState extends State<ChatScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (_currentSession?.projectName != null) ...[
+                if (_currentSession?.projectName != null &&
+                    _currentSession!.projectName!.isNotEmpty &&
+                    _currentSession!.projectName != WorkspaceService.defaultProjectName) ...[
                   Icon(Icons.folder_outlined, size: 10, color: theme.colorScheme.onSurfaceVariant),
                   const SizedBox(width: 3),
                   Text(
@@ -1101,16 +1110,19 @@ class _ChatScreenState extends State<ChatScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final rawProjects = (snapshot.data?[0] as List<String>?) ?? ['agentsdroid'];
+        final rawProjects = (snapshot.data?[0] as List<String>?) ?? [];
         final sessions = (snapshot.data?[1] as List<ChatSessionSummary>?) ?? [];
-        final projects = List<String>.from(rawProjects);
+        final projects = List<String>.from(rawProjects)
+          ..removeWhere((p) => p == WorkspaceService.defaultProjectName);
 
         // Group sessions by project or standalone
         final projectSessions = <String, List<ChatSessionSummary>>{};
         final standaloneSessions = <ChatSessionSummary>[];
 
         for (final s in sessions) {
-          if (s.projectName != null && s.projectName!.isNotEmpty) {
+          if (s.projectName != null &&
+              s.projectName!.isNotEmpty &&
+              s.projectName != WorkspaceService.defaultProjectName) {
             projectSessions.putIfAbsent(s.projectName!, () => []).add(s);
           } else {
             standaloneSessions.add(s);
@@ -1490,12 +1502,12 @@ class _ChatScreenState extends State<ChatScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary,
+            color: const Color(0xFF2563EB),
             borderRadius: BorderRadius.circular(16).copyWith(bottomRight: const Radius.circular(2)),
           ),
           child: Text(
             msg.content,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
           ),
         ),
       );
@@ -1685,13 +1697,18 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
     final query = _searchController.text.trim().toLowerCase();
     final availableProjects = <String>{};
     for (final s in _allSessions) {
-      if (s.projectName != null && s.projectName!.isNotEmpty) {
+      if (s.projectName != null &&
+          s.projectName!.isNotEmpty &&
+          s.projectName != WorkspaceService.defaultProjectName) {
         availableProjects.add(s.projectName!);
       }
     }
 
     final filtered = _allSessions.where((s) {
-      if (_selectedFilter == 'standalone' && s.projectName != null) return false;
+      final isStandalone = s.projectName == null ||
+          s.projectName!.isEmpty ||
+          s.projectName == WorkspaceService.defaultProjectName;
+      if (_selectedFilter == 'standalone' && !isStandalone) return false;
       if (_selectedFilter == 'archived' && !s.isArchived) return false;
       if (_selectedFilter != 'all' && _selectedFilter != 'standalone' && _selectedFilter != 'archived') {
         if (s.projectName != _selectedFilter) return false;
@@ -1853,7 +1870,9 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Row(
                                   children: [
-                                    if (s.projectName != null) ...[
+                                    if (s.projectName != null &&
+                                        s.projectName!.isNotEmpty &&
+                                        s.projectName != WorkspaceService.defaultProjectName) ...[
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                         decoration: BoxDecoration(

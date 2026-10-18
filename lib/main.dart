@@ -22,6 +22,7 @@ void main() async {
 
     final prootManager = PRootManager();
     await prootManager.init(workspacePath: workspaceService.workspacePath);
+    workspaceService.attachPRootManager(prootManager);
 
     runApp(
       ProviderScope(
@@ -129,6 +130,9 @@ class _AgentsDroidAppState extends State<AgentsDroidApp> {
           seedColor: const Color(0xFF2563EB), // Modern Blue / Indigo
           brightness: Brightness.dark,
           surface: const Color(0xFF141414),
+        ).copyWith(
+          primary: const Color(0xFF2563EB),
+          onPrimary: Colors.white,
         ),
         scaffoldBackgroundColor: const Color(0xFF0F0F0F),
         appBarTheme: const AppBarTheme(
