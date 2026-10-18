@@ -1,4 +1,4 @@
-# AgentsDroid 🤖📱
+# AgentsDroid
 
 [简体中文](README.md) | **English**
 
@@ -7,27 +7,27 @@
 
 ---
 
-## ✨ Highlights
+## Highlights
 
-- **🔒 Zero Root Required**: Runs in standard Android user-space with no root privileges and no need to install secondary apps like Termux.
-- **⚡ Dual Agent Engine**:
+- **Zero Root Required**: Runs in standard Android user-space with no root privileges and no need to install secondary apps like Termux.
+- **Dual Agent Engine**:
   - **Built-in Native Dart Agent**: Instant startup, direct integration with Anthropic Claude, DeepSeek, Google Gemini, OpenAI, or custom OpenAI-compatible endpoints.
   - **Embedded PRoot Linux Subsystem**: Runs standard Debian-arm64 rootfs directly inside the app sandbox, enabling official `npm install -g @anthropic-ai/claude-code`, `aider`, and standard Node.js/Python/Git.
-- **🎨 Unified Native GUI**:
+- **Unified Native GUI**:
   - Structured chat with interactive **Tool Approval Cards** (`Approve`, `Always Allow`, `Reject`).
   - Expandable **Reasoning / Thought Cards**.
   - Built-in **Diff Review Screen** with color-coded additions/deletions.
   - **Workspace File Explorer** to inspect project code on touch devices.
-- **🌐 Internationalization (i18n)**: Out-of-the-box support for Simplified Chinese and English with in-app language switching.
-- **🔐 Secure Key Vault**: API keys encrypted via Android Hardware Keystore (`flutter_secure_storage`).
-- **🛡️ Smart Safety Control**:
+- **Internationalization (i18n)**: Out-of-the-box support for Simplified Chinese and English with in-app language switching.
+- **Secure Key Vault**: API keys encrypted via Android Hardware Keystore (`flutter_secure_storage`).
+- **Smart Safety Control**:
   - Read-only actions (read file, list dir, search) execute automatically.
   - Modifying actions (patch file, write file, bash command) prompt for user confirmation.
   - Autonomous YOLO mode toggle available for power users.
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```
 agentsdroid/
@@ -50,7 +50,7 @@ agentsdroid/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Flutter SDK 3.47+ / Dart 3.13+
