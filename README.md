@@ -10,13 +10,26 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart)](https://dart.dev)
-[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)](#快速上手)
+[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)](#下载与安装)
 [![Release](https://img.shields.io/github/v/release/Aclguh/agentsdroid?label=Download)](https://github.com/Aclguh/agentsdroid/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **简体中文** · [English](README_en.md)
 
 </div>
+
+---
+
+## 下载与安装
+
+请前往 [GitHub Releases](https://github.com/Aclguh/agentsdroid/releases/latest) 下载适用于你设备的 Release APK 安装包：
+
+| 安装包名称 | 架构类型 | 文件大小 | 适用说明 |
+| :--- | :--- | :--- | :--- |
+| `AgentsDroid-arm64-v8a-release.apk` | ARM 64位 (arm64-v8a) | 23.8 MB | 绝大多数现代主流 Android 手机（推荐优先下载） |
+| `AgentsDroid-release.apk` | 全架构通用包 (Universal) | 60.8 MB | 整合所有 CPU 架构运行时，兼容全部机型 |
+| `AgentsDroid-armeabi-v7a-release.apk` | ARM 32位 (armeabi-v7a) | 21.8 MB | 较旧的 32 位 Android 设备 |
+| `AgentsDroid-x86_64-release.apk` | x86_64 架构 | 25.3 MB | 64 位 x86 Android 模拟器或 PC 子系统 |
 
 ---
 

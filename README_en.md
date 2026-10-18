@@ -10,13 +10,26 @@ Code, debug, run tests, and manage Git projects directly from your phone — Zer
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart)](https://dart.dev)
-[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)](#getting-started)
+[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)](#download--releases)
 [![Release](https://img.shields.io/github/v/release/Aclguh/agentsdroid?label=Download)](https://github.com/Aclguh/agentsdroid/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 [简体中文](README.md) · **English**
 
 </div>
+
+---
+
+## Download & Releases
+
+Download the suitable Release APK package for your device from [GitHub Releases](https://github.com/Aclguh/agentsdroid/releases/latest):
+
+| Package Name | Architecture | File Size | Description |
+| :--- | :--- | :--- | :--- |
+| `AgentsDroid-arm64-v8a-release.apk` | ARM 64-bit (arm64-v8a) | 23.8 MB | Most modern Android smartphones (Recommended) |
+| `AgentsDroid-release.apk` | Universal Package | 60.8 MB | Contains all CPU ABIs, broadest compatibility |
+| `AgentsDroid-armeabi-v7a-release.apk` | ARM 32-bit (armeabi-v7a) | 21.8 MB | Legacy 32-bit Android devices |
+| `AgentsDroid-x86_64-release.apk` | x86_64 | 25.3 MB | 64-bit x86 Android emulators or desktop containers |
 
 ---
 
