@@ -298,4 +298,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sessionUntitled => '新会话';
+
+  @override
+  String get projects => '项目';
+
+  @override
+  String get conversations => '会话';
+
+  @override
+  String get newProject => '新建项目';
+
+  @override
+  String get projectNameHint => '输入项目名称 (如 my_app)';
+
+  @override
+  String get create => '创建';
+
+  @override
+  String get archive => '归档';
+
+  @override
+  String get unarchive => '恢复';
+
+  @override
+  String get archivedSessions => '已归档会话';
+
+  @override
+  String get showArchived => '查看归档';
+
+  @override
+  String get hideArchived => '返回活跃会话';
+
+  @override
+  String get noArchivedSessions => '暂无归档会话';
+
+  @override
+  String get newProjectSession => '新建项目会话';
+
+  @override
+  String get newStandaloneSession => '新建独立会话';
+
+  @override
+  String get archiveSessionConfirm => '确定要归档此会话吗？';
+
+  @override
+  String get unarchiveSessionConfirm => '确定要恢复此会话吗？';
 }

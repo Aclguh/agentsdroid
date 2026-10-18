@@ -95,5 +95,20 @@
   "renameSession": "Rename Session",
   "sessionTitleHint": "Enter session title",
   "save": "Save",
-  "sessionUntitled": "New Chat"
+  "sessionUntitled": "New Chat",
+  "projects": "Projects",
+  "conversations": "Conversations",
+  "newProject": "New Project",
+  "projectNameHint": "Enter project name (e.g. my_app)",
+  "create": "Create",
+  "archive": "Archive",
+  "unarchive": "Restore",
+  "archivedSessions": "Archived Sessions",
+  "showArchived": "View Archived",
+  "hideArchived": "View Active",
+  "noArchivedSessions": "No archived sessions",
+  "newProjectSession": "New Project Session",
+  "newStandaloneSession": "New Standalone Session",
+  "archiveSessionConfirm": "Are you sure you want to archive this session?",
+  "unarchiveSessionConfirm": "Are you sure you want to restore this session?"
 }

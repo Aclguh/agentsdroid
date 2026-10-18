@@ -57,6 +57,9 @@ class _ChatScreenState extends State<ChatScreen> {
   ChatMessage? _currentAssistantMessage;
   ChatSession? _currentSession;
 
+  final Set<String> _expandedProjects = {'agentsdroid'};
+  bool _showArchived = false;
+
   @override
   void initState() {
     super.initState();
@@ -76,8 +79,12 @@ class _ChatScreenState extends State<ChatScreen> {
     if (widget.sessionService == null) {
       await _sessionService.init();
     }
+    _expandedProjects.add(widget.workspace.currentProjectName);
     // Requirement: Always start with a fresh new conversation on app open
-    _currentSession = await _sessionService.createSession(title: '新会话');
+    _currentSession = await _sessionService.createSession(
+      title: '新会话',
+      projectName: widget.workspace.currentProjectName,
+    );
     if (mounted) {
       setState(() {
         _messages.clear();
@@ -216,15 +223,22 @@ class _ChatScreenState extends State<ChatScreen> {
     await _coordinator.startTask(text);
   }
 
-  Future<void> _handleNewSession([AppLocalizations? l10n]) async {
+  Future<void> _handleNewSession(AppLocalizations l10n, {String? projectName}) async {
     if (_agentState != AgentState.idle) {
       await _coordinator.interrupt();
     }
     _persistCurrentSession();
     _coordinator.resetSession();
 
-    final defaultTitle = l10n?.sessionUntitled ?? '新会话';
-    final newSession = await _sessionService.createSession(title: defaultTitle);
+    if (projectName != null) {
+      await widget.workspace.switchProject(projectName);
+    }
+
+    final defaultTitle = l10n.sessionUntitled;
+    final newSession = await _sessionService.createSession(
+      title: defaultTitle,
+      projectName: projectName,
+    );
     if (!mounted) return;
 
     setState(() {
@@ -257,6 +271,11 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!mounted) return;
 
     if (session != null) {
+      if (session.projectName != null && session.projectName!.isNotEmpty) {
+        await widget.workspace.switchProject(session.projectName!);
+      }
+      if (!mounted) return;
+
       setState(() {
         _currentSession = session;
         _messages.clear();
@@ -266,7 +285,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
     }
 
-    if (Navigator.of(context).canPop()) {
+    if (mounted && Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
   }
@@ -295,11 +314,11 @@ class _ChatScreenState extends State<ChatScreen> {
     if (confirmed == true && mounted) {
       await _sessionService.deleteSession(sessionId);
       if (_currentSession?.id == sessionId) {
-        final remaining = await _sessionService.listSessions();
+        final remaining = await _sessionService.listSessions(isArchived: false);
         if (remaining.isNotEmpty) {
           await _handleSwitchSession(remaining.first.id);
         } else {
-          await _handleNewSession(l10n);
+          await _handleNewSession(l10n, projectName: widget.workspace.currentProjectName);
         }
       } else {
         setState(() {});
@@ -344,6 +363,69 @@ class _ChatScreenState extends State<ChatScreen> {
         setState(() {});
       }
     }
+  }
+
+  Future<void> _handleArchiveSession(String sessionId, AppLocalizations l10n) async {
+    await _sessionService.archiveSession(sessionId);
+    if (!mounted) return;
+
+    if (_currentSession?.id == sessionId) {
+      await _handleNewSession(l10n, projectName: widget.workspace.currentProjectName);
+    } else {
+      setState(() {});
+    }
+  }
+
+  Future<void> _handleUnarchiveSession(String sessionId, AppLocalizations l10n) async {
+    await _sessionService.unarchiveSession(sessionId);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _handleCreateProject(AppLocalizations l10n) async {
+    final controller = TextEditingController();
+    final projectName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text(l10n.newProject),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: l10n.projectNameHint,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(l10n.create),
+          ),
+        ],
+      ),
+    );
+
+    if (projectName != null && projectName.isNotEmpty && mounted) {
+      await widget.workspace.createProject(projectName);
+      setState(() {
+        _expandedProjects.add(projectName);
+      });
+      await _handleNewSession(l10n, projectName: projectName);
+    }
+  }
+
+  String _formatRelativeTime(DateTime dateTime) {
+    final diff = DateTime.now().difference(dateTime);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 30) return '${diff.inDays}d';
+    return DateFormat('MM/dd').format(dateTime);
   }
 
   @override
@@ -392,6 +474,21 @@ class _ChatScreenState extends State<ChatScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_currentSession?.projectName != null) ...[
+                  Icon(Icons.folder_outlined, size: 10, color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 3),
+                  Text(
+                    _currentSession!.projectName!,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blueAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text('•', style: TextStyle(fontSize: 8, color: theme.colorScheme.onSurfaceVariant)),
+                  const SizedBox(width: 4),
+                ],
                 Flexible(
                   child: Text(
                     activeModel,
@@ -424,7 +521,7 @@ class _ChatScreenState extends State<ChatScreen> {
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             tooltip: l10n.newChat,
-            onPressed: () => _handleNewSession(l10n),
+            onPressed: () => _handleNewSession(l10n, projectName: widget.workspace.currentProjectName),
           ),
           IconButton(
             icon: const Icon(Icons.terminal_outlined),
@@ -520,153 +617,49 @@ class _ChatScreenState extends State<ChatScreen> {
       child: SafeArea(
         child: Column(
           children: [
-            // Drawer Header
+            // Header: Projects / Archived Toggle / Create Project
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
               child: Row(
                 children: [
-                  const Icon(Icons.history, color: Colors.blueAccent),
-                  const SizedBox(width: 10),
                   Text(
-                    l10n.chatHistory,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    _showArchived ? l10n.archivedSessions : l10n.projects,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: _showArchived ? Colors.amber : Colors.white70,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(
+                      _showArchived ? Icons.arrow_back : Icons.filter_list_rounded,
+                      size: 19,
+                      color: _showArchived ? Colors.amber : Colors.white60,
+                    ),
+                    tooltip: _showArchived ? l10n.hideArchived : l10n.showArchived,
+                    onPressed: () {
+                      setState(() {
+                        _showArchived = !_showArchived;
+                      });
+                    },
                   ),
+                  if (!_showArchived)
+                    IconButton(
+                      icon: const Icon(Icons.create_new_folder_outlined, size: 19, color: Colors.white60),
+                      tooltip: l10n.newProject,
+                      onPressed: () => _handleCreateProject(l10n),
+                    ),
                 ],
               ),
             ),
 
-            // New Chat Button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: FilledButton.icon(
-                onPressed: () => _handleNewSession(l10n),
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(l10n.newChat),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ),
-
-            const Divider(color: Color(0xFF262626), height: 16),
-
-            // Session List
+            // Content Area: Either Archived List or Projects + Conversations Tree
             Expanded(
-              child: FutureBuilder<List<ChatSessionSummary>>(
-                future: _sessionService.listSessions(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final sessions = snapshot.data ?? [];
-                  if (sessions.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 40,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.noHistorySessions,
-                            style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    itemCount: sessions.length,
-                    itemBuilder: (context, index) {
-                      final item = sessions[index];
-                      final isSelected = item.id == _currentSession?.id;
-
-                      return Container(
-                        margin: const EdgeInsets.symmetric(vertical: 3),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                          border: isSelected
-                              ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 1)
-                              : Border.all(color: Colors.transparent, width: 1),
-                        ),
-                        child: ListTile(
-                          dense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                          leading: Icon(
-                            isSelected ? Icons.chat : Icons.chat_bubble_outline,
-                            size: 18,
-                            color: isSelected ? theme.colorScheme.primary : Colors.white60,
-                          ),
-                          title: Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? Colors.white : Colors.white70,
-                            ),
-                          ),
-                          subtitle: Text(
-                            '${DateFormat('MM/dd HH:mm').format(item.updatedAt)} • ${item.messageCount} msgs',
-                            style: const TextStyle(fontSize: 10, color: Colors.white38),
-                          ),
-                          trailing: PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert, size: 16, color: Colors.white38),
-                            padding: EdgeInsets.zero,
-                            color: const Color(0xFF1E1E1E),
-                            onSelected: (val) {
-                              if (val == 'rename') {
-                                _handleRenameSession(item, l10n);
-                              } else if (val == 'delete') {
-                                _handleDeleteSession(item.id, l10n);
-                              }
-                            },
-                            itemBuilder: (ctx) => [
-                              PopupMenuItem(
-                                value: 'rename',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.edit_outlined, size: 16),
-                                    const SizedBox(width: 8),
-                                    Text(l10n.renameSession),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
-                                    const SizedBox(width: 8),
-                                    Text(l10n.deleteSession, style: const TextStyle(color: Colors.redAccent)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          onTap: () => _handleSwitchSession(item.id),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
+              child: _showArchived
+                  ? _buildArchivedList(context, l10n, theme)
+                  : _buildProjectsAndConversationsTree(context, l10n, theme),
             ),
 
             const Divider(color: Color(0xFF262626), height: 1),
@@ -707,10 +700,335 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (mounted) setState(() {});
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProjectsAndConversationsTree(
+      BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        widget.workspace.listProjects(),
+        _sessionService.listSessions(isArchived: false),
+      ]),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final projects = (snapshot.data?[0] as List<String>?) ?? ['agentsdroid'];
+        final sessions = (snapshot.data?[1] as List<ChatSessionSummary>?) ?? [];
+
+        // Group sessions by project or standalone
+        final projectSessions = <String, List<ChatSessionSummary>>{};
+        final standaloneSessions = <ChatSessionSummary>[];
+
+        for (final s in sessions) {
+          if (s.projectName != null && s.projectName!.isNotEmpty) {
+            projectSessions.putIfAbsent(s.projectName!, () => []).add(s);
+          } else {
+            standaloneSessions.add(s);
+          }
+        }
+
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          children: [
+            // Projects List
+            for (final projectName in projects) ...[
+              _buildProjectFolderTile(
+                projectName,
+                projectSessions[projectName] ?? [],
+                l10n,
+                theme,
+              ),
+            ],
+
+            const SizedBox(height: 16),
+
+            // Conversations Section Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 4, 0, 4),
+              child: Row(
+                children: [
+                  Text(
+                    l10n.conversations,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.add, size: 20, color: Colors.white70),
+                    tooltip: l10n.newStandaloneSession,
+                    onPressed: () => _handleNewSession(l10n, projectName: null),
+                  ),
+                ],
+              ),
+            ),
+
+            // Standalone Conversations List
+            if (standaloneSessions.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Text(
+                  l10n.noHistorySessions,
+                  style: const TextStyle(fontSize: 11, color: Colors.white30, fontStyle: FontStyle.italic),
+                ),
+              )
+            else
+              for (final s in standaloneSessions)
+                _buildSessionItem(s, l10n, theme, indent: false),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProjectFolderTile(
+    String projectName,
+    List<ChatSessionSummary> sessions,
+    AppLocalizations l10n,
+    ThemeData theme,
+  ) {
+    final isExpanded = _expandedProjects.contains(projectName);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _expandedProjects.remove(projectName);
+              } else {
+                _expandedProjects.add(projectName);
+              }
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  isExpanded ? Icons.folder_open_outlined : Icons.folder_outlined,
+                  size: 18,
+                  color: Colors.white70,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    projectName,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 16, color: Colors.white38),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  tooltip: l10n.newProjectSession,
+                  onPressed: () => _handleNewSession(l10n, projectName: projectName),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Child sessions when folder is expanded
+        if (isExpanded) ...[
+          if (sessions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 32, top: 2, bottom: 8),
+              child: GestureDetector(
+                onTap: () => _handleNewSession(l10n, projectName: projectName),
+                child: Text(
+                  '+ ${l10n.newProjectSession}',
+                  style: const TextStyle(fontSize: 11, color: Colors.white30, fontStyle: FontStyle.italic),
+                ),
+              ),
+            )
+          else
+            for (final s in sessions)
+              _buildSessionItem(s, l10n, theme, indent: true),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSessionItem(
+    ChatSessionSummary s,
+    AppLocalizations l10n,
+    ThemeData theme, {
+    required bool indent,
+  }) {
+    final isSelected = s.id == _currentSession?.id;
+
+    return Padding(
+      padding: EdgeInsets.only(left: indent ? 16.0 : 0.0, top: 2, bottom: 2),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF262626) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _handleSwitchSession(s.id),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    s.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected ? Colors.white : Colors.white70,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _formatRelativeTime(s.updatedAt),
+                  style: const TextStyle(fontSize: 11, color: Colors.white38),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 16, color: Colors.white38),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                  color: const Color(0xFF1E1E1E),
+                  onSelected: (val) {
+                    if (val == 'rename') {
+                      _handleRenameSession(s, l10n);
+                    } else if (val == 'archive') {
+                      _handleArchiveSession(s.id, l10n);
+                    } else if (val == 'delete') {
+                      _handleDeleteSession(s.id, l10n);
+                    }
+                  },
+                  itemBuilder: (ctx) => [
+                    PopupMenuItem(
+                      value: 'rename',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_outlined, size: 16),
+                          const SizedBox(width: 8),
+                          Text(l10n.renameSession),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'archive',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.archive_outlined, size: 16),
+                          const SizedBox(width: 8),
+                          Text(l10n.archive),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+                          const SizedBox(width: 8),
+                          Text(l10n.deleteSession, style: const TextStyle(color: Colors.redAccent)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildArchivedList(BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    return FutureBuilder<List<ChatSessionSummary>>(
+      future: _sessionService.listSessions(isArchived: true),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final archived = snapshot.data ?? [];
+        if (archived.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.archive_outlined, size: 40, color: Colors.white24),
+                const SizedBox(height: 12),
+                Text(l10n.noArchivedSessions, style: const TextStyle(color: Colors.white38, fontSize: 13)),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          itemCount: archived.length,
+          itemBuilder: (context, index) {
+            final s = archived[index];
+            return Container(
+              margin: const EdgeInsets.symmetric(vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                leading: const Icon(Icons.archive_outlined, size: 18, color: Colors.amber),
+                title: Text(
+                  s.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+                subtitle: Text(
+                  '${s.projectName ?? l10n.conversations} • ${_formatRelativeTime(s.updatedAt)}',
+                  style: const TextStyle(fontSize: 10, color: Colors.white38),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.unarchive_outlined, size: 18, color: Colors.greenAccent),
+                      tooltip: l10n.unarchive,
+                      onPressed: () => _handleUnarchiveSession(s.id, l10n),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                      tooltip: l10n.delete,
+                      onPressed: () => _handleDeleteSession(s.id, l10n),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

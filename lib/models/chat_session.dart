@@ -6,6 +6,8 @@ class ChatSessionSummary {
   final DateTime createdAt;
   DateTime updatedAt;
   final int messageCount;
+  String? projectName; // null for standalone conversations (不在项目中)
+  bool isArchived; // true if archived (归档)
 
   ChatSessionSummary({
     required this.id,
@@ -13,6 +15,8 @@ class ChatSessionSummary {
     required this.createdAt,
     required this.updatedAt,
     required this.messageCount,
+    this.projectName,
+    this.isArchived = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -21,6 +25,8 @@ class ChatSessionSummary {
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
     'messageCount': messageCount,
+    'projectName': projectName,
+    'isArchived': isArchived,
   };
 
   factory ChatSessionSummary.fromJson(Map<String, dynamic> json) => ChatSessionSummary(
@@ -29,6 +35,8 @@ class ChatSessionSummary {
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),
     messageCount: json['messageCount'] as int? ?? 0,
+    projectName: json['projectName'] as String?,
+    isArchived: json['isArchived'] as bool? ?? false,
   );
 }
 
@@ -38,6 +46,8 @@ class ChatSession {
   final DateTime createdAt;
   DateTime updatedAt;
   final List<ChatMessage> messages;
+  String? projectName; // null for standalone conversations (不在项目中)
+  bool isArchived; // true if archived (归档)
 
   ChatSession({
     required this.id,
@@ -45,6 +55,8 @@ class ChatSession {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<ChatMessage>? messages,
+    this.projectName,
+    this.isArchived = false,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
         messages = messages ?? [];
@@ -55,6 +67,8 @@ class ChatSession {
     createdAt: createdAt,
     updatedAt: updatedAt,
     messageCount: messages.length,
+    projectName: projectName,
+    isArchived: isArchived,
   );
 
   Map<String, dynamic> toJson() => {
@@ -63,6 +77,8 @@ class ChatSession {
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
     'messages': messages.map((m) => m.toJson()).toList(),
+    'projectName': projectName,
+    'isArchived': isArchived,
   };
 
   factory ChatSession.fromJson(Map<String, dynamic> json) => ChatSession(
@@ -74,5 +90,7 @@ class ChatSession {
             ?.map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
             .toList() ??
         [],
+    projectName: json['projectName'] as String?,
+    isArchived: json['isArchived'] as bool? ?? false,
   );
 }

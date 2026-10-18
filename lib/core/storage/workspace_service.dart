@@ -6,15 +6,35 @@ import '../../models/agent_event.dart';
 import '../proot/proot_manager.dart';
 
 class WorkspaceService {
+  Directory? _workspacesRootDir;
   Directory? _workspaceDir;
 
   Future<void> init({Directory? baseDir}) async {
     final appDir = baseDir ?? await getApplicationDocumentsDirectory();
-    _workspaceDir = Directory(p.join(appDir.path, 'workspace', 'default_project'));
-    if (!await _workspaceDir!.exists()) {
+    _workspacesRootDir = Directory(p.join(appDir.path, 'workspace'));
+    if (!await _workspacesRootDir!.exists()) {
+      await _workspacesRootDir!.create(recursive: true);
+    }
+
+    final agentsdroidDir = Directory(p.join(_workspacesRootDir!.path, 'agentsdroid'));
+    final defaultDir = Directory(p.join(_workspacesRootDir!.path, 'default_project'));
+
+    if (await agentsdroidDir.exists()) {
+      _workspaceDir = agentsdroidDir;
+    } else if (await defaultDir.exists()) {
+      _workspaceDir = defaultDir;
+    } else {
+      _workspaceDir = agentsdroidDir;
       await _workspaceDir!.create(recursive: true);
       await _createSampleProject();
     }
+  }
+
+  Directory get workspacesRootDir {
+    if (_workspacesRootDir == null) {
+      throw StateError('WorkspaceService not initialized. Call init() first.');
+    }
+    return _workspacesRootDir!;
   }
 
   Directory get workspaceDir {
@@ -25,6 +45,47 @@ class WorkspaceService {
   }
 
   String get workspacePath => workspaceDir.path;
+
+  String get currentProjectName => _workspaceDir != null ? p.basename(_workspaceDir!.path) : 'agentsdroid';
+
+  Future<List<String>> listProjects() async {
+    final root = workspacesRootDir;
+    if (!await root.exists()) return ['agentsdroid'];
+
+    final projects = <String>[];
+    final entities = root.listSync();
+    for (final e in entities) {
+      if (e is Directory) {
+        projects.add(p.basename(e.path));
+      }
+    }
+    if (projects.isEmpty) {
+      projects.add('agentsdroid');
+    }
+    projects.sort();
+    return projects;
+  }
+
+  Future<void> switchProject(String projectName) async {
+    final target = Directory(p.join(workspacesRootDir.path, projectName));
+    if (!await target.exists()) {
+      await target.create(recursive: true);
+      final readme = File(p.join(target.path, 'README.md'));
+      if (!await readme.exists()) {
+        await readme.writeAsString('# $projectName\n\nCreated in AgentsDroid.');
+      }
+    }
+    _workspaceDir = target;
+  }
+
+  Future<void> createProject(String projectName) async {
+    final target = Directory(p.join(workspacesRootDir.path, projectName));
+    if (!await target.exists()) {
+      await target.create(recursive: true);
+      final readme = File(p.join(target.path, 'README.md'));
+      await readme.writeAsString('# $projectName\n\nCreated in AgentsDroid.');
+    }
+  }
 
   // Resolves a relative or absolute path safely within the workspace
   String resolvePath(String relativeOrAbsolutePath) {

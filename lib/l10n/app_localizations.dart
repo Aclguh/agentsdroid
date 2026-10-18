@@ -673,6 +673,96 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'新会话'**
   String get sessionUntitled;
+
+  /// No description provided for @projects.
+  ///
+  /// In zh, this message translates to:
+  /// **'项目'**
+  String get projects;
+
+  /// No description provided for @conversations.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话'**
+  String get conversations;
+
+  /// No description provided for @newProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建项目'**
+  String get newProject;
+
+  /// No description provided for @projectNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入项目名称 (如 my_app)'**
+  String get projectNameHint;
+
+  /// No description provided for @create.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建'**
+  String get create;
+
+  /// No description provided for @archive.
+  ///
+  /// In zh, this message translates to:
+  /// **'归档'**
+  String get archive;
+
+  /// No description provided for @unarchive.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复'**
+  String get unarchive;
+
+  /// No description provided for @archivedSessions.
+  ///
+  /// In zh, this message translates to:
+  /// **'已归档会话'**
+  String get archivedSessions;
+
+  /// No description provided for @showArchived.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看归档'**
+  String get showArchived;
+
+  /// No description provided for @hideArchived.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回活跃会话'**
+  String get hideArchived;
+
+  /// No description provided for @noArchivedSessions.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无归档会话'**
+  String get noArchivedSessions;
+
+  /// No description provided for @newProjectSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建项目会话'**
+  String get newProjectSession;
+
+  /// No description provided for @newStandaloneSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建独立会话'**
+  String get newStandaloneSession;
+
+  /// No description provided for @archiveSessionConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要归档此会话吗？'**
+  String get archiveSessionConfirm;
+
+  /// No description provided for @unarchiveSessionConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要恢复此会话吗？'**
+  String get unarchiveSessionConfirm;
 }
 
 class _AppLocalizationsDelegate

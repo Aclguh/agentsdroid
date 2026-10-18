@@ -48,6 +48,33 @@ void main() {
       final dir = Directory(service.resolvePath('nested/folder/path'));
       expect(await dir.exists(), isTrue);
     });
+
+    test('supports multi-project creation, listing, and switching', () async {
+      final service = WorkspaceService();
+      await service.init(baseDir: docDir);
+
+      // Initially default project 'agentsdroid' exists
+      expect(await service.listProjects(), contains('agentsdroid'));
+      expect(service.currentProjectName, equals('agentsdroid'));
+
+      // Create a new project
+      await service.createProject('my-mobile-app');
+      final projDir = Directory('${service.workspacesRootDir.path}/my-mobile-app');
+      expect(await projDir.exists(), isTrue);
+      expect(await File('${projDir.path}/README.md').exists(), isTrue);
+
+      final projects = await service.listProjects();
+      expect(projects, contains('my-mobile-app'));
+
+      // Switch to project
+      await service.switchProject('my-mobile-app');
+      expect(service.currentProjectName, equals('my-mobile-app'));
+      expect(service.workspaceDir.path.endsWith('my-mobile-app'), isTrue);
+
+      // Switch back
+      await service.switchProject('agentsdroid');
+      expect(service.currentProjectName, equals('agentsdroid'));
+    });
   });
 
   group('ForegroundServiceManager Tests', () {

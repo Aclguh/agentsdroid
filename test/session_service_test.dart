@@ -121,5 +121,50 @@ void main() {
       expect(s2.id, equals(s1.id));
       expect(s2.title, equals('首个会话'));
     });
+
+    test('archives and unarchives sessions', () async {
+      final s = await sessionService.createSession(title: '归档测试会话');
+      s.messages.add(ChatMessage(id: 'm1', role: MessageRole.user, content: 'test'));
+      await sessionService.saveSession(s);
+
+      // Initially not archived
+      var activeList = await sessionService.listSessions(isArchived: false);
+      var archivedList = await sessionService.listSessions(isArchived: true);
+      expect(activeList.length, equals(1));
+      expect(archivedList, isEmpty);
+
+      // Archive session
+      await sessionService.archiveSession(s.id);
+      activeList = await sessionService.listSessions(isArchived: false);
+      archivedList = await sessionService.listSessions(isArchived: true);
+      expect(activeList, isEmpty);
+      expect(archivedList.length, equals(1));
+      expect(archivedList.first.id, equals(s.id));
+      expect(archivedList.first.isArchived, isTrue);
+
+      // Unarchive session
+      await sessionService.unarchiveSession(s.id);
+      activeList = await sessionService.listSessions(isArchived: false);
+      archivedList = await sessionService.listSessions(isArchived: true);
+      expect(activeList.length, equals(1));
+      expect(archivedList, isEmpty);
+      expect(activeList.first.isArchived, isFalse);
+    });
+
+    test('supports session project association', () async {
+      final s = await sessionService.createSession(
+        title: '项目内部会话',
+        projectName: 'agentsdroid',
+      );
+      s.messages.add(ChatMessage(id: 'm1', role: MessageRole.user, content: 'hello in project'));
+      await sessionService.saveSession(s);
+
+      final list = await sessionService.listSessions();
+      expect(list.length, equals(1));
+      expect(list.first.projectName, equals('agentsdroid'));
+
+      final loaded = await sessionService.getSession(s.id);
+      expect(loaded?.projectName, equals('agentsdroid'));
+    });
   });
 }

@@ -28,7 +28,7 @@ class SessionService {
     return File(p.join(sessionsDir.path, '$id.json'));
   }
 
-  Future<List<ChatSessionSummary>> listSessions() async {
+  Future<List<ChatSessionSummary>> listSessions({bool? isArchived}) async {
     final dir = sessionsDir;
     if (!await dir.exists()) return [];
 
@@ -43,7 +43,9 @@ class SessionService {
           final session = ChatSession.fromJson(json);
           // Only retain sessions that have actual messages
           if (session.messages.isNotEmpty) {
-            summaries.add(session.toSummary());
+            if (isArchived == null || session.isArchived == isArchived) {
+              summaries.add(session.toSummary());
+            }
           } else {
             // Clean up any empty session file from disk
             await entity.delete();
@@ -109,20 +111,46 @@ class SessionService {
     return session;
   }
 
-  Future<ChatSession> createSession({String title = '新会话'}) async {
-    // Returns a new in-memory ChatSession; will not be written to disk until it has messages
+  Future<ChatSession> archiveSession(String id) async {
+    final session = await getSession(id);
+    if (session == null) {
+      throw FileSystemException('Session not found', id);
+    }
+    session.isArchived = true;
+    await saveSession(session);
+    return session;
+  }
+
+  Future<ChatSession> unarchiveSession(String id) async {
+    final session = await getSession(id);
+    if (session == null) {
+      throw FileSystemException('Session not found', id);
+    }
+    session.isArchived = false;
+    await saveSession(session);
+    return session;
+  }
+
+  Future<ChatSession> createSession({
+    String title = '新会话',
+    String? projectName,
+  }) async {
     return ChatSession(
       id: _uuid.v4(),
       title: title,
+      projectName: projectName,
     );
   }
 
-  Future<ChatSession> getOrCreateLatestSession({String defaultTitle = '新会话'}) async {
-    final list = await listSessions();
+  Future<ChatSession> getOrCreateLatestSession({
+    String defaultTitle = '新会话',
+    String? projectName,
+  }) async {
+    final list = await listSessions(isArchived: false);
     if (list.isNotEmpty) {
       final latest = await getSession(list.first.id);
       if (latest != null && latest.messages.isNotEmpty) return latest;
     }
-    return await createSession(title: defaultTitle);
+    return await createSession(title: defaultTitle, projectName: projectName);
   }
 }

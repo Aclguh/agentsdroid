@@ -95,5 +95,20 @@
   "renameSession": "重命名会话",
   "sessionTitleHint": "输入会话标题",
   "save": "保存",
-  "sessionUntitled": "新会话"
+  "sessionUntitled": "新会话",
+  "projects": "项目",
+  "conversations": "会话",
+  "newProject": "新建项目",
+  "projectNameHint": "输入项目名称 (如 my_app)",
+  "create": "创建",
+  "archive": "归档",
+  "unarchive": "恢复",
+  "archivedSessions": "已归档会话",
+  "showArchived": "查看归档",
+  "hideArchived": "返回活跃会话",
+  "noArchivedSessions": "暂无归档会话",
+  "newProjectSession": "新建项目会话",
+  "newStandaloneSession": "新建独立会话",
+  "archiveSessionConfirm": "确定要归档此会话吗？",
+  "unarchiveSessionConfirm": "确定要恢复此会话吗？"
 }

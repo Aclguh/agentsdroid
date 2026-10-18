@@ -307,4 +307,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionUntitled => 'New Chat';
+
+  @override
+  String get projects => 'Projects';
+
+  @override
+  String get conversations => 'Conversations';
+
+  @override
+  String get newProject => 'New Project';
+
+  @override
+  String get projectNameHint => 'Enter project name (e.g. my_app)';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String get archive => 'Archive';
+
+  @override
+  String get unarchive => 'Restore';
+
+  @override
+  String get archivedSessions => 'Archived Sessions';
+
+  @override
+  String get showArchived => 'View Archived';
+
+  @override
+  String get hideArchived => 'View Active';
+
+  @override
+  String get noArchivedSessions => 'No archived sessions';
+
+  @override
+  String get newProjectSession => 'New Project Session';
+
+  @override
+  String get newStandaloneSession => 'New Standalone Session';
+
+  @override
+  String get archiveSessionConfirm =>
+      'Are you sure you want to archive this session?';
+
+  @override
+  String get unarchiveSessionConfirm =>
+      'Are you sure you want to restore this session?';
 }
