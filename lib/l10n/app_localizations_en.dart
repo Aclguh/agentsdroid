@@ -354,4 +354,37 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get unarchiveSessionConfirm =>
       'Are you sure you want to restore this session?';
+
+  @override
+  String get newConversation => 'New Conversation';
+
+  @override
+  String get conversationHistory => 'Conversation History';
+
+  @override
+  String get displayOptions => 'Display Options';
+
+  @override
+  String get sortConversations => 'Sort Conversations';
+
+  @override
+  String get sortProjects => 'Sort Projects';
+
+  @override
+  String get sortRecent => 'Most Recent';
+
+  @override
+  String get sortName => 'By Name (A-Z)';
+
+  @override
+  String get archivedOnly => 'Archived Only';
+
+  @override
+  String get searchConversations => 'Search conversations...';
+
+  @override
+  String get allConversations => 'All Conversations';
+
+  @override
+  String get noMatchingConversations => 'No matching conversations found';
 }

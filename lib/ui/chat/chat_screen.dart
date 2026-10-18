@@ -39,6 +39,9 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
+enum ConversationSortOrder { recent, name }
+enum ProjectSortOrder { name, recent }
+
 class _ChatScreenState extends State<ChatScreen> {
   late final EngineCoordinator _coordinator;
   late final ForegroundServiceManager _foregroundManager;
@@ -59,6 +62,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   final Set<String> _expandedProjects = {'agentsdroid'};
   bool _showArchived = false;
+  ConversationSortOrder _conversationSortOrder = ConversationSortOrder.recent;
+  ProjectSortOrder _projectSortOrder = ProjectSortOrder.name;
 
   @override
   void initState() {
@@ -428,6 +433,30 @@ class _ChatScreenState extends State<ChatScreen> {
     return DateFormat('MM/dd').format(dateTime);
   }
 
+  void _showConversationHistorySheet(BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return _ConversationHistoryModal(
+          sessionService: _sessionService,
+          currentSessionId: _currentSession?.id,
+          onSelectSession: (id) {
+            Navigator.pop(ctx);
+            Navigator.pop(context); // close drawer
+            _handleSwitchSession(id);
+          },
+          onArchiveSession: (id) => _handleArchiveSession(id, l10n),
+          onUnarchiveSession: (id) => _handleUnarchiveSession(id, l10n),
+          onDeleteSession: (id) => _handleDeleteSession(id, l10n),
+          formatRelativeTime: _formatRelativeTime,
+          l10n: l10n,
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _persistCurrentSession();
@@ -617,9 +646,86 @@ class _ChatScreenState extends State<ChatScreen> {
       child: SafeArea(
         child: Column(
           children: [
-            // Header: Projects / Archived Toggle / Create Project
+            // Top Action Buttons (Matching reference UI)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+              child: Column(
+                children: [
+                  // + New Conversation Button
+                  Material(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _handleNewSession(l10n, projectName: null);
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF2C2C2C), width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add, size: 18, color: Colors.white70),
+                            const SizedBox(width: 10),
+                            Text(
+                              l10n.newConversation,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  // Conversation History Button
+                  Material(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => _showConversationHistorySheet(context, l10n, theme),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF2C2C2C), width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.history_rounded, size: 18, color: Colors.white70),
+                            const SizedBox(width: 10),
+                            Text(
+                              l10n.conversationHistory,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(color: Color(0xFF262626), height: 16),
+
+            // Header: Projects / Display Options (Filter & Sort) / Create Project
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
               child: Row(
                 children: [
                   Text(
@@ -631,19 +737,164 @@ class _ChatScreenState extends State<ChatScreen> {
                       letterSpacing: 0.5,
                     ),
                   ),
+                  if (_showArchived) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        setState(() {
+                          _showArchived = false;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.close, size: 12, color: Colors.amber),
+                            const SizedBox(width: 2),
+                            Text(l10n.hideArchived, style: const TextStyle(fontSize: 10, color: Colors.amber)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
-                  IconButton(
+                  // Display Options PopupMenu (Image 1)
+                  PopupMenuButton<String>(
                     icon: Icon(
-                      _showArchived ? Icons.arrow_back : Icons.filter_list_rounded,
-                      size: 19,
+                      Icons.filter_list_rounded,
+                      size: 20,
                       color: _showArchived ? Colors.amber : Colors.white60,
                     ),
-                    tooltip: _showArchived ? l10n.hideArchived : l10n.showArchived,
-                    onPressed: () {
+                    tooltip: l10n.displayOptions,
+                    color: const Color(0xFF222222),
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0xFF333333)),
+                    ),
+                    onSelected: (val) {
                       setState(() {
-                        _showArchived = !_showArchived;
+                        if (val == 'sort_conv_recent') {
+                          _conversationSortOrder = ConversationSortOrder.recent;
+                        } else if (val == 'sort_conv_name') {
+                          _conversationSortOrder = ConversationSortOrder.name;
+                        } else if (val == 'sort_proj_name') {
+                          _projectSortOrder = ProjectSortOrder.name;
+                        } else if (val == 'sort_proj_recent') {
+                          _projectSortOrder = ProjectSortOrder.recent;
+                        } else if (val == 'toggle_archived') {
+                          _showArchived = !_showArchived;
+                        }
                       });
                     },
+                    itemBuilder: (ctx) => [
+                      PopupMenuItem<String>(
+                        enabled: false,
+                        height: 26,
+                        child: Text(
+                          l10n.sortConversations,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white38),
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'sort_conv_recent',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(
+                              _conversationSortOrder == ConversationSortOrder.recent ? Icons.check : Icons.circle_outlined,
+                              size: 16,
+                              color: _conversationSortOrder == ConversationSortOrder.recent ? Colors.amber : Colors.white30,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(l10n.sortRecent, style: const TextStyle(fontSize: 13, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'sort_conv_name',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(
+                              _conversationSortOrder == ConversationSortOrder.name ? Icons.check : Icons.circle_outlined,
+                              size: 16,
+                              color: _conversationSortOrder == ConversationSortOrder.name ? Colors.amber : Colors.white30,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(l10n.sortName, style: const TextStyle(fontSize: 13, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(height: 8),
+                      PopupMenuItem<String>(
+                        enabled: false,
+                        height: 26,
+                        child: Text(
+                          l10n.sortProjects,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white38),
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'sort_proj_name',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(
+                              _projectSortOrder == ProjectSortOrder.name ? Icons.check : Icons.circle_outlined,
+                              size: 16,
+                              color: _projectSortOrder == ProjectSortOrder.name ? Colors.amber : Colors.white30,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(l10n.sortName, style: const TextStyle(fontSize: 13, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'sort_proj_recent',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(
+                              _projectSortOrder == ProjectSortOrder.recent ? Icons.check : Icons.circle_outlined,
+                              size: 16,
+                              color: _projectSortOrder == ProjectSortOrder.recent ? Colors.amber : Colors.white30,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(l10n.sortRecent, style: const TextStyle(fontSize: 13, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(height: 8),
+                      PopupMenuItem<String>(
+                        value: 'toggle_archived',
+                        height: 38,
+                        child: Row(
+                          children: [
+                            Icon(
+                              _showArchived ? Icons.check_box : Icons.check_box_outline_blank,
+                              size: 18,
+                              color: _showArchived ? Colors.amber : Colors.white38,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.archivedOnly,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: _showArchived ? FontWeight.bold : FontWeight.normal,
+                                color: _showArchived ? Colors.amber : Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   if (!_showArchived)
                     IconButton(
@@ -719,8 +970,9 @@ class _ChatScreenState extends State<ChatScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final projects = (snapshot.data?[0] as List<String>?) ?? ['agentsdroid'];
+        final rawProjects = (snapshot.data?[0] as List<String>?) ?? ['agentsdroid'];
         final sessions = (snapshot.data?[1] as List<ChatSessionSummary>?) ?? [];
+        final projects = List<String>.from(rawProjects);
 
         // Group sessions by project or standalone
         final projectSessions = <String, List<ChatSessionSummary>>{};
@@ -732,6 +984,33 @@ class _ChatScreenState extends State<ChatScreen> {
           } else {
             standaloneSessions.add(s);
           }
+        }
+
+        // Sort sessions within each group
+        void sortSessions(List<ChatSessionSummary> list) {
+          if (_conversationSortOrder == ConversationSortOrder.recent) {
+            list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+          } else {
+            list.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+          }
+        }
+
+        for (final list in projectSessions.values) {
+          sortSessions(list);
+        }
+        sortSessions(standaloneSessions);
+
+        // Sort projects
+        if (_projectSortOrder == ProjectSortOrder.name) {
+          projects.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+        } else {
+          projects.sort((a, b) {
+            final aSessions = projectSessions[a] ?? [];
+            final bSessions = projectSessions[b] ?? [];
+            final aTime = aSessions.isEmpty ? DateTime.fromMillisecondsSinceEpoch(0) : aSessions.first.updatedAt;
+            final bTime = bSessions.isEmpty ? DateTime.fromMillisecondsSinceEpoch(0) : bSessions.first.updatedAt;
+            return bTime.compareTo(aTime);
+          });
         }
 
         return ListView(
@@ -1241,6 +1520,368 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ConversationHistoryModal extends StatefulWidget {
+  final SessionService sessionService;
+  final String? currentSessionId;
+  final ValueChanged<String> onSelectSession;
+  final Future<void> Function(String id) onArchiveSession;
+  final Future<void> Function(String id) onUnarchiveSession;
+  final Future<void> Function(String id) onDeleteSession;
+  final String Function(DateTime dt) formatRelativeTime;
+  final AppLocalizations l10n;
+
+  const _ConversationHistoryModal({
+    required this.sessionService,
+    required this.currentSessionId,
+    required this.onSelectSession,
+    required this.onArchiveSession,
+    required this.onUnarchiveSession,
+    required this.onDeleteSession,
+    required this.formatRelativeTime,
+    required this.l10n,
+  });
+
+  @override
+  State<_ConversationHistoryModal> createState() => _ConversationHistoryModalState();
+}
+
+class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedFilter = 'all';
+  List<ChatSessionSummary> _allSessions = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSessions();
+  }
+
+  Future<void> _loadSessions() async {
+    final list = await widget.sessionService.listSessions(isArchived: null);
+    if (mounted) {
+      setState(() {
+        _allSessions = list;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _searchController.text.trim().toLowerCase();
+    final availableProjects = <String>{};
+    for (final s in _allSessions) {
+      if (s.projectName != null && s.projectName!.isNotEmpty) {
+        availableProjects.add(s.projectName!);
+      }
+    }
+
+    final filtered = _allSessions.where((s) {
+      if (_selectedFilter == 'standalone' && s.projectName != null) return false;
+      if (_selectedFilter == 'archived' && !s.isArchived) return false;
+      if (_selectedFilter != 'all' && _selectedFilter != 'standalone' && _selectedFilter != 'archived') {
+        if (s.projectName != _selectedFilter) return false;
+      }
+      if (_selectedFilter != 'archived' && s.isArchived) return false;
+
+      if (query.isNotEmpty) {
+        final titleMatches = s.title.toLowerCase().contains(query);
+        final projectMatches = s.projectName?.toLowerCase().contains(query) ?? false;
+        if (!titleMatches && !projectMatches) return false;
+      }
+      return true;
+    }).toList();
+
+    filtered.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Color(0xFF181818),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 6),
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Row(
+              children: [
+                const Icon(Icons.history_rounded, size: 22, color: Colors.white70),
+                const SizedBox(width: 10),
+                Text(
+                  widget.l10n.conversationHistory,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20, color: Colors.white60),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+
+          // Search Field
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: widget.l10n.searchConversations,
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                prefixIcon: const Icon(Icons.search, size: 18, color: Colors.white38),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 16, color: Colors.white38),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: const Color(0xFF242424),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+
+          // Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Row(
+              children: [
+                _buildFilterChip('all', widget.l10n.allConversations),
+                const SizedBox(width: 6),
+                _buildFilterChip('standalone', widget.l10n.conversations),
+                const SizedBox(width: 6),
+                for (final proj in availableProjects) ...[
+                  _buildFilterChip(proj, proj, isProject: true),
+                  const SizedBox(width: 6),
+                ],
+                _buildFilterChip('archived', widget.l10n.archivedSessions),
+              ],
+            ),
+          ),
+
+          const Divider(color: Color(0xFF262626), height: 1),
+
+          // Sessions List
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : filtered.isEmpty
+                    ? Center(
+                        child: Text(
+                          widget.l10n.noMatchingConversations,
+                          style: const TextStyle(color: Colors.white38, fontSize: 13),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 4),
+                        itemBuilder: (ctx, i) {
+                          final s = filtered[i];
+                          final isCurrent = s.id == widget.currentSessionId;
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: isCurrent ? const Color(0xFF282828) : const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isCurrent ? Colors.blueAccent.withValues(alpha: 0.5) : const Color(0xFF2C2C2C),
+                              ),
+                            ),
+                            child: ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              onTap: () => widget.onSelectSession(s.id),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      s.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                                        color: isCurrent ? Colors.white : Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    widget.formatRelativeTime(s.updatedAt),
+                                    style: const TextStyle(fontSize: 11, color: Colors.white38),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    if (s.projectName != null) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blueAccent.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          s.projectName!,
+                                          style: const TextStyle(fontSize: 10, color: Colors.blueAccent),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ] else ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white10,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          widget.l10n.conversations,
+                                          style: const TextStyle(fontSize: 10, color: Colors.white60),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                    if (s.isArchived)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          widget.l10n.archivedSessions,
+                                          style: const TextStyle(fontSize: 10, color: Colors.amber),
+                                        ),
+                                      ),
+                                    const Spacer(),
+                                    Text(
+                                      '${s.messageCount} msgs',
+                                      style: const TextStyle(fontSize: 10, color: Colors.white24),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              trailing: PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert, size: 16, color: Colors.white38),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                                color: const Color(0xFF252525),
+                                onSelected: (val) async {
+                                  if (val == 'archive') {
+                                    await widget.onArchiveSession(s.id);
+                                    await _loadSessions();
+                                  } else if (val == 'unarchive') {
+                                    await widget.onUnarchiveSession(s.id);
+                                    await _loadSessions();
+                                  } else if (val == 'delete') {
+                                    await widget.onDeleteSession(s.id);
+                                    await _loadSessions();
+                                  }
+                                },
+                                itemBuilder: (ctx) => [
+                                  if (!s.isArchived)
+                                    PopupMenuItem(
+                                      value: 'archive',
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.archive_outlined, size: 16),
+                                          const SizedBox(width: 8),
+                                          Text(widget.l10n.archive),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    PopupMenuItem(
+                                      value: 'unarchive',
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.unarchive_outlined, size: 16),
+                                          const SizedBox(width: 8),
+                                          Text(widget.l10n.unarchive),
+                                        ],
+                                      ),
+                                    ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+                                        const SizedBox(width: 8),
+                                        Text(widget.l10n.delete, style: const TextStyle(color: Colors.redAccent)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String key, String label, {bool isProject = false}) {
+    final isSelected = _selectedFilter == key;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) {
+        setState(() {
+          _selectedFilter = key;
+        });
+      },
+      avatar: isProject ? const Icon(Icons.folder_outlined, size: 14) : null,
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: isSelected ? Colors.white : Colors.white60,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      backgroundColor: const Color(0xFF222222),
+      selectedColor: const Color(0xFF333333),
+      side: BorderSide(
+        color: isSelected ? Colors.blueAccent : const Color(0xFF333333),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      visualDensity: VisualDensity.compact,
     );
   }
 }

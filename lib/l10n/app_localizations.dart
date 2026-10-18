@@ -763,6 +763,72 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'确定要恢复此会话吗？'**
   String get unarchiveSessionConfirm;
+
+  /// No description provided for @newConversation.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建对话'**
+  String get newConversation;
+
+  /// No description provided for @conversationHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话历史'**
+  String get conversationHistory;
+
+  /// No description provided for @displayOptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示设置'**
+  String get displayOptions;
+
+  /// No description provided for @sortConversations.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话排序'**
+  String get sortConversations;
+
+  /// No description provided for @sortProjects.
+  ///
+  /// In zh, this message translates to:
+  /// **'项目排序'**
+  String get sortProjects;
+
+  /// No description provided for @sortRecent.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近更新'**
+  String get sortRecent;
+
+  /// No description provided for @sortName.
+  ///
+  /// In zh, this message translates to:
+  /// **'按名称 (A-Z)'**
+  String get sortName;
+
+  /// No description provided for @archivedOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅显示归档'**
+  String get archivedOnly;
+
+  /// No description provided for @searchConversations.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索会话...'**
+  String get searchConversations;
+
+  /// No description provided for @allConversations.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部会话'**
+  String get allConversations;
+
+  /// No description provided for @noMatchingConversations.
+  ///
+  /// In zh, this message translates to:
+  /// **'未找到匹配会话'**
+  String get noMatchingConversations;
 }
 
 class _AppLocalizationsDelegate

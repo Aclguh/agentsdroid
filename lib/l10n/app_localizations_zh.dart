@@ -343,4 +343,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get unarchiveSessionConfirm => '确定要恢复此会话吗？';
+
+  @override
+  String get newConversation => '新建对话';
+
+  @override
+  String get conversationHistory => '会话历史';
+
+  @override
+  String get displayOptions => '显示设置';
+
+  @override
+  String get sortConversations => '会话排序';
+
+  @override
+  String get sortProjects => '项目排序';
+
+  @override
+  String get sortRecent => '最近更新';
+
+  @override
+  String get sortName => '按名称 (A-Z)';
+
+  @override
+  String get archivedOnly => '仅显示归档';
+
+  @override
+  String get searchConversations => '搜索会话...';
+
+  @override
+  String get allConversations => '全部会话';
+
+  @override
+  String get noMatchingConversations => '未找到匹配会话';
 }

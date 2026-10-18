@@ -110,5 +110,16 @@
   "newProjectSession": "New Project Session",
   "newStandaloneSession": "New Standalone Session",
   "archiveSessionConfirm": "Are you sure you want to archive this session?",
-  "unarchiveSessionConfirm": "Are you sure you want to restore this session?"
+  "unarchiveSessionConfirm": "Are you sure you want to restore this session?",
+  "newConversation": "New Conversation",
+  "conversationHistory": "Conversation History",
+  "displayOptions": "Display Options",
+  "sortConversations": "Sort Conversations",
+  "sortProjects": "Sort Projects",
+  "sortRecent": "Most Recent",
+  "sortName": "By Name (A-Z)",
+  "archivedOnly": "Archived Only",
+  "searchConversations": "Search conversations...",
+  "allConversations": "All Conversations",
+  "noMatchingConversations": "No matching conversations found"
 }

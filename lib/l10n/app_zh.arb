@@ -110,5 +110,16 @@
   "newProjectSession": "新建项目会话",
   "newStandaloneSession": "新建独立会话",
   "archiveSessionConfirm": "确定要归档此会话吗？",
-  "unarchiveSessionConfirm": "确定要恢复此会话吗？"
+  "unarchiveSessionConfirm": "确定要恢复此会话吗？",
+  "newConversation": "新建对话",
+  "conversationHistory": "会话历史",
+  "displayOptions": "显示设置",
+  "sortConversations": "会话排序",
+  "sortProjects": "项目排序",
+  "sortRecent": "最近更新",
+  "sortName": "按名称 (A-Z)",
+  "archivedOnly": "仅显示归档",
+  "searchConversations": "搜索会话...",
+  "allConversations": "全部会话",
+  "noMatchingConversations": "未找到匹配会话"
 }
