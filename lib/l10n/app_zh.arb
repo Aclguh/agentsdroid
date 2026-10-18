@@ -223,5 +223,20 @@
   "noProvidersConfigured": "暂无已配置的服务商",
   "noModelsInProvider": "该服务商下暂无可用模型",
   "addProviderHint": "请点击下方按钮添加服务商与模型",
-  "noActiveModelHint": "未设置生效模型，请在设置中添加并选择模型"
+  "noActiveModelHint": "未设置生效模型，请在设置中添加并选择模型",
+  "about": "关于",
+  "aboutSubtitle": "版本、包名与开源信息",
+  "versionSection": "版本信息",
+  "versionLabel": "版本号",
+  "buildLabel": "构建号",
+  "packageNameLabel": "包名",
+  "repositorySection": "开源仓库",
+  "repositoryCopied": "仓库地址已复制到剪贴板",
+  "licenseSection": "开源许可",
+  "licenseAppCode": "应用代码与设计",
+  "creditsSection": "致谢与技术基石",
+  "creditFlutter": "跨平台原生渲染框架",
+  "creditPRoot": "Android 用户态 Linux 沙箱环境",
+  "creditClaudeCode": "Anthropic 官方 Agent CLI",
+  "copyrightNotice": "AgentsDroid © 2026 Aclguh. All rights reserved."
 }

@@ -1,9 +1,22 @@
+<div align="center">
+
+<img src="docs/icon.png" width="120" alt="AgentsDroid 图标" />
+
 # AgentsDroid
 
-**简体中文** | [English](README_en.md)
+**专为 Android 设备打造的移动端开源 AI 编程 Agent 工作台。**
 
-> **AgentsDroid** 是一款专为 Android 设备打造的移动端开源 AI 编程 Agent 工作台。  
-> 让你脱离 PC 电脑，仅凭一台安卓手机即可调度 AI Agent 进行代码审查、编写、Bug 修复、Git 管理及终端命令测试 —— **免 Root 权限，零外部 App 依赖**。
+让你脱离 PC 电脑，仅凭一台安卓手机即可调度 AI Agent 进行代码审查、编写、Bug 修复、Git 管理及终端命令测试 —— 免 Root 权限，零外部 App 依赖。
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart)](https://dart.dev)
+[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)](#快速上手)
+[![Release](https://img.shields.io/github/v/release/Aclguh/agentsdroid?label=Download)](https://github.com/Aclguh/agentsdroid/releases/latest)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**简体中文** · [English](README_en.md)
+
+</div>
 
 ---
 

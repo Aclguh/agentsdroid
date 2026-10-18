@@ -1,9 +1,22 @@
+<div align="center">
+
+<img src="docs/icon.png" width="120" alt="AgentsDroid Icon" />
+
 # AgentsDroid
 
-[简体中文](README.md) | **English**
+**A mobile-first open-source AI coding agent workbench designed for Android.**
 
-> **AgentsDroid** is an open-source, mobile-first AI coding agent workbench designed for Android.  
-> Code, debug, run tests, and manage Git projects directly from your phone — **Zero Root Required, Zero External App Dependencies**.
+Code, debug, run tests, and manage Git projects directly from your phone — Zero Root Required, Zero External App Dependencies.
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart)](https://dart.dev)
+[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)](#getting-started)
+[![Release](https://img.shields.io/github/v/release/Aclguh/agentsdroid?label=Download)](https://github.com/Aclguh/agentsdroid/releases/latest)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+[简体中文](README.md) · **English**
+
+</div>
 
 ---
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/proot/proot_manager.dart';
 import '../../core/storage/key_vault.dart';
 import '../../l10n/app_localizations.dart';
+import 'about_screen.dart';
 import 'engine_settings_screen.dart';
 import 'language_settings_screen.dart';
 import 'model_settings_screen.dart';
@@ -142,6 +143,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               );
               if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryCard(
+            context: context,
+            title: l10n.about,
+            subtitle: l10n.aboutSubtitle,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AboutScreen(),
+                ),
+              );
             },
           ),
         ],

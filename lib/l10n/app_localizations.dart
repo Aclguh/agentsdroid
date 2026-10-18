@@ -1273,6 +1273,96 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未设置生效模型，请在设置中添加并选择模型'**
   String get noActiveModelHint;
+
+  /// No description provided for @about.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于'**
+  String get about;
+
+  /// No description provided for @aboutSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'版本、包名与开源信息'**
+  String get aboutSubtitle;
+
+  /// No description provided for @versionSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'版本信息'**
+  String get versionSection;
+
+  /// No description provided for @versionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'版本号'**
+  String get versionLabel;
+
+  /// No description provided for @buildLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'构建号'**
+  String get buildLabel;
+
+  /// No description provided for @packageNameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'包名'**
+  String get packageNameLabel;
+
+  /// No description provided for @repositorySection.
+  ///
+  /// In zh, this message translates to:
+  /// **'开源仓库'**
+  String get repositorySection;
+
+  /// No description provided for @repositoryCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'仓库地址已复制到剪贴板'**
+  String get repositoryCopied;
+
+  /// No description provided for @licenseSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'开源许可'**
+  String get licenseSection;
+
+  /// No description provided for @licenseAppCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用代码与设计'**
+  String get licenseAppCode;
+
+  /// No description provided for @creditsSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'致谢与技术基石'**
+  String get creditsSection;
+
+  /// No description provided for @creditFlutter.
+  ///
+  /// In zh, this message translates to:
+  /// **'跨平台原生渲染框架'**
+  String get creditFlutter;
+
+  /// No description provided for @creditPRoot.
+  ///
+  /// In zh, this message translates to:
+  /// **'Android 用户态 Linux 沙箱环境'**
+  String get creditPRoot;
+
+  /// No description provided for @creditClaudeCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'Anthropic 官方 Agent CLI'**
+  String get creditClaudeCode;
+
+  /// No description provided for @copyrightNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'AgentsDroid © 2026 Aclguh. All rights reserved.'**
+  String get copyrightNotice;
 }
 
 class _AppLocalizationsDelegate

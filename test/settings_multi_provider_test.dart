@@ -155,7 +155,7 @@ void main() {
       );
     }
 
-    testWidgets('SettingsScreen displays 5 horizontal summary cards and no detailed forms', (tester) async {
+    testWidgets('SettingsScreen displays 6 horizontal summary cards and no detailed forms', (tester) async {
       await tester.pumpWidget(
         buildTestApp(
           SettingsScreen(
@@ -166,13 +166,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify the 5 summary cards are present
-      expect(find.byType(Card), findsNWidgets(5));
+      // Verify the 6 summary cards are present
+      expect(find.byType(Card), findsNWidgets(6));
       expect(find.text('模型与服务商'), findsOneWidget);
       expect(find.text('Agent 引擎'), findsOneWidget);
       expect(find.text('执行安全策略'), findsOneWidget);
       expect(find.text('界面语言'), findsOneWidget);
       expect(find.text('嵌入式 Linux 子系统 (PRoot)'), findsOneWidget);
+      expect(find.text('关于'), findsOneWidget);
 
       // Verify no detailed input fields on the main screen
       expect(find.byType(TextField), findsNothing);

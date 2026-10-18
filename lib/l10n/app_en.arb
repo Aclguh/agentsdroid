@@ -223,5 +223,20 @@
   "noProvidersConfigured": "No Providers Configured",
   "noModelsInProvider": "No models available in this provider",
   "addProviderHint": "Please tap the button below to add a provider and models",
-  "noActiveModelHint": "No active model set. Please configure and select a model in Settings."
+  "noActiveModelHint": "No active model set. Please configure and select a model in Settings.",
+  "about": "About",
+  "aboutSubtitle": "Version, package & open-source info",
+  "versionSection": "Version Information",
+  "versionLabel": "Version",
+  "buildLabel": "Build",
+  "packageNameLabel": "Package Name",
+  "repositorySection": "Repository",
+  "repositoryCopied": "Repository URL copied to clipboard",
+  "licenseSection": "License",
+  "licenseAppCode": "App Source & Design",
+  "creditsSection": "Credits & Foundations",
+  "creditFlutter": "Cross-platform native framework",
+  "creditPRoot": "User-space Linux sandbox on Android",
+  "creditClaudeCode": "Anthropic official agent CLI",
+  "copyrightNotice": "AgentsDroid © 2026 Aclguh. All rights reserved."
 }

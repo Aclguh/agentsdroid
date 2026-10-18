@@ -606,4 +606,50 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noActiveModelHint => '未设置生效模型，请在设置中添加并选择模型';
+
+  @override
+  String get about => '关于';
+
+  @override
+  String get aboutSubtitle => '版本、包名与开源信息';
+
+  @override
+  String get versionSection => '版本信息';
+
+  @override
+  String get versionLabel => '版本号';
+
+  @override
+  String get buildLabel => '构建号';
+
+  @override
+  String get packageNameLabel => '包名';
+
+  @override
+  String get repositorySection => '开源仓库';
+
+  @override
+  String get repositoryCopied => '仓库地址已复制到剪贴板';
+
+  @override
+  String get licenseSection => '开源许可';
+
+  @override
+  String get licenseAppCode => '应用代码与设计';
+
+  @override
+  String get creditsSection => '致谢与技术基石';
+
+  @override
+  String get creditFlutter => '跨平台原生渲染框架';
+
+  @override
+  String get creditPRoot => 'Android 用户态 Linux 沙箱环境';
+
+  @override
+  String get creditClaudeCode => 'Anthropic 官方 Agent CLI';
+
+  @override
+  String get copyrightNotice =>
+      'AgentsDroid © 2026 Aclguh. All rights reserved.';
 }

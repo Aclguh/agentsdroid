@@ -630,4 +630,50 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noActiveModelHint =>
       'No active model set. Please configure and select a model in Settings.';
+
+  @override
+  String get about => 'About';
+
+  @override
+  String get aboutSubtitle => 'Version, package & open-source info';
+
+  @override
+  String get versionSection => 'Version Information';
+
+  @override
+  String get versionLabel => 'Version';
+
+  @override
+  String get buildLabel => 'Build';
+
+  @override
+  String get packageNameLabel => 'Package Name';
+
+  @override
+  String get repositorySection => 'Repository';
+
+  @override
+  String get repositoryCopied => 'Repository URL copied to clipboard';
+
+  @override
+  String get licenseSection => 'License';
+
+  @override
+  String get licenseAppCode => 'App Source & Design';
+
+  @override
+  String get creditsSection => 'Credits & Foundations';
+
+  @override
+  String get creditFlutter => 'Cross-platform native framework';
+
+  @override
+  String get creditPRoot => 'User-space Linux sandbox on Android';
+
+  @override
+  String get creditClaudeCode => 'Anthropic official agent CLI';
+
+  @override
+  String get copyrightNotice =>
+      'AgentsDroid © 2026 Aclguh. All rights reserved.';
 }
