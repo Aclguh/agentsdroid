@@ -217,5 +217,11 @@
   "configuredProviders": "Configured Providers",
   "currentActiveModel": "Active Model",
   "enterApiKeyHint": "Enter or paste API Key",
-  "confirm": "Confirm"
+  "confirm": "Confirm",
+  "pressBackAgainToExit": "Press back again to exit",
+  "noModelsConfigured": "No Models Configured",
+  "noProvidersConfigured": "No Providers Configured",
+  "noModelsInProvider": "No models available in this provider",
+  "addProviderHint": "Please tap the button below to add a provider and models",
+  "noActiveModelHint": "No active model set. Please configure and select a model in Settings."
 }

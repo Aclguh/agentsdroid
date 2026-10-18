@@ -195,8 +195,20 @@ class BuiltinAgentEngine implements AgentEngine {
 
     final providerId = _keyVault.getActiveProviderId();
     final providerConfig = _keyVault.getProvider(providerId);
+    final activeModel = _keyVault.getActiveModel();
+
+    if (providerId.isEmpty || providerConfig == null || activeModel.isEmpty) {
+      _setState(AgentState.error, 'No AI provider or model configured.');
+      _eventController.add(MessageEvent(
+        text: '⚠️ **未配置可用模型**: 请前往「设置」->「模型与服务商」添加服务商并配置生效模型。',
+        isComplete: true,
+      ));
+      _setState(AgentState.idle);
+      return;
+    }
+
     final apiKey = await _keyVault.getApiKeyForProvider(providerId);
-    final providerDisplayName = providerConfig?.name ?? _keyVault.getActiveProvider().displayName;
+    final providerDisplayName = providerConfig.name;
 
     if (apiKey == null || apiKey.isEmpty) {
       _setState(AgentState.error, 'Please configure the API Key for $providerDisplayName in Settings first.');
@@ -209,13 +221,14 @@ class BuiltinAgentEngine implements AgentEngine {
     }
 
     try {
-      final isAnthropic = (providerConfig != null && providerConfig.apiType == 'anthropic') ||
+      final isAnthropic = (providerConfig.apiType == 'anthropic') ||
           (_keyVault.getActiveProvider() == LLMProvider.anthropic);
       if (isAnthropic) {
-        await _runAnthropicLoop(prompt, apiKey, providerConfig?.baseUrl);
+        await _runAnthropicLoop(prompt, apiKey, providerConfig.baseUrl);
       } else {
-        final baseUrl = providerConfig?.baseUrl ??
-            (_keyVault.getActiveProvider() == LLMProvider.deepseek
+        final baseUrl = providerConfig.baseUrl.isNotEmpty
+            ? providerConfig.baseUrl
+            : (_keyVault.getActiveProvider() == LLMProvider.deepseek
                 ? _keyVault.getDeepseekBaseUrl()
                 : _keyVault.getCustomBaseUrl());
         await _runOpenAiCompatibleLoop(prompt, apiKey, baseUrl);

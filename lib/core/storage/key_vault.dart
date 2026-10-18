@@ -145,81 +145,22 @@ class KeyVault {
 
   // --- Predefined Default Providers ---
   static List<ModelProviderConfig> getDefaultProviders() {
-    return [
-      const ModelProviderConfig(
-        id: 'deepseek',
-        name: 'DeepSeek',
-        baseUrl: 'https://api.deepseek.com',
-        apiType: 'openai',
-        models: [
-          ModelConfig(id: 'deepseek-chat', name: 'DeepSeek Chat (V3)'),
-          ModelConfig(id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)', supportsThinking: true),
-        ],
-        isCustom: false,
-      ),
-      const ModelProviderConfig(
-        id: 'openai',
-        name: 'OpenAI',
-        baseUrl: 'https://api.openai.com/v1',
-        apiType: 'openai',
-        models: [
-          ModelConfig(id: 'gpt-4o', name: 'OpenAI GPT-4o'),
-          ModelConfig(id: 'gpt-4o-mini', name: 'OpenAI GPT-4o Mini'),
-          ModelConfig(id: 'o3-mini', name: 'OpenAI o3-mini', supportsThinking: true),
-          ModelConfig(id: 'o1', name: 'OpenAI o1', supportsThinking: true),
-        ],
-        isCustom: false,
-      ),
-      const ModelProviderConfig(
-        id: 'anthropic',
-        name: 'Anthropic',
-        baseUrl: 'https://api.anthropic.com',
-        apiType: 'anthropic',
-        models: [
-          ModelConfig(id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', supportsThinking: true),
-          ModelConfig(id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'),
-          ModelConfig(id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku'),
-        ],
-        isCustom: false,
-      ),
-      const ModelProviderConfig(
-        id: 'gemini',
-        name: 'Google Gemini',
-        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-        apiType: 'openai',
-        models: [
-          ModelConfig(id: 'gemini-2.5-flash', name: 'Google Gemini 2.5 Flash'),
-          ModelConfig(id: 'gemini-2.5-pro', name: 'Google Gemini 2.5 Pro'),
-        ],
-        isCustom: false,
-      ),
-    ];
+    return const [];
   }
 
   // --- Provider Management ---
   List<ModelProviderConfig> getProviders() {
     final raw = _prefs.getString(_prefProvidersConfigJson);
-    if (raw != null && raw.isNotEmpty) {
+    if (raw != null) {
       try {
         final list = jsonDecode(raw) as List<dynamic>;
-        final providers = list
+        return list
             .map((item) => ModelProviderConfig.fromJson(item as Map<String, dynamic>))
             .toList();
-        if (providers.isNotEmpty) {
-          return providers;
-        }
       } catch (_) {}
     }
 
-    final defaults = getDefaultProviders();
-    final customDeepseekUrl = _prefs.getString(_prefDeepseekBaseUrl);
-    if (customDeepseekUrl != null && customDeepseekUrl.isNotEmpty) {
-      final idx = defaults.indexWhere((p) => p.id == 'deepseek');
-      if (idx >= 0) {
-        defaults[idx] = defaults[idx].copyWith(baseUrl: customDeepseekUrl);
-      }
-    }
-    return defaults;
+    return List<ModelProviderConfig>.from(getDefaultProviders());
   }
 
   Future<void> saveProviders(List<ModelProviderConfig> providers) async {
@@ -228,6 +169,7 @@ class KeyVault {
   }
 
   ModelProviderConfig? getProvider(String providerId) {
+    if (providerId.isEmpty) return null;
     final providers = getProviders();
     try {
       return providers.firstWhere((p) => p.id == providerId);
@@ -258,7 +200,12 @@ class KeyVault {
         await setActiveProviderId(providers.first.id);
         if (providers.first.models.isNotEmpty) {
           await setActiveModel(providers.first.models.first.id);
+        } else {
+          await setActiveModel('');
         }
+      } else {
+        await setActiveProviderId('');
+        await setActiveModel('');
       }
     }
   }
@@ -293,12 +240,15 @@ class KeyVault {
       if (getActiveModel() == modelId) {
         if (models.isNotEmpty) {
           await setActiveModel(models.first.id);
+        } else {
+          await setActiveModel('');
         }
       }
     }
   }
 
   ModelConfig? getModel(String modelId) {
+    if (modelId.isEmpty) return null;
     for (final p in getProviders()) {
       for (final m in p.models) {
         if (m.id == modelId) return m;
@@ -383,7 +333,11 @@ class KeyVault {
 
   // --- Active Provider & Model ---
   String getActiveProviderId() {
-    return _prefs.getString(_prefActiveProvider) ?? 'deepseek';
+    final saved = _prefs.getString(_prefActiveProvider);
+    if (saved != null && saved.isNotEmpty) return saved;
+    final providers = getProviders();
+    if (providers.isNotEmpty) return providers.first.id;
+    return '';
   }
 
   Future<void> setActiveProviderId(String providerId) async {
@@ -410,7 +364,7 @@ class KeyVault {
     if (provider != null && provider.models.isNotEmpty) {
       return provider.models.first.id;
     }
-    return 'deepseek-chat';
+    return '';
   }
 
   Future<void> setActiveModel(String model) async {

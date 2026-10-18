@@ -37,6 +37,18 @@ void main() {
     prootManager = PRootManager();
     sessionService = SessionService();
     await sessionService.init(baseDir: tempDir);
+
+    const initialProvider = ModelProviderConfig(
+      id: 'deepseek',
+      name: 'DeepSeek',
+      baseUrl: 'https://api.deepseek.com',
+      models: [
+        ModelConfig(id: 'deepseek-chat', name: 'DeepSeek V3'),
+      ],
+    );
+    await keyVault.addOrUpdateProvider(initialProvider);
+    await keyVault.setActiveProviderId('deepseek');
+    await keyVault.setActiveModel('deepseek-chat');
   });
 
   tearDown(() async {
@@ -324,6 +336,75 @@ void main() {
       // Input field should NOT regain focus!
       expect(textField.focusNode?.hasFocus, isFalse);
     });
+
+    testWidgets('pill displays unconfigured model status when keyVault has no models', (tester) async {
+      await keyVault.saveProviders([]);
+      await keyVault.setActiveModel('');
+      await keyVault.setActiveProviderId('');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('zh'), Locale('en')],
+          locale: const Locale('zh'),
+          home: ChatScreen(
+            keyVault: keyVault,
+            workspace: workspace,
+            prootManager: prootManager,
+            sessionService: sessionService,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('未配置模型'), findsOneWidget);
+    });
+
+    testWidgets('back press closes drawer first if open, or shows exit reminder', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('zh'), Locale('en')],
+          locale: const Locale('zh'),
+          home: ChatScreen(
+            keyVault: keyVault,
+            workspace: workspace,
+            prootManager: prootManager,
+            sessionService: sessionService,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // 1. Press back once when drawer is closed -> shows SnackBar
+      final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
+      await widgetsAppState.didPopRoute();
+      await tester.pump();
+
+      expect(find.text('再次返回退出应用'), findsOneWidget);
+
+      // 2. Open drawer -> press back -> closes drawer instead of exiting
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+      expect(find.byType(Drawer), findsOneWidget);
+
+      await widgetsAppState.didPopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(Drawer), findsNothing);
+    });
   });
 }
+
 

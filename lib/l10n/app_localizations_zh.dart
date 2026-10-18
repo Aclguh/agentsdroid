@@ -588,4 +588,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get confirm => '确定';
+
+  @override
+  String get pressBackAgainToExit => '再次返回退出应用';
+
+  @override
+  String get noModelsConfigured => '未配置模型';
+
+  @override
+  String get noProvidersConfigured => '暂无已配置的服务商';
+
+  @override
+  String get noModelsInProvider => '该服务商下暂无可用模型';
+
+  @override
+  String get addProviderHint => '请点击下方按钮添加服务商与模型';
+
+  @override
+  String get noActiveModelHint => '未设置生效模型，请在设置中添加并选择模型';
 }

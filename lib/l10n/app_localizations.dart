@@ -1237,6 +1237,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'确定'**
   String get confirm;
+
+  /// No description provided for @pressBackAgainToExit.
+  ///
+  /// In zh, this message translates to:
+  /// **'再次返回退出应用'**
+  String get pressBackAgainToExit;
+
+  /// No description provided for @noModelsConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置模型'**
+  String get noModelsConfigured;
+
+  /// No description provided for @noProvidersConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无已配置的服务商'**
+  String get noProvidersConfigured;
+
+  /// No description provided for @noModelsInProvider.
+  ///
+  /// In zh, this message translates to:
+  /// **'该服务商下暂无可用模型'**
+  String get noModelsInProvider;
+
+  /// No description provided for @addProviderHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请点击下方按钮添加服务商与模型'**
+  String get addProviderHint;
+
+  /// No description provided for @noActiveModelHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置生效模型，请在设置中添加并选择模型'**
+  String get noActiveModelHint;
 }
 
 class _AppLocalizationsDelegate

@@ -217,5 +217,11 @@
   "configuredProviders": "已配置的服务商",
   "currentActiveModel": "当前生效模型",
   "enterApiKeyHint": "输入或粘贴 API Key",
-  "confirm": "确定"
+  "confirm": "确定",
+  "pressBackAgainToExit": "再次返回退出应用",
+  "noModelsConfigured": "未配置模型",
+  "noProvidersConfigured": "暂无已配置的服务商",
+  "noModelsInProvider": "该服务商下暂无可用模型",
+  "addProviderHint": "请点击下方按钮添加服务商与模型",
+  "noActiveModelHint": "未设置生效模型，请在设置中添加并选择模型"
 }

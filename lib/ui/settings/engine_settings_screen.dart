@@ -84,25 +84,9 @@ class _EngineSettingsScreenState extends State<EngineSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                l10n.engineBuiltin,
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'Recommended',
-                                  style: TextStyle(fontSize: 10, color: Colors.greenAccent, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            l10n.engineBuiltin,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 6),
                           Text(

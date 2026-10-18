@@ -153,6 +153,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final _inputFocusNode = FocusNode();
   final _scrollController = ScrollController();
   final _uuid = const Uuid();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  DateTime? _lastBackPressTime;
 
   AgentState _agentState = AgentState.idle;
   String? _statusMessage;
@@ -798,8 +800,35 @@ class _ChatScreenState extends State<ChatScreen> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      onDrawerChanged: (isOpen) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        if (_scaffoldKey.currentState?.isDrawerOpen == true) {
+          _scaffoldKey.currentState?.closeDrawer();
+          return;
+        }
+
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.pressBackAgainToExit),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
+        await SystemNavigator.pop();
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        onDrawerChanged: (isOpen) {
         if (isOpen) {
           _refreshTreeData();
           setState(() {});
@@ -1004,8 +1033,9 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHistoryDrawer(BuildContext context, AppLocalizations l10n, ThemeData theme) {
     return Drawer(
@@ -2012,7 +2042,8 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  String _getDisplayModelName(String model) {
+  String _getDisplayModelName(String model, AppLocalizations l10n) {
+    if (model.isEmpty) return l10n.noModelsConfigured;
     final config = widget.keyVault.getModel(model);
     if (config != null) return config.name;
     if (model.contains('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
@@ -2228,7 +2259,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    _getDisplayModelName(activeModel),
+                                    _getDisplayModelName(activeModel, l10n),
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.white70,
@@ -2413,97 +2444,108 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Flexible(
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: providers.length,
-                      itemBuilder: (c, pIdx) {
-                        final p = providers[pIdx];
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 10, bottom: 4, left: 4),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    p.name,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white54,
-                                    ),
-                                  ),
-                                  if (p.isCustom) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white10,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        l10n.customProviderTag,
-                                        style: const TextStyle(fontSize: 9, color: Colors.white60),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            ...p.models.map((m) {
-                              final isSelected = m.id == currentModel;
-                              return ListTile(
-                                dense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                title: Row(
+                  if (providers.isEmpty || providers.every((p) => p.models.isEmpty))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      child: Center(
+                        child: Text(
+                          l10n.noModelsConfigured,
+                          style: const TextStyle(fontSize: 14, color: Colors.white54),
+                        ),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: providers.length,
+                        itemBuilder: (c, pIdx) {
+                          final p = providers[pIdx];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10, bottom: 4, left: 4),
+                                child: Row(
                                   children: [
-                                    Flexible(
-                                      child: Text(
-                                        m.name,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                          color: isSelected ? Colors.white : Colors.white70,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
+                                    Text(
+                                      p.name,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white54,
                                       ),
                                     ),
-                                    if (m.supportsThinking) ...[
+                                    if (p.isCustom) ...[
                                       const SizedBox(width: 6),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                         decoration: BoxDecoration(
-                                          color: Colors.purple.withValues(alpha: 0.2),
+                                          color: Colors.white10,
                                           borderRadius: BorderRadius.circular(4),
                                         ),
-                                        child: const Text(
-                                          'Thinking',
-                                          style: TextStyle(fontSize: 9, color: Colors.purpleAccent),
+                                        child: Text(
+                                          l10n.customProviderTag,
+                                          style: const TextStyle(fontSize: 9, color: Colors.white60),
                                         ),
                                       ),
                                     ],
                                   ],
                                 ),
-                                subtitle: Text(
-                                  '${p.name} • ${m.id}',
-                                  style: const TextStyle(fontSize: 11, color: Colors.white38),
-                                ),
-                                trailing: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
-                                onTap: () async {
-                                  Navigator.pop(ctx);
-                                  await widget.keyVault.setActiveProviderId(p.id);
-                                  await widget.keyVault.setActiveModel(m.id);
-                                  if (mounted) setState(() {});
-                                },
-                              );
-                            }),
-                            const Divider(height: 12, color: Color(0xFF2A2A2A)),
-                          ],
-                        );
-                      },
+                              ),
+                              ...p.models.map((m) {
+                                final isSelected = m.id == currentModel;
+                                return ListTile(
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  title: Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          m.name,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected ? Colors.white : Colors.white70,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (m.supportsThinking) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: Colors.purple.withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'Thinking',
+                                            style: TextStyle(fontSize: 9, color: Colors.purpleAccent),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  subtitle: Text(
+                                    '${p.name} • ${m.id}',
+                                    style: const TextStyle(fontSize: 11, color: Colors.white38),
+                                  ),
+                                  trailing: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                                  onTap: () async {
+                                    Navigator.pop(ctx);
+                                    await widget.keyVault.setActiveProviderId(p.id);
+                                    await widget.keyVault.setActiveModel(m.id);
+                                    if (mounted) setState(() {});
+                                  },
+                                );
+                              }),
+                              const Divider(height: 12, color: Color(0xFF2A2A2A)),
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 6),
                   TextButton(
                     onPressed: () {
@@ -2963,7 +3005,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       borderRadius: BorderRadius.circular(16),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
-                        onTap: () => _showThinkingIntensitySheet(context, l10n),
+                        onTap: activeModel.isEmpty
+                            ? () => _showModelPickerSheet(context, l10n)
+                            : () => _showThinkingIntensitySheet(context, l10n),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                           decoration: BoxDecoration(
@@ -2978,7 +3022,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  '${_getDisplayModelName(activeModel)} ${_getThinkingShortLabel(thinkingIntensity)}',
+                                  activeModel.isEmpty
+                                      ? l10n.noModelsConfigured
+                                      : '${_getDisplayModelName(activeModel, l10n)} ${_getThinkingShortLabel(thinkingIntensity)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(

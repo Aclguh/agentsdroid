@@ -66,8 +66,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _buildSummaryCard(
             context: context,
-            icon: Icons.smart_toy_outlined,
-            iconColor: Colors.cyanAccent,
             title: l10n.modelsAndProviders,
             subtitle: '$activeProviderName • $activeModelName',
             onTap: () async {
@@ -83,8 +81,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _buildSummaryCard(
             context: context,
-            icon: Icons.bolt_outlined,
-            iconColor: Colors.amberAccent,
             title: l10n.agentEngine,
             subtitle: engineSubtitle,
             onTap: () async {
@@ -103,8 +99,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _buildSummaryCard(
             context: context,
-            icon: Icons.security_outlined,
-            iconColor: Colors.greenAccent,
             title: l10n.safetySection,
             subtitle: safetySubtitle,
             onTap: () async {
@@ -120,8 +114,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _buildSummaryCard(
             context: context,
-            icon: Icons.translate_outlined,
-            iconColor: Colors.lightBlueAccent,
             title: l10n.language,
             subtitle: langSubtitle,
             onTap: () async {
@@ -137,8 +129,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _buildSummaryCard(
             context: context,
-            icon: Icons.terminal_outlined,
-            iconColor: Colors.orangeAccent,
             title: l10n.subsystemSection,
             subtitle: subsystemSubtitle,
             onTap: () async {
@@ -161,8 +151,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSummaryCard({
     required BuildContext context,
-    required IconData icon,
-    required Color iconColor,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
@@ -185,16 +173,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

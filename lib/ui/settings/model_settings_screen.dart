@@ -455,7 +455,12 @@ class _ModelSettingsScreenState extends State<ModelSettingsScreen> {
             color: theme.colorScheme.surfaceContainerHighest,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 1.2),
+              side: BorderSide(
+                color: _activeModelId.isNotEmpty
+                    ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                width: 1.2,
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -467,7 +472,9 @@ class _ModelSettingsScreenState extends State<ModelSettingsScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
+                          color: _activeModelId.isNotEmpty
+                              ? theme.colorScheme.primary
+                              : Colors.grey.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -475,26 +482,47 @@ class _ModelSettingsScreenState extends State<ModelSettingsScreen> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onPrimary,
+                            color: _activeModelId.isNotEmpty
+                                ? theme.colorScheme.onPrimary
+                                : theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        activeProviderConfig?.name ?? _activeProviderId,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
+                      if (activeProviderConfig != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          activeProviderConfig.name,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    activeModelConfig?.name ?? _activeModelId,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    _activeModelId.isNotEmpty
+                        ? (activeModelConfig?.name ?? _activeModelId)
+                        : l10n.noModelsConfigured,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: _activeModelId.isNotEmpty ? null : theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  Text(
-                    _activeModelId,
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
+                  if (_activeModelId.isNotEmpty)
+                    Text(
+                      _activeModelId,
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        l10n.noActiveModelHint,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -527,10 +555,51 @@ class _ModelSettingsScreenState extends State<ModelSettingsScreen> {
 
           const SizedBox(height: 12),
 
-          // Provider Cards List
-          ..._providers.map((p) {
-            final isProviderActive = p.id == _activeProviderId;
-            final hasKey = _apiKeyConfiguredMap[p.id] ?? false;
+          if (_providers.isEmpty)
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.dns_outlined,
+                      size: 40,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.noProvidersConfigured,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.addProviderHint,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () => _showAddProviderDialog(context, l10n),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(l10n.addProvider),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            // Provider Cards List
+            ..._providers.map((p) {
+              final isProviderActive = p.id == _activeProviderId;
+              final hasKey = _apiKeyConfiguredMap[p.id] ?? false;
 
             return Card(
               margin: const EdgeInsets.only(bottom: 16),
@@ -609,13 +678,12 @@ class _ModelSettingsScreenState extends State<ModelSettingsScreen> {
                           visualDensity: VisualDensity.compact,
                           onPressed: () => _showEditProviderDialog(context, p, l10n),
                         ),
-                        if (p.isCustom)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                            tooltip: l10n.deleteProvider,
-                            visualDensity: VisualDensity.compact,
-                            onPressed: () => _confirmDeleteProvider(context, p, l10n),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                          tooltip: l10n.deleteProvider,
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _confirmDeleteProvider(context, p, l10n),
+                        ),
                       ],
                     ),
 
@@ -687,90 +755,102 @@ class _ModelSettingsScreenState extends State<ModelSettingsScreen> {
                     const SizedBox(height: 4),
 
                     // Models
-                    ...p.models.map((m) {
-                      final isModelActive = (p.id == _activeProviderId && m.id == _activeModelId);
-
-                      return InkWell(
-                        onTap: () => _setActiveModel(p, m),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 3),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isModelActive
-                                ? theme.colorScheme.primary.withValues(alpha: 0.12)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isModelActive
-                                  ? theme.colorScheme.primary.withValues(alpha: 0.5)
-                                  : Colors.transparent,
-                              width: 1,
-                            ),
+                    if (p.models.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: Text(
+                          l10n.noModelsInProvider,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                           ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isModelActive ? Icons.radio_button_checked : Icons.radio_button_off,
-                                size: 18,
-                                color: isModelActive ? theme.colorScheme.primary : Colors.white38,
+                        ),
+                      )
+                    else
+                      ...p.models.map((m) {
+                        final isModelActive = (p.id == _activeProviderId && m.id == _activeModelId);
+
+                        return InkWell(
+                          onTap: () => _setActiveModel(p, m),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isModelActive
+                                  ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isModelActive
+                                    ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                                    : Colors.transparent,
+                                width: 1,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            m.name,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: isModelActive ? FontWeight.bold : FontWeight.w500,
-                                              color: isModelActive ? theme.colorScheme.primary : null,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (m.supportsThinking) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                            decoration: BoxDecoration(
-                                              color: Colors.purple.withValues(alpha: 0.2),
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: const Text(
-                                              'Thinking',
-                                              style: TextStyle(fontSize: 9, color: Colors.purpleAccent),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    Text(
-                                      m.id,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                                      ),
-                                    ),
-                                  ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isModelActive ? Icons.radio_button_checked : Icons.radio_button_off,
+                                  size: 18,
+                                  color: isModelActive ? theme.colorScheme.primary : Colors.white38,
                                 ),
-                              ),
-                              if (p.models.length > 1)
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              m.name,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: isModelActive ? FontWeight.bold : FontWeight.w500,
+                                                color: isModelActive ? theme.colorScheme.primary : null,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (m.supportsThinking) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: Colors.purple.withValues(alpha: 0.2),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: const Text(
+                                                'Thinking',
+                                                style: TextStyle(fontSize: 9, color: Colors.purpleAccent),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      Text(
+                                        m.id,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 IconButton(
                                   icon: const Icon(Icons.close, size: 16),
                                   tooltip: l10n.deleteModel,
                                   visualDensity: VisualDensity.compact,
                                   onPressed: () => _confirmDeleteModel(context, p, m, l10n),
                                 ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      }),
                   ],
                 ),
               ),

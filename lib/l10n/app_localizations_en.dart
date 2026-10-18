@@ -610,4 +610,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get confirm => 'Confirm';
+
+  @override
+  String get pressBackAgainToExit => 'Press back again to exit';
+
+  @override
+  String get noModelsConfigured => 'No Models Configured';
+
+  @override
+  String get noProvidersConfigured => 'No Providers Configured';
+
+  @override
+  String get noModelsInProvider => 'No models available in this provider';
+
+  @override
+  String get addProviderHint =>
+      'Please tap the button below to add a provider and models';
+
+  @override
+  String get noActiveModelHint =>
+      'No active model set. Please configure and select a model in Settings.';
 }

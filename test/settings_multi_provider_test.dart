@@ -30,26 +30,11 @@ void main() {
   });
 
   group('KeyVault Multi-Provider and Multi-Model Tests', () {
-    test('Default providers are correctly initialized', () {
+    test('Default providers are empty by default (zero built-in)', () {
       final providers = keyVault.getProviders();
-      expect(providers.length, equals(4));
-
-      final deepseek = providers.firstWhere((p) => p.id == 'deepseek');
-      expect(deepseek.name, equals('DeepSeek'));
-      expect(deepseek.baseUrl, equals('https://api.deepseek.com'));
-      expect(deepseek.models.length, equals(2));
-      expect(deepseek.models.any((m) => m.id == 'deepseek-chat'), isTrue);
-      expect(deepseek.models.any((m) => m.id == 'deepseek-reasoner' && m.supportsThinking), isTrue);
-
-      final openai = providers.firstWhere((p) => p.id == 'openai');
-      expect(openai.models.any((m) => m.id == 'gpt-4o'), isTrue);
-      expect(openai.models.any((m) => m.id == 'o3-mini' && m.supportsThinking), isTrue);
-
-      final anthropic = providers.firstWhere((p) => p.id == 'anthropic');
-      expect(anthropic.models.any((m) => m.id == 'claude-3-7-sonnet-20250219' && m.supportsThinking), isTrue);
-
-      final gemini = providers.firstWhere((p) => p.id == 'gemini');
-      expect(gemini.models.any((m) => m.id == 'gemini-2.5-flash'), isTrue);
+      expect(providers, isEmpty);
+      expect(keyVault.getActiveProviderId(), isEmpty);
+      expect(keyVault.getActiveModel(), isEmpty);
     });
 
     test('Add custom provider and save API key', () async {
@@ -69,7 +54,7 @@ void main() {
       await keyVault.setApiKeyForProvider('custom_siliconflow', 'sk-silicon-12345');
 
       final providers = keyVault.getProviders();
-      expect(providers.length, equals(5));
+      expect(providers.length, equals(1));
 
       final retrieved = keyVault.getProvider('custom_siliconflow');
       expect(retrieved, isNotNull);
@@ -80,27 +65,44 @@ void main() {
       expect(key, equals('sk-silicon-12345'));
     });
 
-    test('Add and remove model from existing provider', () async {
-      final initialDeepseek = keyVault.getProvider('deepseek')!;
-      expect(initialDeepseek.models.length, equals(2));
-
-      const newModel = ModelConfig(
-        id: 'deepseek-coder',
-        name: 'DeepSeek Coder V2',
-        supportsThinking: false,
+    test('Add and remove model from existing provider, including the last model', () async {
+      const provider = ModelProviderConfig(
+        id: 'test_provider',
+        name: 'Test Provider',
+        baseUrl: 'https://api.test.com',
+        models: [
+          ModelConfig(id: 'model-a', name: 'Model A'),
+        ],
       );
 
-      await keyVault.addModelToProvider('deepseek', newModel);
+      await keyVault.addOrUpdateProvider(provider);
+      await keyVault.setActiveProviderId('test_provider');
+      await keyVault.setActiveModel('model-a');
 
-      final updatedDeepseek = keyVault.getProvider('deepseek')!;
-      expect(updatedDeepseek.models.length, equals(3));
-      expect(updatedDeepseek.models.any((m) => m.id == 'deepseek-coder'), isTrue);
+      expect(keyVault.getProvider('test_provider')!.models.length, equals(1));
+      expect(keyVault.getActiveModel(), equals('model-a'));
 
-      // Now remove the model
-      await keyVault.removeModelFromProvider('deepseek', 'deepseek-coder');
-      final afterRemoval = keyVault.getProvider('deepseek')!;
-      expect(afterRemoval.models.length, equals(2));
-      expect(afterRemoval.models.any((m) => m.id == 'deepseek-coder'), isFalse);
+      // Add second model
+      const newModel = ModelConfig(
+        id: 'model-b',
+        name: 'Model B',
+        supportsThinking: false,
+      );
+      await keyVault.addModelToProvider('test_provider', newModel);
+      expect(keyVault.getProvider('test_provider')!.models.length, equals(2));
+
+      // Remove model-a
+      await keyVault.removeModelFromProvider('test_provider', 'model-a');
+      final afterFirst = keyVault.getProvider('test_provider')!;
+      expect(afterFirst.models.length, equals(1));
+      expect(afterFirst.models.first.id, equals('model-b'));
+      expect(keyVault.getActiveModel(), equals('model-b'));
+
+      // Now remove the very last model (model-b)
+      await keyVault.removeModelFromProvider('test_provider', 'model-b');
+      final afterLast = keyVault.getProvider('test_provider')!;
+      expect(afterLast.models, isEmpty);
+      expect(keyVault.getActiveModel(), isEmpty);
     });
 
     test('Delete custom provider and cleanup key', () async {
@@ -125,9 +127,15 @@ void main() {
     });
 
     test('Active provider and active model switching persists correctly', () async {
-      expect(keyVault.getActiveProviderId(), equals('deepseek'));
-      expect(keyVault.getActiveModel(), equals('deepseek-chat'));
-
+      const provider = ModelProviderConfig(
+        id: 'anthropic',
+        name: 'Anthropic',
+        baseUrl: 'https://api.anthropic.com',
+        models: [
+          ModelConfig(id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet'),
+        ],
+      );
+      await keyVault.addOrUpdateProvider(provider);
       await keyVault.setActiveProviderId('anthropic');
       await keyVault.setActiveModel('claude-3-7-sonnet-20250219');
 
@@ -169,6 +177,13 @@ void main() {
       // Verify no detailed input fields on the main screen
       expect(find.byType(TextField), findsNothing);
       expect(find.byType(DropdownButtonFormField), findsNothing);
+
+      // Verify no icons on summary cards (user requested no icons)
+      expect(find.byIcon(Icons.smart_toy_outlined), findsNothing);
+      expect(find.byIcon(Icons.bolt_outlined), findsNothing);
+      expect(find.byIcon(Icons.security_outlined), findsNothing);
+      expect(find.byIcon(Icons.translate_outlined), findsNothing);
+      expect(find.byIcon(Icons.terminal_outlined), findsNothing);
     });
 
     testWidgets('Tapping Models card navigates to ModelSettingsScreen', (tester) async {
@@ -185,15 +200,28 @@ void main() {
       await tester.tap(find.text('模型与服务商'));
       await tester.pumpAndSettle();
 
-      // Now inside ModelSettingsScreen
+      // Now inside ModelSettingsScreen with zero built-in providers
       expect(find.byType(ModelSettingsScreen), findsOneWidget);
       expect(find.text('当前生效模型'), findsOneWidget);
+      expect(find.text('未配置模型'), findsOneWidget);
       expect(find.text('已配置的服务商'), findsOneWidget);
-      expect(find.text('DeepSeek'), findsWidgets);
-      expect(find.text('OpenAI'), findsWidgets);
+      expect(find.text('暂无已配置的服务商'), findsOneWidget);
     });
 
-    testWidgets('ModelSettingsScreen allows switching active model', (tester) async {
+    testWidgets('ModelSettingsScreen allows switching active model and deleting last model', (tester) async {
+      const provider = ModelProviderConfig(
+        id: 'my_provider',
+        name: 'My AI',
+        baseUrl: 'https://api.myai.com',
+        models: [
+          ModelConfig(id: 'model-1', name: 'Model 1'),
+          ModelConfig(id: 'model-2', name: 'Model 2'),
+        ],
+      );
+      await keyVault.addOrUpdateProvider(provider);
+      await keyVault.setActiveProviderId('my_provider');
+      await keyVault.setActiveModel('model-1');
+
       await tester.pumpWidget(
         buildTestApp(
           ModelSettingsScreen(keyVault: keyVault),
@@ -201,13 +229,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(keyVault.getActiveModel(), equals('deepseek-chat'));
+      expect(keyVault.getActiveModel(), equals('model-1'));
 
-      // Tap on deepseek-reasoner
-      await tester.tap(find.text('DeepSeek Reasoner (R1)'));
+      // Tap on model-2 to activate
+      await tester.tap(find.text('Model 2'));
       await tester.pumpAndSettle();
 
-      expect(keyVault.getActiveModel(), equals('deepseek-reasoner'));
+      expect(keyVault.getActiveModel(), equals('model-2'));
+
+      // Verify delete buttons exist for each model
+      expect(find.byIcon(Icons.close), findsNWidgets(2));
     });
 
     testWidgets('Tapping Engine card navigates to EngineSettingsScreen and allows switching', (tester) async {
@@ -227,6 +258,7 @@ void main() {
       expect(find.byType(EngineSettingsScreen), findsOneWidget);
       expect(find.text('内置轻量 Agent'), findsOneWidget);
       expect(find.text('官方 Claude Code CLI'), findsOneWidget);
+      expect(find.text('Recommended'), findsNothing);
 
       await tester.tap(find.text('官方 Claude Code CLI'));
       await tester.pumpAndSettle();
