@@ -41,7 +41,13 @@ class SessionService {
           final content = await entity.readAsString();
           final json = jsonDecode(content) as Map<String, dynamic>;
           final session = ChatSession.fromJson(json);
-          summaries.add(session.toSummary());
+          // Only retain sessions that have actual messages
+          if (session.messages.isNotEmpty) {
+            summaries.add(session.toSummary());
+          } else {
+            // Clean up any empty session file from disk
+            await entity.delete();
+          }
         } catch (_) {
           // Gracefully skip invalid or corrupted session files
         }
@@ -60,15 +66,28 @@ class SessionService {
     try {
       final content = await file.readAsString();
       final json = jsonDecode(content) as Map<String, dynamic>;
-      return ChatSession.fromJson(json);
+      final session = ChatSession.fromJson(json);
+      if (session.messages.isEmpty) {
+        await file.delete();
+        return null;
+      }
+      return session;
     } catch (_) {
       return null;
     }
   }
 
   Future<void> saveSession(ChatSession session) async {
-    session.updatedAt = DateTime.now();
     final file = _getSessionFile(session.id);
+    // If the session has no messages, delete it from disk if exists (do not persist empty sessions)
+    if (session.messages.isEmpty) {
+      if (await file.exists()) {
+        await file.delete();
+      }
+      return;
+    }
+
+    session.updatedAt = DateTime.now();
     final jsonString = jsonEncode(session.toJson());
     await file.writeAsString(jsonString);
   }
@@ -91,19 +110,18 @@ class SessionService {
   }
 
   Future<ChatSession> createSession({String title = '新会话'}) async {
-    final session = ChatSession(
+    // Returns a new in-memory ChatSession; will not be written to disk until it has messages
+    return ChatSession(
       id: _uuid.v4(),
       title: title,
     );
-    await saveSession(session);
-    return session;
   }
 
   Future<ChatSession> getOrCreateLatestSession({String defaultTitle = '新会话'}) async {
     final list = await listSessions();
     if (list.isNotEmpty) {
       final latest = await getSession(list.first.id);
-      if (latest != null) return latest;
+      if (latest != null && latest.messages.isNotEmpty) return latest;
     }
     return await createSession(title: defaultTitle);
   }

@@ -21,10 +21,13 @@ void main() {
       }
     });
 
-    test('creates, saves, loads and lists sessions', () async {
+    test('creates, saves, loads and lists sessions with messages', () async {
       final session = await sessionService.createSession(title: '测试会话 1');
       expect(session.id, isNotEmpty);
       expect(session.title, equals('测试会话 1'));
+
+      // Empty session is not listed in history
+      expect(await sessionService.listSessions(), isEmpty);
 
       // Add messages to session
       final toolCall = ToolCallEvent(
@@ -48,7 +51,7 @@ void main() {
       session.messages.add(msg);
       await sessionService.saveSession(session);
 
-      // List sessions
+      // List sessions now includes it
       final list = await sessionService.listSessions();
       expect(list.length, equals(1));
       expect(list.first.id, equals(session.id));
@@ -68,7 +71,12 @@ void main() {
 
     test('renames and deletes sessions', () async {
       final s1 = await sessionService.createSession(title: '会话 A');
+      s1.messages.add(ChatMessage(id: 'm1', role: MessageRole.user, content: 'msg 1'));
+      await sessionService.saveSession(s1);
+
       final s2 = await sessionService.createSession(title: '会话 B');
+      s2.messages.add(ChatMessage(id: 'm2', role: MessageRole.user, content: 'msg 2'));
+      await sessionService.saveSession(s2);
 
       var list = await sessionService.listSessions();
       expect(list.length, equals(2));
@@ -88,10 +96,25 @@ void main() {
       expect(deleted, isNull);
     });
 
-    test('getOrCreateLatestSession returns latest or creates default', () async {
-      // First call: creates new
+    test('empty sessions are not retained in history or disk', () async {
+      final emptySession = await sessionService.createSession(title: '空对话');
+      // Calling saveSession on empty session will not persist or will delete file
+      await sessionService.saveSession(emptySession);
+
+      final list = await sessionService.listSessions();
+      expect(list, isEmpty);
+      expect(await sessionService.getSession(emptySession.id), isNull);
+    });
+
+    test('getOrCreateLatestSession returns latest with messages or creates default', () async {
+      // First call when no sessions exist with messages
       final s1 = await sessionService.getOrCreateLatestSession(defaultTitle: '首个会话');
       expect(s1.title, equals('首个会话'));
+      expect(s1.messages, isEmpty);
+
+      // Add message and save s1
+      s1.messages.add(ChatMessage(id: 'm1', role: MessageRole.user, content: 'test'));
+      await sessionService.saveSession(s1);
 
       // Second call: returns existing latest
       final s2 = await sessionService.getOrCreateLatestSession(defaultTitle: '新默认会话');

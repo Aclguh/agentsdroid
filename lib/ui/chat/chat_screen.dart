@@ -76,18 +76,23 @@ class _ChatScreenState extends State<ChatScreen> {
     if (widget.sessionService == null) {
       await _sessionService.init();
     }
-    _currentSession = await _sessionService.getOrCreateLatestSession();
+    // Requirement: Always start with a fresh new conversation on app open
+    _currentSession = await _sessionService.createSession(title: '新会话');
     if (mounted) {
       setState(() {
         _messages.clear();
-        _messages.addAll(_currentSession!.messages);
+        _currentAssistantMessage = null;
       });
-      _scrollToBottom();
     }
   }
 
   void _persistCurrentSession() {
     if (_currentSession == null) return;
+    // Requirement: Do not retain conversations with no messages in history
+    if (_messages.isEmpty) {
+      _sessionService.deleteSession(_currentSession!.id);
+      return;
+    }
     _currentSession!.messages.clear();
     _currentSession!.messages.addAll(_messages);
     _sessionService.saveSession(_currentSession!);
