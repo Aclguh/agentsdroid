@@ -387,19 +387,6 @@ class _ChatScreenState extends State<ChatScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  _coordinator.currentEngineType == AgentEngineType.builtin
-                      ? l10n.engineBuiltinShort
-                      : l10n.engineClaudeCodeShort,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: _coordinator.currentEngineType == AgentEngineType.builtin
-                        ? Colors.blueAccent
-                        : Colors.amber,
-                  ),
-                ),
-                const SizedBox(width: 4),
                 Flexible(
                   child: Text(
                     activeModel,
@@ -435,23 +422,6 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () => _handleNewSession(l10n),
           ),
           IconButton(
-            icon: const Icon(Icons.folder_outlined),
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-            tooltip: l10n.workspaceFiles,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WorkspaceExplorerScreen(
-                    workspace: widget.workspace,
-                    prootManager: widget.prootManager,
-                  ),
-                ),
-              );
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.terminal_outlined),
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -466,24 +436,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-            tooltip: l10n.settings,
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    keyVault: widget.keyVault,
-                    prootManager: widget.prootManager,
-                  ),
-                ),
-              );
-              if (mounted) setState(() {});
             },
           ),
         ],
