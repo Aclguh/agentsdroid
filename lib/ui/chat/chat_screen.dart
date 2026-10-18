@@ -997,7 +997,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             // App Name Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
               child: Row(
                 children: [
                   Text(
@@ -1013,9 +1013,12 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
 
+            const Divider(color: Color(0xFF262626), height: 1),
+            const SizedBox(height: 10),
+
             // Top Action Buttons (Matching reference UI)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
               child: Column(
                 children: [
                   // + New Conversation Button
@@ -1523,48 +1526,58 @@ class _ChatScreenState extends State<ChatScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: () {
-            setState(() {
-              if (isExpanded) {
-                _expandedProjects.remove(projectName);
-              } else {
-                _expandedProjects.add(projectName);
-              }
-            });
-            widget.keyVault.setExpandedProjects(_expandedProjects);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            child: Row(
-              children: [
-                Icon(
-                  isExpanded ? Icons.folder_open_outlined : Icons.folder_outlined,
-                  size: 16,
-                  color: Colors.white70,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    projectName,
-                    style: const TextStyle(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 0.5),
+          child: Container(
+            height: 26,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(5),
+              onTap: () {
+                setState(() {
+                  if (isExpanded) {
+                    _expandedProjects.remove(projectName);
+                  } else {
+                    _expandedProjects.add(projectName);
+                  }
+                });
+                widget.keyVault.setExpandedProjects(_expandedProjects);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Row(
+                  children: [
+                    Icon(
+                      isExpanded ? Icons.folder_open_outlined : Icons.folder_outlined,
+                      size: 15,
                       color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        projectName,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12.5,
+                          height: 1.1,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add, size: 15, color: Colors.white38),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                      tooltip: l10n.newProjectSession,
+                      onPressed: () => _handleNewSession(l10n, projectName: projectName),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add, size: 16, color: Colors.white38),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                  tooltip: l10n.newProjectSession,
-                  onPressed: () => _handleNewSession(l10n, projectName: projectName),
-                ),
-              ],
+              ),
             ),
           ),
         ),
