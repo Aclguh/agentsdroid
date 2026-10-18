@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/agent/engine_coordinator.dart';
+import '../../core/notification/foreground_service_manager.dart';
 import '../../core/proot/proot_manager.dart';
 import '../../core/storage/key_vault.dart';
 import '../../core/storage/workspace_service.dart';
@@ -35,7 +36,9 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   late final EngineCoordinator _coordinator;
+  late final ForegroundServiceManager _foregroundManager;
   StreamSubscription<AgentEvent>? _subscription;
+  StreamSubscription<AgentEvent>? _foregroundSubscription;
 
   final List<ChatMessage> _messages = [];
   final _textController = TextEditingController();
@@ -54,6 +57,8 @@ class _ChatScreenState extends State<ChatScreen> {
       workspace: widget.workspace,
       prootManager: widget.prootManager,
     );
+    _foregroundManager = ForegroundServiceManager();
+    _foregroundSubscription = _foregroundManager.bindAgentEvents(_coordinator.eventStream);
     _listenToEngineEvents();
   }
 
@@ -146,6 +151,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _foregroundSubscription?.cancel();
+    _foregroundManager.dispose();
     _subscription?.cancel();
     _coordinator.dispose();
     _textController.dispose();
@@ -244,7 +251,10 @@ class _ChatScreenState extends State<ChatScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => WorkspaceExplorerScreen(workspace: widget.workspace),
+                  builder: (context) => WorkspaceExplorerScreen(
+                    workspace: widget.workspace,
+                    prootManager: widget.prootManager,
+                  ),
                 ),
               );
             },

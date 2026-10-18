@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/agent_event.dart';
 
 class DiffViewerScreen extends StatelessWidget {
@@ -9,6 +11,7 @@ class DiffViewerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final additions = diff.diffLines.where((l) => l.type == DiffLineType.added).length;
     final deletions = diff.diffLines.where((l) => l.type == DiffLineType.removed).length;
 
@@ -29,6 +32,18 @@ class DiffViewerScreen extends StatelessWidget {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy),
+            tooltip: l10n.copyContent,
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: diff.newContent));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.copiedToClipboard)),
+              );
+            },
+          ),
+        ],
       ),
       body: Container(
         color: const Color(0xFF1E1E1E), // Classic IDE editor dark

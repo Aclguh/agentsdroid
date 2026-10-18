@@ -67,5 +67,22 @@
   "engineNotReady": "引擎环境尚未就绪",
   "goToSubsystemTerminal": "前往子系统终端",
   "goToSettings": "前往设置",
-  "cancel": "取消"
+  "cancel": "取消",
+  "exportZip": "导出 Zip 压缩包",
+  "exportingZip": "正在压缩并导出工作区...",
+  "zipExported": "工作区已成功导出为 Zip 压缩包！",
+  "cloneGit": "克隆 Git 仓库",
+  "cloneGitHint": "输入 Git 仓库 URL (如 https://github.com/...)",
+  "cloning": "正在克隆代码仓库...",
+  "cloneSuccess": "Git 仓库克隆成功！",
+  "cloneFailed": "Git 仓库克隆失败",
+  "newFile": "新建文件",
+  "newFolder": "新建文件夹",
+  "fileNameHint": "输入文件名 (如 utils.py)",
+  "folderNameHint": "输入文件夹名",
+  "deleteConfirm": "确认删除",
+  "deleteConfirmMsg": "确认要删除该项吗？此操作无法撤销。",
+  "delete": "删除",
+  "copyContent": "复制修改后内容",
+  "copiedToClipboard": "已复制到剪贴板"
 }

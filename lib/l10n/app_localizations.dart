@@ -505,6 +505,108 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'取消'**
   String get cancel;
+
+  /// No description provided for @exportZip.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出 Zip 压缩包'**
+  String get exportZip;
+
+  /// No description provided for @exportingZip.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在压缩并导出工作区...'**
+  String get exportingZip;
+
+  /// No description provided for @zipExported.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作区已成功导出为 Zip 压缩包！'**
+  String get zipExported;
+
+  /// No description provided for @cloneGit.
+  ///
+  /// In zh, this message translates to:
+  /// **'克隆 Git 仓库'**
+  String get cloneGit;
+
+  /// No description provided for @cloneGitHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入 Git 仓库 URL (如 https://github.com/...)'**
+  String get cloneGitHint;
+
+  /// No description provided for @cloning.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在克隆代码仓库...'**
+  String get cloning;
+
+  /// No description provided for @cloneSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Git 仓库克隆成功！'**
+  String get cloneSuccess;
+
+  /// No description provided for @cloneFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Git 仓库克隆失败'**
+  String get cloneFailed;
+
+  /// No description provided for @newFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建文件'**
+  String get newFile;
+
+  /// No description provided for @newFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建文件夹'**
+  String get newFolder;
+
+  /// No description provided for @fileNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入文件名 (如 utils.py)'**
+  String get fileNameHint;
+
+  /// No description provided for @folderNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入文件夹名'**
+  String get folderNameHint;
+
+  /// No description provided for @deleteConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认删除'**
+  String get deleteConfirm;
+
+  /// No description provided for @deleteConfirmMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认要删除该项吗？此操作无法撤销。'**
+  String get deleteConfirmMsg;
+
+  /// No description provided for @delete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get delete;
+
+  /// No description provided for @copyContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制修改后内容'**
+  String get copyContent;
+
+  /// No description provided for @copiedToClipboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制到剪贴板'**
+  String get copiedToClipboard;
 }
 
 class _AppLocalizationsDelegate

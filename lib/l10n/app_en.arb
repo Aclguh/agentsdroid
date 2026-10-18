@@ -67,5 +67,22 @@
   "engineNotReady": "Engine Environment Not Ready",
   "goToSubsystemTerminal": "Go to Subsystem Console",
   "goToSettings": "Go to Settings",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "exportZip": "Export Zip Archive",
+  "exportingZip": "Archiving & exporting workspace...",
+  "zipExported": "Workspace successfully exported as Zip archive!",
+  "cloneGit": "Clone Git Repository",
+  "cloneGitHint": "Enter Git repo URL (e.g. https://github.com/...)",
+  "cloning": "Cloning repository...",
+  "cloneSuccess": "Repository cloned successfully!",
+  "cloneFailed": "Failed to clone repository",
+  "newFile": "New File",
+  "newFolder": "New Folder",
+  "fileNameHint": "Enter file name (e.g. utils.py)",
+  "folderNameHint": "Enter folder name",
+  "deleteConfirm": "Confirm Delete",
+  "deleteConfirmMsg": "Are you sure you want to delete this item? This cannot be undone.",
+  "delete": "Delete",
+  "copyContent": "Copy Modified Content",
+  "copiedToClipboard": "Copied to clipboard"
 }

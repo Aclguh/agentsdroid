@@ -10,14 +10,18 @@
 ## Highlights
 
 - **Zero Root Required**: Runs in standard Android user-space with no root privileges and no need to install secondary apps like Termux.
-- **Dual Agent Engine**:
+- **Dual Agent Engine Coordination**:
   - **Built-in Native Dart Agent**: Instant startup, direct integration with Anthropic Claude, DeepSeek, Google Gemini, OpenAI, or custom OpenAI-compatible endpoints.
-  - **Embedded PRoot Linux Subsystem**: Runs standard Debian-arm64 rootfs directly inside the app sandbox, enabling official `npm install -g @anthropic-ai/claude-code`, `aider`, and standard Node.js/Python/Git.
+  - **Official Claude Code CLI Adapter**: Runs official `@anthropic-ai/claude-code` and Node.js directly inside the embedded Debian PRoot sandbox.
+- **Intelligent ANSI Stream Parser**:
+  - Automatically cleans terminal ANSI escape sequences and extracts thoughts, tool commands, unified diffs, and file edits.
+  - **Interactive Confirmation Interception**: Seamlessly captures `[y/n]` CLI prompts and presents them as native approval cards, feeding response back to stdin.
 - **Unified Native GUI**:
-  - Structured chat with interactive **Tool Approval Cards** (`Approve`, `Always Allow`, `Reject`).
+  - Structured chat with interactive **Tool Approval Cards** (`Approve`, `Reject`).
   - Expandable **Reasoning / Thought Cards**.
-  - Built-in **Diff Review Screen** with color-coded additions/deletions.
-  - **Workspace File Explorer** to inspect project code on touch devices.
+  - Built-in **Diff Review Screen** with color-coded line numbers and one-click code copy.
+  - **Workspace File Explorer**: Create files/folders, clone external Git repositories, and export workspace as a Zip archive.
+- **Android Foreground Persistence & WakeLock**: Coordinates partial CPU wake locks and foreground notifications to prevent system throttling during long tasks.
 - **Internationalization (i18n)**: Out-of-the-box support for Simplified Chinese and English with in-app language switching.
 - **Secure Key Vault**: API keys encrypted via Android Hardware Keystore (`flutter_secure_storage`).
 - **Smart Safety Control**:
@@ -33,19 +37,22 @@
 agentsdroid/
 ├── lib/
 │   ├── core/
-│   │   ├── agent/             # Abstract AgentEngine interface & event contracts
-│   │   ├── builtin/           # BuiltinAgentEngine (LLM tool calling loop, Diff generation)
+│   │   ├── agent/             # Abstract AgentEngine interface & EngineCoordinator
+│   │   ├── builtin/           # BuiltinAgentEngine (LLM tool loop, Diff generation)
+│   │   ├── cli/               # ClaudeCodeAdapter & AnsiStreamParser (CLI stream to native cards)
+│   │   ├── notification/      # ForegroundServiceManager (Foreground notifications & WakeLock)
 │   │   ├── proot/             # PRootManager (Debian-arm64 download, unpack & sandbox exec)
-│   │   └── storage/           # KeyVault (Keystore encryption) & WorkspaceService (POSIX storage)
+│   │   └── storage/           # KeyVault (Keystore encryption) & WorkspaceService (Zip & Git)
 │   ├── l10n/                  # AppLocalizations & ARB translation files (zh, en)
 │   ├── models/                # AgentEvent, ToolCallEvent, DiffEvent, ChatMessage
 │   ├── ui/
-│   │   ├── chat/              # Main Workbench: Chat bubbles, ThoughtCard, ToolApprovalCard
-│   │   ├── diff/              # Native DiffViewerScreen
-│   │   ├── explorer/          # WorkspaceExplorerScreen (file tree & viewer)
-│   │   └── settings/          # Provider & Model Settings, Language Switcher, YOLO switch
+│   │   ├── chat/              # Main Workbench: Chat bubbles, engine switch chip, ThoughtCard, ToolApprovalCard
+│   │   ├── diff/              # Native DiffViewerScreen with code copy
+│   │   ├── explorer/          # WorkspaceExplorerScreen (file tree, Zip export, Git clone)
+│   │   ├── settings/          # Provider & Model Settings, Language Switcher, YOLO switch
+│   │   └── terminal/          # SubsystemTerminalScreen (Debian console & toolchain status)
 │   └── main.dart              # App initialization & dark theme
-└── android/                   # Android native manifest & permissions
+└── android/                   # Android native manifest, permissions & foreground service
 ```
 
 ---

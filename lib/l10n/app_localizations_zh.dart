@@ -214,4 +214,55 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cancel => '取消';
+
+  @override
+  String get exportZip => '导出 Zip 压缩包';
+
+  @override
+  String get exportingZip => '正在压缩并导出工作区...';
+
+  @override
+  String get zipExported => '工作区已成功导出为 Zip 压缩包！';
+
+  @override
+  String get cloneGit => '克隆 Git 仓库';
+
+  @override
+  String get cloneGitHint => '输入 Git 仓库 URL (如 https://github.com/...)';
+
+  @override
+  String get cloning => '正在克隆代码仓库...';
+
+  @override
+  String get cloneSuccess => 'Git 仓库克隆成功！';
+
+  @override
+  String get cloneFailed => 'Git 仓库克隆失败';
+
+  @override
+  String get newFile => '新建文件';
+
+  @override
+  String get newFolder => '新建文件夹';
+
+  @override
+  String get fileNameHint => '输入文件名 (如 utils.py)';
+
+  @override
+  String get folderNameHint => '输入文件夹名';
+
+  @override
+  String get deleteConfirm => '确认删除';
+
+  @override
+  String get deleteConfirmMsg => '确认要删除该项吗？此操作无法撤销。';
+
+  @override
+  String get delete => '删除';
+
+  @override
+  String get copyContent => '复制修改后内容';
+
+  @override
+  String get copiedToClipboard => '已复制到剪贴板';
 }

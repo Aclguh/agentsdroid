@@ -1,13 +1,15 @@
 import 'dart:io';
+import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../../models/agent_event.dart';
+import '../proot/proot_manager.dart';
 
 class WorkspaceService {
   Directory? _workspaceDir;
 
-  Future<void> init() async {
-    final appDir = await getApplicationDocumentsDirectory();
+  Future<void> init({Directory? baseDir}) async {
+    final appDir = baseDir ?? await getApplicationDocumentsDirectory();
     _workspaceDir = Directory(p.join(appDir.path, 'workspace', 'default_project'));
     if (!await _workspaceDir!.exists()) {
       await _workspaceDir!.create(recursive: true);
@@ -122,10 +124,94 @@ class WorkspaceService {
     );
   }
 
+  Future<void> createDirectory(String relativePath) async {
+    final dir = Directory(resolvePath(relativePath));
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+  }
+
+  /// Exports the workspace files as a .zip archive into app cache or external downloads
+  Future<File> exportWorkspaceZip({String? customTargetDir, bool includeGit = false}) async {
+    final targetDirectory = customTargetDir != null
+        ? Directory(customTargetDir)
+        : await getTemporaryDirectory();
+
+    if (!await targetDirectory.exists()) {
+      await targetDirectory.create(recursive: true);
+    }
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final zipFile = File(p.join(targetDirectory.path, 'workspace_export_$timestamp.zip'));
+
+    final archive = Archive();
+    final entities = workspaceDir.listSync(recursive: true);
+
+    for (final entity in entities) {
+      if (entity is File) {
+        final relPath = p.relative(entity.path, from: workspacePath);
+        if (!includeGit && (relPath.startsWith('.git') || relPath.contains('/.git'))) {
+          continue;
+        }
+        final bytes = await entity.readAsBytes();
+        archive.addFile(ArchiveFile(relPath, bytes.length, bytes));
+      }
+    }
+
+    final encoder = ZipEncoder();
+    final zipBytes = encoder.encode(archive);
+    await zipFile.writeAsBytes(zipBytes);
+    return zipFile;
+  }
+
+  /// Clone external Git repository into workspace using subsystem git or dart shell
+  Future<ProcessResult> cloneGitRepository(String repoUrl, PRootManager prootManager) async {
+    final isInstalled = await prootManager.isInstalled();
+    if (!isInstalled) {
+      throw StateError('Linux Subsystem is required to clone git repositories.');
+    }
+
+    // Clone directly into /workspace
+    return await prootManager.runCommand(
+      'git clone $repoUrl .',
+      workingDir: '/workspace',
+    );
+  }
+
+  /// Get current Git branch and status
+  Future<String> getGitStatus(PRootManager prootManager) async {
+    if (!await prootManager.isInstalled()) {
+      return 'Subsystem not installed';
+    }
+    final gitDir = Directory(p.join(workspacePath, '.git'));
+    if (!await gitDir.exists()) {
+      return 'Not a Git repository';
+    }
+
+    try {
+      final res = await prootManager.runCommand('git status -s', workingDir: '/workspace');
+      return res.stdout.toString().trim();
+    } catch (e) {
+      return 'Git error: $e';
+    }
+  }
+
+  /// Commit changes via subsystem Git
+  Future<ProcessResult> gitCommit(String message, PRootManager prootManager) async {
+    if (!await prootManager.isInstalled()) {
+      throw StateError('Linux Subsystem is required for git commit.');
+    }
+    final sanitizedMsg = message.replaceAll('"', '\\"');
+    return await prootManager.runCommand(
+      'git add . && git commit -m "$sanitizedMsg"',
+      workingDir: '/workspace',
+    );
+  }
+
   Future<void> _createSampleProject() async {
     final readme = File(p.join(workspacePath, 'README.md'));
     if (!await readme.exists()) {
-      await readme.writeAsString('''# Welcome to AgentsDroid! 🚀
+      await readme.writeAsString('''# Welcome to AgentsDroid!
 
 This is your mobile coding workspace running entirely on Android.
 

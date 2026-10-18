@@ -1,13 +1,20 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
+import '../../core/proot/proot_manager.dart';
 import '../../core/storage/workspace_service.dart';
 import '../../l10n/app_localizations.dart';
 
 class WorkspaceExplorerScreen extends StatefulWidget {
   final WorkspaceService workspace;
+  final PRootManager? prootManager;
 
-  const WorkspaceExplorerScreen({super.key, required this.workspace});
+  const WorkspaceExplorerScreen({
+    super.key,
+    required this.workspace,
+    this.prootManager,
+  });
 
   @override
   State<WorkspaceExplorerScreen> createState() => _WorkspaceExplorerScreenState();
@@ -16,11 +23,24 @@ class WorkspaceExplorerScreen extends StatefulWidget {
 class _WorkspaceExplorerScreenState extends State<WorkspaceExplorerScreen> {
   List<FileSystemEntity> _files = [];
   bool _loading = true;
+  String? _gitStatus;
 
   @override
   void initState() {
     super.initState();
     _loadFiles();
+    _checkGitStatus();
+  }
+
+  Future<void> _checkGitStatus() async {
+    if (widget.prootManager != null) {
+      final status = await widget.workspace.getGitStatus(widget.prootManager!);
+      if (mounted) {
+        setState(() {
+          _gitStatus = status;
+        });
+      }
+    }
   }
 
   Future<void> _loadFiles() async {
@@ -31,9 +51,192 @@ class _WorkspaceExplorerScreenState extends State<WorkspaceExplorerScreen> {
         _files = list;
         _loading = false;
       });
+      _checkGitStatus();
     } catch (_) {
       setState(() => _loading = false);
     }
+  }
+
+  Future<void> _exportZip() async {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.exportingZip)),
+    );
+
+    try {
+      final zip = await widget.workspace.exportWorkspaceZip();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${l10n.zipExported}\n${zip.path}'),
+          action: SnackBarAction(
+            label: l10n.copyContent,
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: zip.path));
+            },
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导出失败: $e')),
+      );
+    }
+  }
+
+  Future<void> _showCloneDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController();
+
+    if (widget.prootManager == null || !await widget.prootManager!.isInstalled()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.notInstalledWarning)),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text(l10n.cloneGit),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: l10n.cloneGitHint,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final url = controller.text.trim();
+              if (url.isEmpty) return;
+              Navigator.pop(ctx);
+              _performGitClone(url);
+            },
+            child: Text(l10n.cloneGit),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performGitClone(String url) async {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.cloning)),
+    );
+
+    try {
+      final res = await widget.workspace.cloneGitRepository(url, widget.prootManager!);
+      if (!mounted) return;
+      if (res.exitCode == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.cloneSuccess)),
+        );
+        _loadFiles();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.cloneFailed}: ${res.stderr}')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.cloneFailed}: $e')),
+      );
+    }
+  }
+
+  Future<void> _showCreateDialog({required bool isDirectory}) async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text(isDirectory ? l10n.newFolder : l10n.newFile),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: isDirectory ? l10n.folderNameHint : l10n.fileNameHint,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(ctx);
+
+              if (isDirectory) {
+                await widget.workspace.createDirectory(name);
+              } else {
+                await widget.workspace.writeFile(name, '');
+              }
+              _loadFiles();
+            },
+            child: Text(l10n.approve),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(FileSystemEntity entity) async {
+    final l10n = AppLocalizations.of(context)!;
+    final name = p.basename(entity.path);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text(l10n.deleteConfirm),
+        content: Text('${l10n.deleteConfirmMsg}\n($name)'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                if (entity is Directory) {
+                  await entity.delete(recursive: true);
+                } else {
+                  await entity.delete();
+                }
+                _loadFiles();
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('删除失败: $e')),
+                );
+              }
+            },
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -43,8 +246,41 @@ class _WorkspaceExplorerScreenState extends State<WorkspaceExplorerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.workspaceFiles),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.workspaceFiles, style: const TextStyle(fontSize: 16)),
+            if (_gitStatus != null && _gitStatus!.isNotEmpty && _gitStatus != 'Not a Git repository')
+              Text(
+                'Git: ${_gitStatus!.replaceAll('\n', ', ')}',
+                style: const TextStyle(fontSize: 11, color: Colors.greenAccent, fontFamily: 'monospace'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.archive_outlined),
+            onPressed: _exportZip,
+            tooltip: l10n.exportZip,
+          ),
+          IconButton(
+            icon: const Icon(Icons.download_for_offline_outlined),
+            onPressed: _showCloneDialog,
+            tooltip: l10n.cloneGit,
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.add),
+            onSelected: (val) {
+              if (val == 'file') _showCreateDialog(isDirectory: false);
+              if (val == 'folder') _showCreateDialog(isDirectory: true);
+            },
+            itemBuilder: (ctx) => [
+              PopupMenuItem(value: 'file', child: Text(l10n.newFile)),
+              PopupMenuItem(value: 'folder', child: Text(l10n.newFolder)),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadFiles,
@@ -62,6 +298,12 @@ class _WorkspaceExplorerScreenState extends State<WorkspaceExplorerScreen> {
                       Icon(Icons.folder_open, size: 48, color: theme.colorScheme.onSurfaceVariant),
                       const SizedBox(height: 12),
                       Text(l10n.noFilesInWorkspace, style: theme.textTheme.bodyMedium),
+                      const SizedBox(height: 16),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _showCreateDialog(isDirectory: false),
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.newFile),
+                      ),
                     ],
                   ),
                 )
@@ -78,12 +320,23 @@ class _WorkspaceExplorerScreenState extends State<WorkspaceExplorerScreen> {
                         color: isDir ? Colors.amber : theme.colorScheme.primary,
                       ),
                       title: Text(name, style: const TextStyle(fontFamily: 'monospace', fontSize: 14)),
-                      trailing: isDir ? const Icon(Icons.chevron_right, size: 18) : null,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isDir) const Icon(Icons.chevron_right, size: 18),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.white38),
+                            onPressed: () => _confirmDelete(entity),
+                            tooltip: l10n.delete,
+                          ),
+                        ],
+                      ),
                       onTap: () {
                         if (!isDir) {
                           _openFileViewer(name);
                         }
                       },
+                      onLongPress: () => _confirmDelete(entity),
                     );
                   },
                 ),
@@ -144,6 +397,15 @@ class _WorkspaceExplorerScreenState extends State<WorkspaceExplorerScreen> {
                           ),
                         ),
                         const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: content));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('已复制文件内容到剪贴板')),
+                            );
+                          },
+                        ),
                         IconButton(
                           icon: const Icon(Icons.close, color: Colors.white70),
                           onPressed: () => Navigator.pop(context),

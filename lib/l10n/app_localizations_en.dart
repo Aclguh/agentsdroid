@@ -221,4 +221,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancel => 'Cancel';
+
+  @override
+  String get exportZip => 'Export Zip Archive';
+
+  @override
+  String get exportingZip => 'Archiving & exporting workspace...';
+
+  @override
+  String get zipExported => 'Workspace successfully exported as Zip archive!';
+
+  @override
+  String get cloneGit => 'Clone Git Repository';
+
+  @override
+  String get cloneGitHint => 'Enter Git repo URL (e.g. https://github.com/...)';
+
+  @override
+  String get cloning => 'Cloning repository...';
+
+  @override
+  String get cloneSuccess => 'Repository cloned successfully!';
+
+  @override
+  String get cloneFailed => 'Failed to clone repository';
+
+  @override
+  String get newFile => 'New File';
+
+  @override
+  String get newFolder => 'New Folder';
+
+  @override
+  String get fileNameHint => 'Enter file name (e.g. utils.py)';
+
+  @override
+  String get folderNameHint => 'Enter folder name';
+
+  @override
+  String get deleteConfirm => 'Confirm Delete';
+
+  @override
+  String get deleteConfirmMsg =>
+      'Are you sure you want to delete this item? This cannot be undone.';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get copyContent => 'Copy Modified Content';
+
+  @override
+  String get copiedToClipboard => 'Copied to clipboard';
 }
