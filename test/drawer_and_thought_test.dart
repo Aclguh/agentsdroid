@@ -290,5 +290,69 @@ void main() {
       final archived = await sessionService.listSessions(isArchived: true);
       expect(archived.any((s) => s.id == sessionId), isTrue);
     });
+
+    testWidgets('creating a new session in a project immediately displays in drawer without manual switching', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await workspace.createProject('AppFeature');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('zh'), Locale('en')],
+          locale: const Locale('zh'),
+          home: ChatScreen(
+            keyVault: keyVault,
+            workspace: workspace,
+            prootManager: prootManager,
+            sessionService: sessionService,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Open drawer
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      // AppFeature should be listed
+      expect(find.text('AppFeature'), findsOneWidget);
+
+      // Find the '+' button on AppFeature folder tile and tap it
+      final appFeatureRow = find.ancestor(
+        of: find.text('AppFeature'),
+        matching: find.byType(Row),
+      ).first;
+      final addSessionBtn = find.descendant(
+        of: appFeatureRow,
+        matching: find.byIcon(Icons.add),
+      );
+      expect(addSessionBtn, findsOneWidget);
+      await tester.tap(addSessionBtn);
+      await tester.pumpAndSettle();
+
+      // The drawer closes and top bar should show AppFeature as project
+      expect(find.text('AppFeature'), findsOneWidget);
+
+      // Open drawer again
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      // AppFeature should be expanded and the newly created session (title '新会话') should be immediately visible in the drawer!
+      expect(keyVault.getExpandedProjects().contains('AppFeature'), isTrue);
+      final drawerFinder = find.byType(Drawer);
+      expect(
+        find.descendant(of: drawerFinder, matching: find.text('新会话')),
+        findsOneWidget,
+      );
+    });
   });
 }

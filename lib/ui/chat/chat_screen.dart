@@ -313,11 +313,13 @@ class _ChatScreenState extends State<ChatScreen> {
           if (event.isComplete) {
             _currentAssistantMessage!.isStreaming = false;
             _persistCurrentSession();
+            _refreshTreeData();
           }
         } else if (event is DiffEvent) {
           if (_currentAssistantMessage != null) {
             _currentAssistantMessage!.blocks.add(DiffBlock(event));
             _persistCurrentSession();
+            _refreshTreeData();
           }
         }
       });
@@ -362,10 +364,12 @@ class _ChatScreenState extends State<ChatScreen> {
       if (_currentSession!.title == '新会话' ||
           _currentSession!.title == 'New Chat' ||
           _currentSession!.title == 'Untitled Session' ||
+          _currentSession!.title == '无标题会话' ||
           _currentSession!.title.isEmpty) {
         _currentSession!.title = text.length > 25 ? '${text.substring(0, 25)}...' : text;
       }
       _persistCurrentSession();
+      _refreshTreeData();
     }
 
     _scrollToBottom();
@@ -388,6 +392,11 @@ class _ChatScreenState extends State<ChatScreen> {
         : null;
     await widget.workspace.switchProject(actualProject);
 
+    if (actualProject != null) {
+      _expandedProjects.add(actualProject);
+      widget.keyVault.setExpandedProjects(_expandedProjects);
+    }
+
     final defaultTitle = l10n.sessionUntitled;
     final newSession = await _sessionService.createSession(
       title: defaultTitle,
@@ -395,11 +404,11 @@ class _ChatScreenState extends State<ChatScreen> {
     );
     if (!mounted) return;
 
-    _refreshTreeData();
     setState(() {
       _currentSession = newSession;
       _messages.clear();
       _currentAssistantMessage = null;
+      _refreshTreeData();
     });
 
     if (Navigator.of(context).canPop()) {
@@ -685,6 +694,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           if (_currentSession != null) {
                             _currentSession!.projectName = proj;
                             await _sessionService.saveSession(_currentSession!);
+                            _expandedProjects.add(proj);
+                            widget.keyVault.setExpandedProjects(_expandedProjects);
                           }
                           _refreshTreeData();
                           if (mounted) setState(() {});
@@ -746,6 +757,7 @@ class _ChatScreenState extends State<ChatScreen> {
         return _ConversationHistoryModal(
           sessionService: _sessionService,
           currentSessionId: _currentSession?.id,
+          currentSessionSummary: _currentSession?.toSummary(),
           onSelectSession: (id) {
             Navigator.pop(ctx);
             Navigator.pop(context); // close drawer
@@ -787,7 +799,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       onDrawerChanged: (isOpen) {
-        if (!isOpen) {
+        if (isOpen) {
+          _refreshTreeData();
+          setState(() {});
+        } else {
           _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
           FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
           FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
@@ -804,6 +819,8 @@ class _ChatScreenState extends State<ChatScreen> {
               _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
               FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
               FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+              _refreshTreeData();
+              setState(() {});
               Scaffold.of(ctx).openDrawer();
             },
           ),
@@ -1339,7 +1356,19 @@ class _ChatScreenState extends State<ChatScreen> {
         }
 
         final rawProjects = (snapshot.data?[0] as List<String>?) ?? [];
-        final sessions = (snapshot.data?[1] as List<ChatSessionSummary>?) ?? [];
+        final rawSessions = (snapshot.data?[1] as List<ChatSessionSummary>?) ?? [];
+        final sessions = List<ChatSessionSummary>.from(rawSessions);
+
+        // Ensure active current session is immediately displayed under its project (or standalone)
+        if (_currentSession != null && !_currentSession!.isArchived) {
+          final index = sessions.indexWhere((s) => s.id == _currentSession!.id);
+          if (index >= 0) {
+            sessions[index] = _currentSession!.toSummary();
+          } else {
+            sessions.add(_currentSession!.toSummary());
+          }
+        }
+
         final projects = List<String>.from(rawProjects)
           ..removeWhere((p) => p == WorkspaceService.defaultProjectName);
 
@@ -2933,6 +2962,7 @@ class _ChatScreenState extends State<ChatScreen> {
 class _ConversationHistoryModal extends StatefulWidget {
   final SessionService sessionService;
   final String? currentSessionId;
+  final ChatSessionSummary? currentSessionSummary;
   final ValueChanged<String> onSelectSession;
   final Future<void> Function(String id) onArchiveSession;
   final Future<void> Function(String id) onUnarchiveSession;
@@ -2943,6 +2973,7 @@ class _ConversationHistoryModal extends StatefulWidget {
   const _ConversationHistoryModal({
     required this.sessionService,
     required this.currentSessionId,
+    this.currentSessionSummary,
     required this.onSelectSession,
     required this.onArchiveSession,
     required this.onUnarchiveSession,
@@ -2969,6 +3000,14 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
 
   Future<void> _loadSessions() async {
     final list = await widget.sessionService.listSessions(isArchived: null);
+    if (widget.currentSessionSummary != null && !widget.currentSessionSummary!.isArchived) {
+      final idx = list.indexWhere((s) => s.id == widget.currentSessionSummary!.id);
+      if (idx >= 0) {
+        list[idx] = widget.currentSessionSummary!;
+      } else {
+        list.insert(0, widget.currentSessionSummary!);
+      }
+    }
     if (mounted) {
       setState(() {
         _allSessions = list;
