@@ -164,4 +164,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
+
+  @override
+  String get subsystemTerminal => 'Subsystem Terminal';
+
+  @override
+  String get terminalTitle => 'Linux Subsystem Console';
+
+  @override
+  String get toolchainStatus => 'Toolchains Status';
+
+  @override
+  String get runCommand => 'Run Command';
+
+  @override
+  String get quickCommands => 'Quick Commands';
+
+  @override
+  String get commandHint => 'Enter Linux command (e.g. node -v, git status)...';
+
+  @override
+  String get notInstalledWarning =>
+      'Linux Subsystem is not installed yet. Please install it in Settings.';
+
+  @override
+  String get clearLog => 'Clear';
 }

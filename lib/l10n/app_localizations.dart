@@ -397,6 +397,54 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'关闭'**
   String get close;
+
+  /// No description provided for @subsystemTerminal.
+  ///
+  /// In zh, this message translates to:
+  /// **'子系统终端'**
+  String get subsystemTerminal;
+
+  /// No description provided for @terminalTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Linux 子系统控制台'**
+  String get terminalTitle;
+
+  /// No description provided for @toolchainStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'开发工具链状态'**
+  String get toolchainStatus;
+
+  /// No description provided for @runCommand.
+  ///
+  /// In zh, this message translates to:
+  /// **'运行指令'**
+  String get runCommand;
+
+  /// No description provided for @quickCommands.
+  ///
+  /// In zh, this message translates to:
+  /// **'常用指令'**
+  String get quickCommands;
+
+  /// No description provided for @commandHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入 Linux 命令 (如 node -v, git status)...'**
+  String get commandHint;
+
+  /// No description provided for @notInstalledWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'Linux 子系统尚未安装，请前往「设置」进行安装'**
+  String get notInstalledWarning;
+
+  /// No description provided for @clearLog.
+  ///
+  /// In zh, this message translates to:
+  /// **'清屏'**
+  String get clearLog;
 }
 
 class _AppLocalizationsDelegate

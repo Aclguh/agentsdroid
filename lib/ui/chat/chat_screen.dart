@@ -13,6 +13,7 @@ import '../../models/chat_message.dart';
 import '../diff/diff_viewer_screen.dart';
 import '../explorer/workspace_explorer_screen.dart';
 import '../settings/settings_screen.dart';
+import '../terminal/subsystem_terminal_screen.dart';
 import 'widgets/thought_card.dart';
 import 'widgets/tool_approval_card.dart';
 
@@ -48,7 +49,11 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _engine = BuiltinAgentEngine(widget.keyVault, widget.workspace);
+    _engine = BuiltinAgentEngine(
+      widget.keyVault,
+      widget.workspace,
+      prootManager: widget.prootManager,
+    );
     _listenToEngineEvents();
   }
 
@@ -199,6 +204,21 @@ class _ChatScreenState extends State<ChatScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => WorkspaceExplorerScreen(workspace: widget.workspace),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.terminal_outlined),
+            tooltip: l10n.subsystemTerminal,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SubsystemTerminalScreen(
+                    prootManager: widget.prootManager,
+                    keyVault: widget.keyVault,
+                  ),
                 ),
               );
             },

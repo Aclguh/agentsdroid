@@ -46,6 +46,7 @@ dependencies:
   flutter_highlight: ^0.7.0
   flutter_localizations:
     sdk: flutter
+  archive: ^4.5.2
 
 dev_dependencies:
   flutter_test:

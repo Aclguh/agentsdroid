@@ -49,5 +49,13 @@
   "diffGenerated": "Diff generated",
   "noFilesInWorkspace": "No files in workspace yet.",
   "refresh": "Refresh",
-  "close": "Close"
+  "close": "Close",
+  "subsystemTerminal": "Subsystem Terminal",
+  "terminalTitle": "Linux Subsystem Console",
+  "toolchainStatus": "Toolchains Status",
+  "runCommand": "Run Command",
+  "quickCommands": "Quick Commands",
+  "commandHint": "Enter Linux command (e.g. node -v, git status)...",
+  "notInstalledWarning": "Linux Subsystem is not installed yet. Please install it in Settings.",
+  "clearLog": "Clear"
 }

@@ -159,4 +159,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get close => '关闭';
+
+  @override
+  String get subsystemTerminal => '子系统终端';
+
+  @override
+  String get terminalTitle => 'Linux 子系统控制台';
+
+  @override
+  String get toolchainStatus => '开发工具链状态';
+
+  @override
+  String get runCommand => '运行指令';
+
+  @override
+  String get quickCommands => '常用指令';
+
+  @override
+  String get commandHint => '输入 Linux 命令 (如 node -v, git status)...';
+
+  @override
+  String get notInstalledWarning => 'Linux 子系统尚未安装，请前往「设置」进行安装';
+
+  @override
+  String get clearLog => '清屏';
 }

@@ -5,12 +5,14 @@ import 'package:http/http.dart' as http;
 
 import '../../models/agent_event.dart';
 import '../agent/agent_engine.dart';
+import '../proot/proot_manager.dart';
 import '../storage/key_vault.dart';
 import '../storage/workspace_service.dart';
 
 class BuiltinAgentEngine implements AgentEngine {
   final KeyVault _keyVault;
   final WorkspaceService _workspace;
+  final PRootManager? prootManager;
 
   final _eventController = StreamController<AgentEvent>.broadcast();
   @override
@@ -28,7 +30,7 @@ class BuiltinAgentEngine implements AgentEngine {
   final List<Map<String, dynamic>> _openaiHistory = [];
   final List<Map<String, dynamic>> _anthropicHistory = [];
 
-  BuiltinAgentEngine(this._keyVault, this._workspace);
+  BuiltinAgentEngine(this._keyVault, this._workspace, {this.prootManager});
 
   void _setState(AgentState state, [String? message]) {
     _currentState = state;
@@ -402,14 +404,35 @@ class BuiltinAgentEngine implements AgentEngine {
         }
         return matches;
       case 'run_command':
-        // Safe command runner in workspace
+        // Execute in PRoot Linux sandbox if installed, otherwise local process
         final cmd = args['command'] as String;
-        final res = await Process.run('sh', ['-c', cmd], workingDirectory: _workspace.workspacePath);
-        return {
-          'exitCode': res.exitCode,
-          'stdout': res.stdout,
-          'stderr': res.stderr,
-        };
+        final pm = prootManager;
+        if (pm != null && await pm.isInstalled()) {
+          final env = await _keyVault.exportEnvironmentVariables();
+          final res = await pm.runCommand(
+            cmd,
+            workingDir: '/workspace',
+            environment: env,
+          );
+          return {
+            'exitCode': res.exitCode,
+            'stdout': res.stdout.toString(),
+            'stderr': res.stderr.toString(),
+            'sandbox': 'proot-debian',
+          };
+        } else {
+          final res = await Process.run(
+            'sh',
+            ['-c', cmd],
+            workingDirectory: _workspace.workspacePath,
+          );
+          return {
+            'exitCode': res.exitCode,
+            'stdout': res.stdout.toString(),
+            'stderr': res.stderr.toString(),
+            'sandbox': 'host',
+          };
+        }
       default:
         throw UnimplementedError('Unknown tool: $toolName');
     }

@@ -49,5 +49,13 @@
   "diffGenerated": "代码变更已生成",
   "noFilesInWorkspace": "工作区暂无文件",
   "refresh": "刷新",
-  "close": "关闭"
+  "close": "关闭",
+  "subsystemTerminal": "子系统终端",
+  "terminalTitle": "Linux 子系统控制台",
+  "toolchainStatus": "开发工具链状态",
+  "runCommand": "运行指令",
+  "quickCommands": "常用指令",
+  "commandHint": "输入 Linux 命令 (如 node -v, git status)...",
+  "notInstalledWarning": "Linux 子系统尚未安装，请前往「设置」进行安装",
+  "clearLog": "清屏"
 }

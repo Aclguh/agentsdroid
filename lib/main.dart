@@ -17,7 +17,7 @@ void main() async {
     await workspaceService.init();
 
     final prootManager = PRootManager();
-    await prootManager.init();
+    await prootManager.init(workspacePath: workspaceService.workspacePath);
 
     runApp(
       ProviderScope(
