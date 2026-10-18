@@ -72,42 +72,56 @@ class _ChatScreenState extends State<ChatScreen> {
           _statusMessage = event.message;
         } else if (event is ThoughtEvent) {
           if (_currentAssistantMessage != null) {
-            _currentAssistantMessage!.thought = event.thought;
-          }
-        } else if (event is MessageEvent) {
-          if (_currentAssistantMessage == null) {
-            _currentAssistantMessage = ChatMessage(
-              id: _uuid.v4(),
-              role: MessageRole.assistant,
-              content: event.text,
-            );
-            _messages.add(_currentAssistantMessage!);
-          } else {
-            _currentAssistantMessage!.content += (event.text.isNotEmpty ? '\n\n${event.text}' : '');
-          }
-          if (event.isComplete) {
-            _currentAssistantMessage!.isStreaming = false;
+            final lastThought = _currentAssistantMessage!.blocks.whereType<ThoughtBlock>().lastOrNull;
+            if (lastThought != null) {
+              lastThought.thought = event.thought;
+            } else {
+              _currentAssistantMessage!.blocks.add(ThoughtBlock(event.thought));
+            }
           }
         } else if (event is ToolCallEvent) {
           if (_currentAssistantMessage == null) {
             _currentAssistantMessage = ChatMessage(
               id: _uuid.v4(),
               role: MessageRole.assistant,
-              content: '',
             );
             _messages.add(_currentAssistantMessage!);
           }
 
-          final existingIdx = _currentAssistantMessage!.toolCalls
-              .indexWhere((tc) => tc.toolCallId == event.toolCallId);
-          if (existingIdx != -1) {
-            _currentAssistantMessage!.toolCalls[existingIdx] = event;
+          final existingBlock = _currentAssistantMessage!.blocks
+              .whereType<ToolCallBlock>()
+              .where((b) => b.toolCall.toolCallId == event.toolCallId)
+              .firstOrNull;
+
+          if (existingBlock != null) {
+            existingBlock.toolCall = event;
           } else {
-            _currentAssistantMessage!.toolCalls.add(event);
+            // Add tool call at the exact sequential point in time
+            _currentAssistantMessage!.blocks.add(ToolCallBlock(event));
+          }
+        } else if (event is MessageEvent) {
+          if (_currentAssistantMessage == null) {
+            _currentAssistantMessage = ChatMessage(
+              id: _uuid.v4(),
+              role: MessageRole.assistant,
+            );
+            _messages.add(_currentAssistantMessage!);
+          }
+
+          // If the last block is already a TextBlock, append to it; otherwise start a new TextBlock
+          if (_currentAssistantMessage!.blocks.isNotEmpty && _currentAssistantMessage!.blocks.last is TextBlock) {
+            final lastBlock = _currentAssistantMessage!.blocks.last as TextBlock;
+            lastBlock.text += (event.text.isNotEmpty ? '\n\n${event.text}' : '');
+          } else if (event.text.isNotEmpty) {
+            _currentAssistantMessage!.blocks.add(TextBlock(event.text));
+          }
+
+          if (event.isComplete) {
+            _currentAssistantMessage!.isStreaming = false;
           }
         } else if (event is DiffEvent) {
           if (_currentAssistantMessage != null) {
-            _currentAssistantMessage!.diffs.add(event);
+            _currentAssistantMessage!.blocks.add(DiffBlock(event));
           }
         }
       });
@@ -169,97 +183,55 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 12,
-        title: Row(
+        titleSpacing: 16,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.smart_toy_outlined, color: Colors.blueAccent, size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l10n.appTitle,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            Text(
+              l10n.appTitle,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _coordinator.currentEngineType == AgentEngineType.builtin
+                      ? l10n.engineBuiltinShort
+                      : l10n.engineClaudeCodeShort,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _coordinator.currentEngineType == AgentEngineType.builtin
+                        ? Colors.blueAccent
+                        : Colors.amber,
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      InkWell(
-                        onTap: () => _showEngineSwitchDialog(l10n),
-                        borderRadius: BorderRadius.circular(4),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: _coordinator.currentEngineType == AgentEngineType.builtin
-                                ? Colors.blueAccent.withValues(alpha: 0.15)
-                                : Colors.amber.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: _coordinator.currentEngineType == AgentEngineType.builtin
-                                  ? Colors.blueAccent.withValues(alpha: 0.4)
-                                  : Colors.amber.withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _coordinator.currentEngineType == AgentEngineType.builtin
-                                    ? Icons.flash_on
-                                    : Icons.terminal,
-                                size: 10,
-                                color: _coordinator.currentEngineType == AgentEngineType.builtin
-                                    ? Colors.blueAccent
-                                    : Colors.amber,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                _coordinator.currentEngineType == AgentEngineType.builtin
-                                    ? l10n.engineBuiltinShort
-                                    : l10n.engineClaudeCodeShort,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: _coordinator.currentEngineType == AgentEngineType.builtin
-                                      ? Colors.blueAccent
-                                      : Colors.amber,
-                                ),
-                              ),
-                              const Icon(Icons.arrow_drop_down, size: 12, color: Colors.white70),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          activeModel,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isYolo) ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          child: const Text('YOLO', style: TextStyle(fontSize: 8, color: Colors.amber, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ],
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    activeModel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (isYolo) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text('YOLO', style: TextStyle(fontSize: 9, color: Colors.amber, fontWeight: FontWeight.bold)),
                   ),
                 ],
-              ),
+              ],
             ),
           ],
         ),
@@ -486,73 +458,72 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Reasoning thought card
-            if (msg.thought != null && msg.thought!.isNotEmpty)
-              ThoughtCard(thought: msg.thought!, isStreaming: msg.isStreaming),
+            for (final block in msg.blocks) ...[
+              if (block is ThoughtBlock && block.thought.isNotEmpty)
+                ThoughtCard(thought: block.thought, isStreaming: msg.isStreaming),
 
-            // Content text
-            if (msg.content.trim().isNotEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(14),
+              if (block is ToolCallBlock)
+                ToolApprovalCard(
+                  toolCall: block.toolCall,
+                  onApprove: () => _coordinator.respondApproval(block.toolCall.toolCallId, true),
+                  onReject: () => _coordinator.respondApproval(block.toolCall.toolCallId, false),
+                  onViewDiff: msg.diffs.isNotEmpty
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DiffViewerScreen(diff: msg.diffs.last),
+                            ),
+                          );
+                        }
+                      : null,
                 ),
-                child: MarkdownBody(
-                  data: msg.content,
-                  selectable: true,
-                  styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                    p: const TextStyle(fontSize: 14, height: 1.45),
-                    code: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                    codeblockDecoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E),
-                      borderRadius: BorderRadius.circular(8),
+
+              if (block is TextBlock && block.text.trim().isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: MarkdownBody(
+                    data: block.text,
+                    selectable: true,
+                    styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                      p: const TextStyle(fontSize: 14, height: 1.45),
+                      code: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      codeblockDecoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-            // Tool Approval Cards
-            for (final tool in msg.toolCalls)
-              ToolApprovalCard(
-                toolCall: tool,
-                onApprove: () => _coordinator.respondApproval(tool.toolCallId, true),
-                onReject: () => _coordinator.respondApproval(tool.toolCallId, false),
-                onViewDiff: msg.diffs.isNotEmpty
-                    ? () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DiffViewerScreen(diff: msg.diffs.last),
-                          ),
-                        );
-                      }
-                    : null,
-              ),
-
-            // Diff Cards (if any diffs generated)
-            for (final diff in msg.diffs)
-              Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                color: const Color(0xFF1E1E1E),
-                child: ListTile(
-                  leading: const Icon(Icons.difference_outlined, color: Colors.greenAccent),
-                  title: Text(diff.filePath, style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 13)),
-                  subtitle: Text(
-                    '${l10n.diffGenerated} (${diff.diffLines.length} lines)',
-                    style: const TextStyle(color: Colors.white60, fontSize: 11),
+              if (block is DiffBlock)
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  color: const Color(0xFF1E1E1E),
+                  child: ListTile(
+                    leading: const Icon(Icons.difference_outlined, color: Colors.greenAccent),
+                    title: Text(block.diff.filePath, style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 13)),
+                    subtitle: Text(
+                      '${l10n.diffGenerated} (${block.diff.diffLines.length} lines)',
+                      style: const TextStyle(color: Colors.white60, fontSize: 11),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DiffViewerScreen(diff: block.diff),
+                        ),
+                      );
+                    },
                   ),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DiffViewerScreen(diff: diff),
-                      ),
-                    );
-                  },
                 ),
-              ),
+            ],
           ],
         ),
       ),
@@ -603,115 +574,6 @@ class _ChatScreenState extends State<ChatScreen> {
               backgroundColor: isWorking ? Colors.redAccent : theme.colorScheme.primary,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showEngineSwitchDialog(AppLocalizations l10n) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.engineSwitchTitle,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.flash_on, color: Colors.blueAccent),
-                  title: Text(l10n.engineBuiltin, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(l10n.engineBuiltinDesc, style: const TextStyle(fontSize: 12)),
-                  trailing: _coordinator.currentEngineType == AgentEngineType.builtin
-                      ? const Icon(Icons.check, color: Colors.blueAccent)
-                      : null,
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _coordinator.switchEngine(AgentEngineType.builtin);
-                    setState(() {});
-                  },
-                ),
-                const Divider(color: Color(0xFF2A2A2A)),
-                ListTile(
-                  leading: const Icon(Icons.terminal, color: Colors.amber),
-                  title: Text(l10n.engineClaudeCode, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(l10n.engineClaudeCodeDesc, style: const TextStyle(fontSize: 12)),
-                  trailing: _coordinator.currentEngineType == AgentEngineType.claudeCode
-                      ? const Icon(Icons.check, color: Colors.amber)
-                      : null,
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final readiness = await _coordinator.checkEngineReadiness(AgentEngineType.claudeCode);
-                    if (!readiness.isReady) {
-                      _showEngineNotReadyDialog(l10n, readiness);
-                    } else {
-                      await _coordinator.switchEngine(AgentEngineType.claudeCode);
-                      setState(() {});
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showEngineNotReadyDialog(AppLocalizations l10n, EngineCheckResult readiness) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: Text(readiness.issueTitle ?? l10n.engineNotReady),
-        content: Text(readiness.issueDetail ?? ''),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-          if (readiness.issueTitle?.contains('Linux') == true || readiness.issueTitle?.contains('Node') == true)
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SubsystemTerminalScreen(
-                      prootManager: widget.prootManager,
-                      keyVault: widget.keyVault,
-                    ),
-                  ),
-                );
-              },
-              child: Text(l10n.goToSubsystemTerminal),
-            )
-          else
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsScreen(
-                      keyVault: widget.keyVault,
-                      prootManager: widget.prootManager,
-                    ),
-                  ),
-                );
-              },
-              child: Text(l10n.goToSettings),
-            ),
         ],
       ),
     );

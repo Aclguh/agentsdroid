@@ -25,6 +25,32 @@ void main() {
     expect(message.toolCalls.first.status, equals(ToolCallStatus.pending));
   });
 
+  test('ChatMessage sequential blocks preserve order', () {
+    final msg = ChatMessage(id: 'msg_seq', role: MessageRole.assistant);
+    msg.blocks.add(ThoughtBlock('Thinking step 1...'));
+    msg.blocks.add(TextBlock('I will now inspect the directory.'));
+    msg.blocks.add(ToolCallBlock(ToolCallEvent(
+      toolCallId: 'call_1',
+      toolName: 'list_directory',
+      arguments: {'path': '.'},
+      status: ToolCallStatus.approved,
+    )));
+    msg.blocks.add(TextBlock('The directory contains main.dart.'));
+
+    expect(msg.blocks.length, equals(4));
+    expect(msg.blocks[0], isA<ThoughtBlock>());
+    expect(msg.blocks[1], isA<TextBlock>());
+    expect(msg.blocks[2], isA<ToolCallBlock>());
+    expect(msg.blocks[3], isA<TextBlock>());
+
+    expect((msg.blocks[0] as ThoughtBlock).thought, equals('Thinking step 1...'));
+    expect((msg.blocks[1] as TextBlock).text, equals('I will now inspect the directory.'));
+    expect((msg.blocks[2] as ToolCallBlock).toolCall.toolName, equals('list_directory'));
+    expect((msg.blocks[3] as TextBlock).text, equals('The directory contains main.dart.'));
+    expect(msg.content, contains('I will now inspect the directory.'));
+    expect(msg.content, contains('The directory contains main.dart.'));
+  });
+
   test('DiffEvent model test', () {
     final diff = DiffEvent(
       filePath: 'main.py',
