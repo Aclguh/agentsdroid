@@ -180,6 +180,17 @@ class ClaudeCodeAdapter implements AgentEngine {
   }
 
   @override
+  void resetSession() {
+    if (_activeProcess != null) {
+      try {
+        _activeProcess!.kill(ProcessSignal.sigint);
+      } catch (_) {}
+    }
+    _cleanupActiveSession();
+    _updateState(AgentState.idle);
+  }
+
+  @override
   Future<void> dispose() async {
     await interrupt();
     await _cleanupActiveSession();

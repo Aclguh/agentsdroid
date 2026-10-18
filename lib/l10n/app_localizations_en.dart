@@ -279,4 +279,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get chatHistory => 'Chat History';
+
+  @override
+  String get newChat => 'New Chat';
+
+  @override
+  String get noHistorySessions => 'No conversation history';
+
+  @override
+  String get deleteSession => 'Delete Session';
+
+  @override
+  String get deleteSessionConfirm =>
+      'Are you sure you want to delete this session?';
+
+  @override
+  String get renameSession => 'Rename Session';
+
+  @override
+  String get sessionTitleHint => 'Enter session title';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get sessionUntitled => 'New Chat';
 }

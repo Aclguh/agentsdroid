@@ -90,6 +90,30 @@ class ToolCallEvent extends AgentEvent {
       timestamp: timestamp,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'toolCallId': toolCallId,
+    'toolName': toolName,
+    'arguments': arguments,
+    'status': status.name,
+    'autoApproved': autoApproved,
+    'result': result,
+    'errorMessage': errorMessage,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory ToolCallEvent.fromJson(Map<String, dynamic> json) => ToolCallEvent(
+    toolCallId: json['toolCallId'] as String,
+    toolName: json['toolName'] as String,
+    arguments: (json['arguments'] as Map<String, dynamic>?) ?? {},
+    status: ToolCallStatus.values.byName(json['status'] as String? ?? 'pending'),
+    autoApproved: json['autoApproved'] as bool? ?? false,
+    result: json['result'],
+    errorMessage: json['errorMessage'] as String?,
+    timestamp: json['timestamp'] != null
+        ? DateTime.tryParse(json['timestamp'] as String)
+        : null,
+  );
 }
 
 class DiffEvent extends AgentEvent {
@@ -105,6 +129,27 @@ class DiffEvent extends AgentEvent {
     required this.diffLines,
     super.timestamp,
   });
+
+  Map<String, dynamic> toJson() => {
+    'filePath': filePath,
+    'originalContent': originalContent,
+    'newContent': newContent,
+    'diffLines': diffLines.map((e) => e.toJson()).toList(),
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory DiffEvent.fromJson(Map<String, dynamic> json) => DiffEvent(
+    filePath: json['filePath'] as String,
+    originalContent: json['originalContent'] as String? ?? '',
+    newContent: json['newContent'] as String? ?? '',
+    diffLines: (json['diffLines'] as List<dynamic>?)
+            ?.map((e) => DiffLine.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+    timestamp: json['timestamp'] != null
+        ? DateTime.tryParse(json['timestamp'] as String)
+        : null,
+  );
 }
 
 enum DiffLineType { unchanged, added, removed }
@@ -121,4 +166,18 @@ class DiffLine {
     this.oldLineNumber,
     this.newLineNumber,
   });
+
+  Map<String, dynamic> toJson() => {
+    'type': type.name,
+    'text': text,
+    'oldLineNumber': oldLineNumber,
+    'newLineNumber': newLineNumber,
+  };
+
+  factory DiffLine.fromJson(Map<String, dynamic> json) => DiffLine(
+    type: DiffLineType.values.byName(json['type'] as String),
+    text: json['text'] as String,
+    oldLineNumber: json['oldLineNumber'] as int?,
+    newLineNumber: json['newLineNumber'] as int?,
+  );
 }

@@ -86,5 +86,14 @@
   "deleteConfirmMsg": "确认要删除该项吗？此操作无法撤销。",
   "delete": "删除",
   "copyContent": "复制修改后内容",
-  "copiedToClipboard": "已复制到剪贴板"
+  "copiedToClipboard": "已复制到剪贴板",
+  "chatHistory": "历史会话",
+  "newChat": "新建会话",
+  "noHistorySessions": "暂无历史会话",
+  "deleteSession": "删除会话",
+  "deleteSessionConfirm": "确定要删除此会话记录吗？",
+  "renameSession": "重命名会话",
+  "sessionTitleHint": "输入会话标题",
+  "save": "保存",
+  "sessionUntitled": "新会话"
 }

@@ -271,4 +271,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get copiedToClipboard => '已复制到剪贴板';
+
+  @override
+  String get chatHistory => '历史会话';
+
+  @override
+  String get newChat => '新建会话';
+
+  @override
+  String get noHistorySessions => '暂无历史会话';
+
+  @override
+  String get deleteSession => '删除会话';
+
+  @override
+  String get deleteSessionConfirm => '确定要删除此会话记录吗？';
+
+  @override
+  String get renameSession => '重命名会话';
+
+  @override
+  String get sessionTitleHint => '输入会话标题';
+
+  @override
+  String get save => '保存';
+
+  @override
+  String get sessionUntitled => '新会话';
 }

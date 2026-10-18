@@ -457,6 +457,18 @@ class BuiltinAgentEngine implements AgentEngine {
   }
 
   @override
+  void resetSession() {
+    _openaiHistory.clear();
+    _anthropicHistory.clear();
+    _isInterrupted = false;
+    for (final completer in _pendingApprovals.values) {
+      if (!completer.isCompleted) completer.complete(false);
+    }
+    _pendingApprovals.clear();
+    _setState(AgentState.idle);
+  }
+
+  @override
   Future<void> dispose() async {
     await interrupt();
     await _eventController.close();

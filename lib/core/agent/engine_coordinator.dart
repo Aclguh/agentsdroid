@@ -174,6 +174,12 @@ class EngineCoordinator implements AgentEngine {
   }
 
   @override
+  void resetSession() {
+    _activeEngine.resetSession();
+    _eventController.add(StatusEvent(AgentState.idle));
+  }
+
+  @override
   Future<void> dispose() async {
     await _activeSubscription?.cancel();
     await _activeEngine.dispose();

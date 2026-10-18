@@ -6,26 +6,68 @@ enum MessageRole {
   system,
 }
 
-sealed class MessageBlock {}
+sealed class MessageBlock {
+  Map<String, dynamic> toJson();
+
+  static MessageBlock fromJson(Map<String, dynamic> json) {
+    final type = json['type'] as String?;
+    switch (type) {
+      case 'thought':
+        return ThoughtBlock(json['thought'] as String? ?? '');
+      case 'text':
+        return TextBlock(json['text'] as String? ?? '');
+      case 'tool_call':
+        return ToolCallBlock(ToolCallEvent.fromJson(json['toolCall'] as Map<String, dynamic>));
+      case 'diff':
+        return DiffBlock(DiffEvent.fromJson(json['diff'] as Map<String, dynamic>));
+      default:
+        return TextBlock(json['text'] as String? ?? '');
+    }
+  }
+}
 
 class ThoughtBlock extends MessageBlock {
   String thought;
   ThoughtBlock(this.thought);
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'thought',
+    'thought': thought,
+  };
 }
 
 class TextBlock extends MessageBlock {
   String text;
   TextBlock(this.text);
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'text',
+    'text': text,
+  };
 }
 
 class ToolCallBlock extends MessageBlock {
   ToolCallEvent toolCall;
   ToolCallBlock(this.toolCall);
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'tool_call',
+    'toolCall': toolCall.toJson(),
+  };
 }
 
 class DiffBlock extends MessageBlock {
   final DiffEvent diff;
   DiffBlock(this.diff);
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'diff',
+    'diff': diff.toJson(),
+  };
 }
 
 class ChatMessage {
@@ -123,6 +165,41 @@ class ChatMessage {
       diffs: diffs ?? List.from(this.diffs),
       blocks: blocks ?? List.from(this.blocks),
       isStreaming: isStreaming ?? this.isStreaming,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'role': role.name,
+    'timestamp': timestamp.toIso8601String(),
+    'blocks': blocks.map((b) => b.toJson()).toList(),
+    'isStreaming': isStreaming,
+  };
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    final rawBlocks = json['blocks'] as List<dynamic>?;
+    List<MessageBlock> parsedBlocks = [];
+    if (rawBlocks != null && rawBlocks.isNotEmpty) {
+      parsedBlocks = rawBlocks.map((b) => MessageBlock.fromJson(b as Map<String, dynamic>)).toList();
+    } else {
+      final content = json['content'] as String? ?? '';
+      final thought = json['thought'] as String?;
+      if (thought != null && thought.isNotEmpty) {
+        parsedBlocks.add(ThoughtBlock(thought));
+      }
+      if (content.isNotEmpty) {
+        parsedBlocks.add(TextBlock(content));
+      }
+    }
+
+    return ChatMessage(
+      id: json['id'] as String,
+      role: MessageRole.values.byName(json['role'] as String? ?? 'user'),
+      timestamp: json['timestamp'] != null
+          ? DateTime.tryParse(json['timestamp'] as String)
+          : null,
+      blocks: parsedBlocks,
+      isStreaming: json['isStreaming'] as bool? ?? false,
     );
   }
 }

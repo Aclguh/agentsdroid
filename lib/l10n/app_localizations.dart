@@ -619,6 +619,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已复制到剪贴板'**
   String get copiedToClipboard;
+
+  /// No description provided for @chatHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史会话'**
+  String get chatHistory;
+
+  /// No description provided for @newChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建会话'**
+  String get newChat;
+
+  /// No description provided for @noHistorySessions.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无历史会话'**
+  String get noHistorySessions;
+
+  /// No description provided for @deleteSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除会话'**
+  String get deleteSession;
+
+  /// No description provided for @deleteSessionConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要删除此会话记录吗？'**
+  String get deleteSessionConfirm;
+
+  /// No description provided for @renameSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'重命名会话'**
+  String get renameSession;
+
+  /// No description provided for @sessionTitleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入会话标题'**
+  String get sessionTitleHint;
+
+  /// No description provided for @save.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get save;
+
+  /// No description provided for @sessionUntitled.
+  ///
+  /// In zh, this message translates to:
+  /// **'新会话'**
+  String get sessionUntitled;
 }
 
 class _AppLocalizationsDelegate

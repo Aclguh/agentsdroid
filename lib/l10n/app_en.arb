@@ -86,5 +86,14 @@
   "deleteConfirmMsg": "Are you sure you want to delete this item? This cannot be undone.",
   "delete": "Delete",
   "copyContent": "Copy Modified Content",
-  "copiedToClipboard": "Copied to clipboard"
+  "copiedToClipboard": "Copied to clipboard",
+  "chatHistory": "Chat History",
+  "newChat": "New Chat",
+  "noHistorySessions": "No conversation history",
+  "deleteSession": "Delete Session",
+  "deleteSessionConfirm": "Are you sure you want to delete this session?",
+  "renameSession": "Rename Session",
+  "sessionTitleHint": "Enter session title",
+  "save": "Save",
+  "sessionUntitled": "New Chat"
 }

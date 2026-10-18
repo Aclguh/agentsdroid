@@ -42,9 +42,9 @@ agentsdroid/
 │   │   ├── cli/               # ClaudeCodeAdapter 与 AnsiStreamParser (终端流转卡片)
 │   │   ├── notification/      # ForegroundServiceManager (前台通知与 WakeLock 保活)
 │   │   ├── proot/             # PRootManager (Debian-arm64 子系统下载、解压与沙箱执行)
-│   │   └── storage/           # KeyVault (硬件加密保险箱) 与 WorkspaceService (工作区 Zip/Git)
+│   │   └── storage/           # KeyVault、WorkspaceService 与 SessionService (会话历史管理)
 │   ├── l10n/                  # 国际化本地化资源包 (zh, en)
-│   ├── models/                # AgentEvent, ToolCallEvent, DiffEvent, ChatMessage
+│   ├── models/                # AgentEvent, ToolCallEvent, DiffEvent, ChatMessage, ChatSession
 │   ├── ui/
 │   │   ├── chat/              # 主工作台：对话流、引擎切换胶囊、ThoughtCard、ToolApprovalCard
 │   │   ├── diff/              # 原生 DiffViewerScreen 变更对比与复制

@@ -42,9 +42,9 @@ agentsdroid/
 │   │   ├── cli/               # ClaudeCodeAdapter & AnsiStreamParser (CLI stream to native cards)
 │   │   ├── notification/      # ForegroundServiceManager (Foreground notifications & WakeLock)
 │   │   ├── proot/             # PRootManager (Debian-arm64 download, unpack & sandbox exec)
-│   │   └── storage/           # KeyVault (Keystore encryption) & WorkspaceService (Zip & Git)
+│   │   └── storage/           # KeyVault, WorkspaceService & SessionService (Session History)
 │   ├── l10n/                  # AppLocalizations & ARB translation files (zh, en)
-│   ├── models/                # AgentEvent, ToolCallEvent, DiffEvent, ChatMessage
+│   ├── models/                # AgentEvent, ToolCallEvent, DiffEvent, ChatMessage, ChatSession
 │   ├── ui/
 │   │   ├── chat/              # Main Workbench: Chat bubbles, engine switch chip, ThoughtCard, ToolApprovalCard
 │   │   ├── diff/              # Native DiffViewerScreen with code copy

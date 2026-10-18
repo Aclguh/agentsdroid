@@ -7,5 +7,6 @@ abstract class AgentEngine {
   Future<void> startTask(String prompt);
   Future<void> respondApproval(String toolCallId, bool approved, {String? reason});
   Future<void> interrupt();
+  void resetSession();
   Future<void> dispose();
 }
