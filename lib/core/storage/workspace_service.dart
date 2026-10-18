@@ -70,10 +70,6 @@ class WorkspaceService {
     final target = Directory(p.join(workspacesRootDir.path, projectName));
     if (!await target.exists()) {
       await target.create(recursive: true);
-      final readme = File(p.join(target.path, 'README.md'));
-      if (!await readme.exists()) {
-        await readme.writeAsString('# $projectName\n\nCreated in AgentsDroid.');
-      }
     }
     _workspaceDir = target;
   }
@@ -82,8 +78,6 @@ class WorkspaceService {
     final target = Directory(p.join(workspacesRootDir.path, projectName));
     if (!await target.exists()) {
       await target.create(recursive: true);
-      final readme = File(p.join(target.path, 'README.md'));
-      await readme.writeAsString('# $projectName\n\nCreated in AgentsDroid.');
     }
   }
 

@@ -61,7 +61,8 @@ void main() {
       await service.createProject('my-mobile-app');
       final projDir = Directory('${service.workspacesRootDir.path}/my-mobile-app');
       expect(await projDir.exists(), isTrue);
-      expect(await File('${projDir.path}/README.md').exists(), isTrue);
+      // New projects should not automatically create README.md
+      expect(await File('${projDir.path}/README.md').exists(), isFalse);
 
       final projects = await service.listProjects();
       expect(projects, contains('my-mobile-app'));

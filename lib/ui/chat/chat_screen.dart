@@ -52,6 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   final List<ChatMessage> _messages = [];
   final _textController = TextEditingController();
+  final _inputFocusNode = FocusNode();
   final _scrollController = ScrollController();
   final _uuid = const Uuid();
 
@@ -85,10 +86,10 @@ class _ChatScreenState extends State<ChatScreen> {
       await _sessionService.init();
     }
     _expandedProjects.add(widget.workspace.currentProjectName);
-    // Requirement: Always start with a fresh new conversation on app open
+    // Requirement: Software opens with a standalone session not belonging to any project
     _currentSession = await _sessionService.createSession(
       title: '新会话',
-      projectName: widget.workspace.currentProjectName,
+      projectName: null,
     );
     if (mounted) {
       setState(() {
@@ -229,6 +230,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _handleNewSession(AppLocalizations l10n, {String? projectName}) async {
+    _inputFocusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_agentState != AgentState.idle) {
       await _coordinator.interrupt();
     }
@@ -258,6 +261,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _handleSwitchSession(String sessionId) async {
+    _inputFocusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_currentSession?.id == sessionId) {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
@@ -323,7 +328,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (remaining.isNotEmpty) {
           await _handleSwitchSession(remaining.first.id);
         } else {
-          await _handleNewSession(l10n, projectName: widget.workspace.currentProjectName);
+          await _handleNewSession(l10n, projectName: null);
         }
       } else {
         setState(() {});
@@ -375,7 +380,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!mounted) return;
 
     if (_currentSession?.id == sessionId) {
-      await _handleNewSession(l10n, projectName: widget.workspace.currentProjectName);
+      await _handleNewSession(l10n, projectName: null);
     } else {
       setState(() {});
     }
@@ -465,6 +470,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _subscription?.cancel();
     _coordinator.dispose();
     _textController.dispose();
+    _inputFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -477,6 +483,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final isYolo = widget.keyVault.isYoloMode();
 
     return Scaffold(
+      onDrawerChanged: (isOpen) {
+        if (!isOpen) {
+          _inputFocusNode.unfocus();
+          FocusManager.instance.primaryFocus?.unfocus();
+        }
+      },
       drawer: _buildHistoryDrawer(context, l10n, theme),
       appBar: AppBar(
         titleSpacing: 0,
@@ -484,7 +496,11 @@ class _ChatScreenState extends State<ChatScreen> {
           builder: (ctx) => IconButton(
             icon: const Icon(Icons.menu),
             tooltip: l10n.chatHistory,
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
+            onPressed: () {
+              _inputFocusNode.unfocus();
+              FocusManager.instance.primaryFocus?.unfocus();
+              Scaffold.of(ctx).openDrawer();
+            },
           ),
         ),
         title: Column(
@@ -550,7 +566,7 @@ class _ChatScreenState extends State<ChatScreen> {
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             tooltip: l10n.newChat,
-            onPressed: () => _handleNewSession(l10n, projectName: widget.workspace.currentProjectName),
+            onPressed: () => _handleNewSession(l10n, projectName: _currentSession?.projectName),
           ),
           IconButton(
             icon: const Icon(Icons.terminal_outlined),
@@ -1343,31 +1359,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 28),
-            _buildPromptSuggestion(l10n.promptSummary, l10n.promptSummaryQuery, theme),
-            _buildPromptSuggestion(l10n.promptFibonacci, l10n.promptFibonacciQuery, theme),
-            _buildPromptSuggestion(l10n.promptListFiles, l10n.promptListFilesQuery, theme),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPromptSuggestion(String label, String prompt, ThemeData theme) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-        onPressed: () => _handleSendMessage(prompt),
-        child: Text(
-          label,
-          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface),
         ),
       ),
     );
@@ -1495,6 +1487,8 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: TextField(
               controller: _textController,
+              focusNode: _inputFocusNode,
+              autofocus: false,
               minLines: 1,
               maxLines: 4,
               decoration: InputDecoration(
