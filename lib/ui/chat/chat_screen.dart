@@ -35,6 +35,100 @@ class ChatScreen extends StatefulWidget {
     this.sessionService,
   });
 
+  static MarkdownStyleSheet buildMarkdownStyleSheet(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final effectiveTheme = theme.textTheme.bodyMedium?.fontSize != null
+        ? theme
+        : theme.copyWith(
+            textTheme: theme.textTheme.copyWith(
+              bodyMedium: (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(fontSize: 14),
+            ),
+          );
+    final defaultSheet = MarkdownStyleSheet.fromTheme(effectiveTheme);
+
+    return defaultSheet.copyWith(
+      p: TextStyle(
+        fontSize: 14,
+        height: 1.45,
+        color: theme.colorScheme.onSurface,
+      ),
+      h1: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: theme.colorScheme.onSurface,
+      ),
+      h2: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: theme.colorScheme.onSurface,
+      ),
+      h3: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: theme.colorScheme.onSurface,
+      ),
+      h4: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: theme.colorScheme.onSurface,
+      ),
+      blockquote: TextStyle(
+        fontSize: 13.5,
+        height: 1.45,
+        color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+        fontStyle: FontStyle.italic,
+      ),
+      blockquotePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      blockquoteDecoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2330) : const Color(0xFFEFF6FF),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+        border: Border(
+          left: BorderSide(
+            color: theme.colorScheme.primary,
+            width: 3.5,
+          ),
+        ),
+      ),
+      code: TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 12.5,
+        color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+        backgroundColor: isDark ? const Color(0xFF232733) : const Color(0xFFF1F5F9),
+      ),
+      codeblockPadding: const EdgeInsets.all(10),
+      codeblockDecoration: BoxDecoration(
+        color: isDark ? const Color(0xFF181A20) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2A2E3D) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      listBullet: TextStyle(color: theme.colorScheme.onSurface),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: theme.dividerColor.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+      ),
+      tableBorder: TableBorder.all(
+        color: theme.dividerColor.withValues(alpha: 0.3),
+        width: 0.8,
+      ),
+      tableHead: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: theme.colorScheme.onSurface,
+      ),
+      tableBody: TextStyle(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+      ),
+    );
+  }
+
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
@@ -1448,14 +1542,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: MarkdownBody(
                     data: block.text,
                     selectable: true,
-                    styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                      p: const TextStyle(fontSize: 14, height: 1.45),
-                      code: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                      codeblockDecoration: BoxDecoration(
-                        color: const Color(0xFF1E1E1E),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                    styleSheet: ChatScreen.buildMarkdownStyleSheet(theme),
                   ),
                 ),
 

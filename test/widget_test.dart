@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:agentsdroid/core/proot/proot_manager.dart';
 import 'package:agentsdroid/models/agent_event.dart';
 import 'package:agentsdroid/models/chat_message.dart';
+import 'package:agentsdroid/ui/chat/chat_screen.dart';
 import 'package:agentsdroid/ui/chat/widgets/tool_approval_card.dart';
 
 void main() {
@@ -140,5 +142,47 @@ void main() {
 
     expect(find.byIcon(Icons.expand_more), findsOneWidget);
     expect(find.text('On branch master\nnothing to commit'), findsNothing);
+  });
+
+  testWidgets('ChatScreen.buildMarkdownStyleSheet provides dark-mode friendly blockquote and code styles', (tester) async {
+    final darkTheme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF2563EB),
+        surface: Color(0xFF141414),
+      ),
+    );
+
+    final sheet = ChatScreen.buildMarkdownStyleSheet(darkTheme);
+
+    // Verify blockquote decoration is dark and not the default light blue shade100
+    expect(sheet.blockquoteDecoration, isA<BoxDecoration>());
+    final deco = sheet.blockquoteDecoration as BoxDecoration;
+    expect(deco.color, equals(const Color(0xFF1E2330)));
+    expect(deco.color, isNot(equals(Colors.blue.shade100)));
+
+    // Verify blockquote text color is high-contrast light
+    expect(sheet.blockquote?.color, equals(const Color(0xFFE2E8F0)));
+
+    // Verify inline code has dark background and distinct color
+    expect(sheet.code?.backgroundColor, equals(const Color(0xFF232733)));
+    expect(sheet.code?.color, equals(const Color(0xFF93C5FD)));
+
+    // Render in a widget tree to verify formatting
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: darkTheme,
+        home: Scaffold(
+          body: MarkdownBody(
+            data: '> This is a quoted block\n\nHere is `inline_code`.',
+            styleSheet: sheet,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('This is a quoted block'), findsOneWidget);
+    expect(find.textContaining('Here is'), findsOneWidget);
   });
 }
