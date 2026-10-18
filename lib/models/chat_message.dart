@@ -13,7 +13,10 @@ sealed class MessageBlock {
     final type = json['type'] as String?;
     switch (type) {
       case 'thought':
-        return ThoughtBlock(json['thought'] as String? ?? '');
+        return ThoughtBlock(
+          json['thought'] as String? ?? '',
+          durationSeconds: json['durationSeconds'] as int?,
+        );
       case 'text':
         return TextBlock(json['text'] as String? ?? '');
       case 'tool_call':
@@ -28,12 +31,14 @@ sealed class MessageBlock {
 
 class ThoughtBlock extends MessageBlock {
   String thought;
-  ThoughtBlock(this.thought);
+  int? durationSeconds;
+  ThoughtBlock(this.thought, {this.durationSeconds});
 
   @override
   Map<String, dynamic> toJson() => {
     'type': 'thought',
     'thought': thought,
+    if (durationSeconds != null) 'durationSeconds': durationSeconds,
   };
 }
 

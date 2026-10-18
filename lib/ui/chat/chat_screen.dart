@@ -159,8 +159,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
   final Set<String> _expandedProjects = {};
   bool _showArchived = false;
+  late bool _isProjectsSectionExpanded;
+  late bool _isConversationsSectionExpanded;
+  DateTime? _currentTurnThinkingStart;
   ConversationSortOrder _conversationSortOrder = ConversationSortOrder.recent;
   ProjectSortOrder _projectSortOrder = ProjectSortOrder.name;
+  Future<List<dynamic>>? _treeDataFuture;
+
+  void _refreshTreeData() {
+    _treeDataFuture = Future.wait([
+      widget.workspace.listProjects(),
+      _sessionService.listSessions(isArchived: false),
+    ]);
+  }
 
   @override
   void initState() {
@@ -174,6 +185,9 @@ class _ChatScreenState extends State<ChatScreen> {
     _foregroundSubscription = _foregroundManager.bindAgentEvents(_coordinator.eventStream);
     _sessionService = widget.sessionService ?? SessionService();
     _expandedProjects.addAll(widget.keyVault.getExpandedProjects());
+    _isProjectsSectionExpanded = widget.keyVault.isProjectsSectionExpanded();
+    _isConversationsSectionExpanded = widget.keyVault.isConversationsSectionExpanded();
+    _refreshTreeData();
     _textController.addListener(_onTextChanged);
     _initSessionService();
     _listenToEngineEvents();
@@ -213,6 +227,17 @@ class _ChatScreenState extends State<ChatScreen> {
     _sessionService.saveSession(_currentSession!);
   }
 
+  void _finalizeThinkingDuration() {
+    if (_currentTurnThinkingStart != null) {
+      final elapsed = DateTime.now().difference(_currentTurnThinkingStart!).inSeconds;
+      final lastThought = _currentAssistantMessage?.blocks.whereType<ThoughtBlock>().lastOrNull;
+      if (lastThought != null && lastThought.durationSeconds == null) {
+        lastThought.durationSeconds = elapsed > 0 ? elapsed : 1;
+      }
+      _currentTurnThinkingStart = null;
+    }
+  }
+
   void _listenToEngineEvents() {
     _subscription = _coordinator.eventStream.listen((event) {
       if (!mounted) return;
@@ -224,18 +249,28 @@ class _ChatScreenState extends State<ChatScreen> {
           if (event.state == AgentState.idle ||
               event.state == AgentState.completed ||
               event.state == AgentState.error) {
+            _finalizeThinkingDuration();
             _persistCurrentSession();
           }
         } else if (event is ThoughtEvent) {
-          if (_currentAssistantMessage != null) {
-            final lastThought = _currentAssistantMessage!.blocks.whereType<ThoughtBlock>().lastOrNull;
-            if (lastThought != null) {
-              lastThought.thought = event.thought;
-            } else {
-              _currentAssistantMessage!.blocks.add(ThoughtBlock(event.thought));
-            }
+          if (_currentAssistantMessage == null) {
+            _currentAssistantMessage = ChatMessage(
+              id: _uuid.v4(),
+              role: MessageRole.assistant,
+            );
+            _messages.add(_currentAssistantMessage!);
+          }
+          _currentTurnThinkingStart ??= DateTime.now();
+
+          final lastThought = _currentAssistantMessage!.blocks.whereType<ThoughtBlock>().lastOrNull;
+          if (lastThought != null) {
+            lastThought.thought = event.thought;
+          } else {
+            _currentAssistantMessage!.blocks.add(ThoughtBlock(event.thought));
           }
         } else if (event is ToolCallEvent) {
+          _finalizeThinkingDuration();
+
           if (_currentAssistantMessage == null) {
             _currentAssistantMessage = ChatMessage(
               id: _uuid.v4(),
@@ -256,6 +291,8 @@ class _ChatScreenState extends State<ChatScreen> {
           }
           _persistCurrentSession();
         } else if (event is MessageEvent) {
+          _finalizeThinkingDuration();
+
           if (_currentAssistantMessage == null) {
             _currentAssistantMessage = ChatMessage(
               id: _uuid.v4(),
@@ -315,6 +352,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     setState(() {
+      _currentTurnThinkingStart = null;
       _messages.add(userMessage);
       _currentAssistantMessage = null; // Start fresh for new assistant turn
     });
@@ -540,6 +578,132 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _showChangeProjectDialog(AppLocalizations l10n) async {
+    final rawProjects = await widget.workspace.listProjects();
+    final projects = List<String>.from(rawProjects)
+      ..removeWhere((p) => p == WorkspaceService.defaultProjectName);
+
+    if (!mounted) return;
+
+    final currentProject = (_currentSession?.projectName != null &&
+            _currentSession!.projectName!.isNotEmpty &&
+            _currentSession!.projectName != WorkspaceService.defaultProjectName)
+        ? _currentSession!.projectName
+        : null;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.selectProjectForSession,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  leading: const Icon(Icons.folder_off_outlined, color: Colors.white70, size: 20),
+                  title: Text(l10n.noProject, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  trailing: currentProject == null ? const Icon(Icons.check, color: Colors.blueAccent, size: 18) : null,
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await widget.workspace.switchProject(null);
+                    if (_currentSession != null) {
+                      _currentSession!.projectName = null;
+                      await _sessionService.saveSession(_currentSession!);
+                    }
+                    _refreshTreeData();
+                    if (mounted) setState(() {});
+                  },
+                ),
+                const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: projects.length,
+                    separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                    itemBuilder: (c, idx) {
+                      final proj = projects[idx];
+                      final isSelected = proj == currentProject;
+                      return ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                        leading: const Icon(Icons.folder_outlined, color: Colors.white70, size: 20),
+                        title: Text(
+                          proj,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        trailing: isSelected ? const Icon(Icons.check, color: Colors.blueAccent, size: 18) : null,
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await widget.workspace.switchProject(proj);
+                          if (_currentSession != null) {
+                            _currentSession!.projectName = proj;
+                            await _sessionService.saveSession(_currentSession!);
+                          }
+                          _refreshTreeData();
+                          if (mounted) setState(() {});
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  leading: const Icon(Icons.create_new_folder_outlined, color: Colors.blueAccent, size: 20),
+                  title: Text(
+                    l10n.newProject,
+                    style: const TextStyle(
+                      color: Colors.blueAccent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _handleCreateProject(l10n);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   String _formatRelativeTime(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inMinutes < 1) return 'now';
@@ -591,8 +755,6 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final activeModel = widget.keyVault.getActiveModel();
-    final isYolo = widget.keyVault.isYoloMode();
 
     return Scaffold(
       onDrawerChanged: (isOpen) {
@@ -628,49 +790,66 @@ class _ChatScreenState extends State<ChatScreen> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 1),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_currentSession?.projectName != null &&
-                    _currentSession!.projectName!.isNotEmpty &&
-                    _currentSession!.projectName != WorkspaceService.defaultProjectName) ...[
-                  Icon(Icons.folder_outlined, size: 10, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 3),
-                  Text(
-                    _currentSession!.projectName!,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blueAccent,
+            Builder(
+              builder: (ctx) {
+                final isNewSession = _messages.isEmpty;
+                final rawProject = _currentSession?.projectName;
+                final hasProject = rawProject != null &&
+                    rawProject.isNotEmpty &&
+                    rawProject != WorkspaceService.defaultProjectName;
+                final displayProjectName = hasProject ? rawProject : l10n.noProject;
+
+                if (isNewSession) {
+                  return InkWell(
+                    key: const Key('top_bar_project_selector'),
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () => _showChangeProjectDialog(l10n),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 1),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            hasProject ? Icons.folder_outlined : Icons.folder_off_outlined,
+                            size: 11,
+                            color: Colors.blueAccent,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            displayProjectName,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blueAccent,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.arrow_drop_down, size: 14, color: Colors.blueAccent),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text('•', style: TextStyle(fontSize: 8, color: theme.colorScheme.onSurfaceVariant)),
-                  const SizedBox(width: 4),
-                ],
-                Flexible(
-                  child: Text(
-                    activeModel,
-                    style: TextStyle(
-                      fontSize: 10,
+                  );
+                }
+
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      hasProject ? Icons.folder_outlined : Icons.folder_off_outlined,
+                      size: 11,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (isYolo) ...[
-                  const SizedBox(width: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(3),
+                    const SizedBox(width: 3),
+                    Text(
+                      displayProjectName,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                    child: const Text('YOLO', style: TextStyle(fontSize: 8, color: Colors.amber, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ],
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -871,21 +1050,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
             const Divider(color: Color(0xFF262626), height: 16),
 
-            // Header: Projects / Display Options (Filter & Sort) / Create Project
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
-              child: Row(
-                children: [
-                  Text(
-                    _showArchived ? l10n.archivedSessions : l10n.projects,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: _showArchived ? Colors.amber : Colors.white70,
-                      letterSpacing: 0.5,
+            if (_showArchived)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+                child: Row(
+                  children: [
+                    Text(
+                      l10n.archivedSessions,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
-                  if (_showArchived) ...[
                     const SizedBox(width: 8),
                     InkWell(
                       borderRadius: BorderRadius.circular(12),
@@ -910,149 +1088,11 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       ),
                     ),
+                    const Spacer(),
+                    _buildDisplayOptionsMenu(l10n),
                   ],
-                  const Spacer(),
-                  // Display Options PopupMenu (Image 1)
-                  PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.filter_list_rounded,
-                      size: 20,
-                      color: _showArchived ? Colors.amber : Colors.white60,
-                    ),
-                    tooltip: l10n.displayOptions,
-                    color: const Color(0xFF222222),
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: const BorderSide(color: Color(0xFF333333)),
-                    ),
-                    onSelected: (val) {
-                      setState(() {
-                        if (val == 'sort_conv_recent') {
-                          _conversationSortOrder = ConversationSortOrder.recent;
-                        } else if (val == 'sort_conv_name') {
-                          _conversationSortOrder = ConversationSortOrder.name;
-                        } else if (val == 'sort_proj_name') {
-                          _projectSortOrder = ProjectSortOrder.name;
-                        } else if (val == 'sort_proj_recent') {
-                          _projectSortOrder = ProjectSortOrder.recent;
-                        } else if (val == 'toggle_archived') {
-                          _showArchived = !_showArchived;
-                        }
-                      });
-                    },
-                    itemBuilder: (ctx) => [
-                      PopupMenuItem<String>(
-                        enabled: false,
-                        height: 26,
-                        child: Text(
-                          l10n.sortConversations,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white38),
-                        ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'sort_conv_recent',
-                        height: 36,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _conversationSortOrder == ConversationSortOrder.recent ? Icons.check : Icons.circle_outlined,
-                              size: 16,
-                              color: _conversationSortOrder == ConversationSortOrder.recent ? Colors.amber : Colors.white30,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(l10n.sortRecent, style: const TextStyle(fontSize: 13, color: Colors.white)),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'sort_conv_name',
-                        height: 36,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _conversationSortOrder == ConversationSortOrder.name ? Icons.check : Icons.circle_outlined,
-                              size: 16,
-                              color: _conversationSortOrder == ConversationSortOrder.name ? Colors.amber : Colors.white30,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(l10n.sortName, style: const TextStyle(fontSize: 13, color: Colors.white)),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuDivider(height: 8),
-                      PopupMenuItem<String>(
-                        enabled: false,
-                        height: 26,
-                        child: Text(
-                          l10n.sortProjects,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white38),
-                        ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'sort_proj_name',
-                        height: 36,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _projectSortOrder == ProjectSortOrder.name ? Icons.check : Icons.circle_outlined,
-                              size: 16,
-                              color: _projectSortOrder == ProjectSortOrder.name ? Colors.amber : Colors.white30,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(l10n.sortName, style: const TextStyle(fontSize: 13, color: Colors.white)),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'sort_proj_recent',
-                        height: 36,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _projectSortOrder == ProjectSortOrder.recent ? Icons.check : Icons.circle_outlined,
-                              size: 16,
-                              color: _projectSortOrder == ProjectSortOrder.recent ? Colors.amber : Colors.white30,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(l10n.sortRecent, style: const TextStyle(fontSize: 13, color: Colors.white)),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuDivider(height: 8),
-                      PopupMenuItem<String>(
-                        value: 'toggle_archived',
-                        height: 38,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _showArchived ? Icons.check_box : Icons.check_box_outline_blank,
-                              size: 18,
-                              color: _showArchived ? Colors.amber : Colors.white38,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.archivedOnly,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: _showArchived ? FontWeight.bold : FontWeight.normal,
-                                color: _showArchived ? Colors.amber : Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (!_showArchived)
-                    IconButton(
-                      icon: const Icon(Icons.create_new_folder_outlined, size: 19, color: Colors.white60),
-                      tooltip: l10n.newProject,
-                      onPressed: () => _handleCreateProject(l10n),
-                    ),
-                ],
+                ),
               ),
-            ),
 
             // Content Area: Either Archived List or Projects + Conversations Tree
             Expanded(
@@ -1106,13 +1146,150 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildDisplayOptionsMenu(AppLocalizations l10n) {
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.filter_list_rounded,
+        size: 19,
+        color: _showArchived ? Colors.amber : Colors.white60,
+      ),
+      tooltip: l10n.displayOptions,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+      color: const Color(0xFF222222),
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: Color(0xFF333333)),
+      ),
+      onSelected: (val) {
+        setState(() {
+          if (val == 'sort_conv_recent') {
+            _conversationSortOrder = ConversationSortOrder.recent;
+          } else if (val == 'sort_conv_name') {
+            _conversationSortOrder = ConversationSortOrder.name;
+          } else if (val == 'sort_proj_name') {
+            _projectSortOrder = ProjectSortOrder.name;
+          } else if (val == 'sort_proj_recent') {
+            _projectSortOrder = ProjectSortOrder.recent;
+          } else if (val == 'toggle_archived') {
+            _showArchived = !_showArchived;
+          }
+        });
+      },
+      itemBuilder: (ctx) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          height: 26,
+          child: Text(
+            l10n.sortConversations,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white38),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'sort_conv_recent',
+          height: 36,
+          child: Row(
+            children: [
+              Icon(
+                _conversationSortOrder == ConversationSortOrder.recent ? Icons.check : Icons.circle_outlined,
+                size: 16,
+                color: _conversationSortOrder == ConversationSortOrder.recent ? Colors.amber : Colors.white30,
+              ),
+              const SizedBox(width: 8),
+              Text(l10n.sortRecent, style: const TextStyle(fontSize: 13, color: Colors.white)),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'sort_conv_name',
+          height: 36,
+          child: Row(
+            children: [
+              Icon(
+                _conversationSortOrder == ConversationSortOrder.name ? Icons.check : Icons.circle_outlined,
+                size: 16,
+                color: _conversationSortOrder == ConversationSortOrder.name ? Colors.amber : Colors.white30,
+              ),
+              const SizedBox(width: 8),
+              Text(l10n.sortName, style: const TextStyle(fontSize: 13, color: Colors.white)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(height: 8),
+        PopupMenuItem<String>(
+          enabled: false,
+          height: 26,
+          child: Text(
+            l10n.sortProjects,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white38),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'sort_proj_name',
+          height: 36,
+          child: Row(
+            children: [
+              Icon(
+                _projectSortOrder == ProjectSortOrder.name ? Icons.check : Icons.circle_outlined,
+                size: 16,
+                color: _projectSortOrder == ProjectSortOrder.name ? Colors.amber : Colors.white30,
+              ),
+              const SizedBox(width: 8),
+              Text(l10n.sortName, style: const TextStyle(fontSize: 13, color: Colors.white)),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'sort_proj_recent',
+          height: 36,
+          child: Row(
+            children: [
+              Icon(
+                _projectSortOrder == ProjectSortOrder.recent ? Icons.check : Icons.circle_outlined,
+                size: 16,
+                color: _projectSortOrder == ProjectSortOrder.recent ? Colors.amber : Colors.white30,
+              ),
+              const SizedBox(width: 8),
+              Text(l10n.sortRecent, style: const TextStyle(fontSize: 13, color: Colors.white)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(height: 8),
+        PopupMenuItem<String>(
+          value: 'toggle_archived',
+          height: 38,
+          child: Row(
+            children: [
+              Icon(
+                _showArchived ? Icons.check_box : Icons.check_box_outline_blank,
+                size: 18,
+                color: _showArchived ? Colors.amber : Colors.white38,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                l10n.archivedOnly,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: _showArchived ? FontWeight.bold : FontWeight.normal,
+                  color: _showArchived ? Colors.amber : Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildProjectsAndConversationsTree(
       BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    _treeDataFuture ??= Future.wait([
+      widget.workspace.listProjects(),
+      _sessionService.listSessions(isArchived: false),
+    ]);
     return FutureBuilder<List<dynamic>>(
-      future: Future.wait([
-        widget.workspace.listProjects(),
-        _sessionService.listSessions(isArchived: false),
-      ]),
+      future: _treeDataFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -1167,35 +1344,108 @@ class _ChatScreenState extends State<ChatScreen> {
         return ListView(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           children: [
-            // Projects List
-            for (final projectName in projects) ...[
-              _buildProjectFolderTile(
-                projectName,
-                projectSessions[projectName] ?? [],
-                l10n,
-                theme,
+            // Projects Section Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 2, 0, 2),
+              child: Row(
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () {
+                      setState(() {
+                        _isProjectsSectionExpanded = !_isProjectsSectionExpanded;
+                      });
+                      widget.keyVault.setProjectsSectionExpanded(_isProjectsSectionExpanded);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.projects,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white70,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          RotatedBox(
+                            quarterTurns: _isProjectsSectionExpanded ? 1 : 0,
+                            child: const Icon(Icons.chevron_right, size: 15, color: Colors.white54),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  _buildDisplayOptionsMenu(l10n),
+                  IconButton(
+                    icon: const Icon(Icons.create_new_folder_outlined, size: 19, color: Colors.white60),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                    tooltip: l10n.newProject,
+                    onPressed: () => _handleCreateProject(l10n),
+                  ),
+                ],
               ),
+            ),
+
+            if (_isProjectsSectionExpanded) ...[
+              for (final projectName in projects)
+                _buildProjectFolderTile(
+                  projectName,
+                  projectSessions[projectName] ?? [],
+                  l10n,
+                  theme,
+                ),
             ],
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
             // Conversations Section Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(6, 4, 0, 4),
+              padding: const EdgeInsets.fromLTRB(4, 2, 0, 2),
               child: Row(
                 children: [
-                  Text(
-                    l10n.conversations,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white70,
-                      letterSpacing: 0.5,
+                  InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () {
+                      setState(() {
+                        _isConversationsSectionExpanded = !_isConversationsSectionExpanded;
+                      });
+                      widget.keyVault.setConversationsSectionExpanded(_isConversationsSectionExpanded);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.conversations,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white70,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          RotatedBox(
+                            quarterTurns: _isConversationsSectionExpanded ? 1 : 0,
+                            child: const Icon(Icons.chevron_right, size: 15, color: Colors.white54),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.add, size: 20, color: Colors.white70),
+                    icon: const Icon(Icons.add, size: 20, color: Colors.white60),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                     tooltip: l10n.newStandaloneSession,
                     onPressed: () => _handleNewSession(l10n, projectName: null),
                   ),
@@ -1203,18 +1453,19 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
 
-            // Standalone Conversations List
-            if (standaloneSessions.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Text(
-                  l10n.noHistorySessions,
-                  style: const TextStyle(fontSize: 11, color: Colors.white30, fontStyle: FontStyle.italic),
-                ),
-              )
-            else
-              for (final s in standaloneSessions)
-                _buildSessionItem(s, l10n, theme, indent: false),
+            if (_isConversationsSectionExpanded) ...[
+              if (standaloneSessions.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Text(
+                    l10n.noHistorySessions,
+                    style: const TextStyle(fontSize: 11, color: Colors.white30, fontStyle: FontStyle.italic),
+                  ),
+                )
+              else
+                for (final s in standaloneSessions)
+                  _buildSessionItem(s, l10n, theme, indent: false),
+            ],
           ],
         );
       },
@@ -1233,7 +1484,7 @@ class _ChatScreenState extends State<ChatScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           onTap: () {
             setState(() {
               if (isExpanded) {
@@ -1245,12 +1496,12 @@ class _ChatScreenState extends State<ChatScreen> {
             widget.keyVault.setExpandedProjects(_expandedProjects);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             child: Row(
               children: [
                 Icon(
                   isExpanded ? Icons.folder_open_outlined : Icons.folder_outlined,
-                  size: 18,
+                  size: 16,
                   color: Colors.white70,
                 ),
                 const SizedBox(width: 8),
@@ -1269,7 +1520,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 IconButton(
                   icon: const Icon(Icons.add, size: 16, color: Colors.white38),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
                   tooltip: l10n.newProjectSession,
                   onPressed: () => _handleNewSession(l10n, projectName: projectName),
                 ),
@@ -1282,7 +1533,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (isExpanded) ...[
           if (sessions.isEmpty)
             Padding(
-              padding: const EdgeInsets.only(left: 32, top: 2, bottom: 8),
+              padding: const EdgeInsets.only(left: 28, top: 2, bottom: 4),
               child: GestureDetector(
                 onTap: () => _handleNewSession(l10n, projectName: projectName),
                 child: Text(
@@ -1308,17 +1559,17 @@ class _ChatScreenState extends State<ChatScreen> {
     final isSelected = s.id == _currentSession?.id;
 
     return Padding(
-      padding: EdgeInsets.only(left: indent ? 16.0 : 0.0, top: 2, bottom: 2),
+      padding: EdgeInsets.only(left: indent ? 16.0 : 0.0, top: 1, bottom: 1),
       child: Container(
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF262626) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           onTap: () => _handleSwitchSession(s.id),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
                 Expanded(
@@ -1339,9 +1590,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   style: const TextStyle(fontSize: 11, color: Colors.white38),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 16, color: Colors.white38),
+                  icon: const Icon(Icons.more_vert, size: 15, color: Colors.white38),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                  constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
                   color: const Color(0xFF1E1E1E),
                   onSelected: (val) {
                     if (val == 'rename') {
@@ -1532,7 +1783,11 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             for (final block in msg.blocks) ...[
               if (block is ThoughtBlock && block.thought.isNotEmpty)
-                ThoughtCard(thought: block.thought, isStreaming: msg.isStreaming),
+                ThoughtCard(
+                  thought: block.thought,
+                  isStreaming: msg.isStreaming,
+                  durationSeconds: block.durationSeconds,
+                ),
 
               if (block is ToolCallBlock)
                 ToolApprovalCard(
@@ -1668,7 +1923,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (model == 'o3-mini') return 'o3-mini';
     if (model.contains('gemini-2.5-flash')) return 'Gemini 2.5 Flash';
     if (model.contains('gemini-2.5-pro')) return 'Gemini 2.5 Pro';
-    if (model.length > 16) return '${model.substring(0, 14)}...';
+    if (model.length > 22) return '${model.substring(0, 20)}...';
     return model;
   }
 
@@ -2344,7 +2599,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
+        padding: const EdgeInsets.fromLTRB(14, 14, 10, 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2354,7 +2609,7 @@ class _ChatScreenState extends State<ChatScreen> {
               controller: _textController,
               focusNode: _inputFocusNode,
               autofocus: false,
-              minLines: 1,
+              minLines: 2,
               maxLines: 6,
               keyboardType: TextInputType.multiline,
               textInputAction: TextInputAction.newline,
@@ -2442,10 +2697,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
 
-                const Spacer(),
+                const SizedBox(width: 8),
 
-                // Model & Thinking Intensity Pill
-                Flexible(
+                // Model & Thinking Intensity Pill - Expanded to extend left
+                Expanded(
                   child: Material(
                     color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB),
                     borderRadius: BorderRadius.circular(16),
@@ -2462,9 +2717,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Flexible(
+                            Expanded(
                               child: Text(
                                 '${_getDisplayModelName(activeModel)} · ${l10n.thinkingTitle} · ${_getThinkingLabel(thinkingIntensity, l10n)}',
                                 maxLines: 1,
@@ -2491,12 +2745,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 const SizedBox(width: 8),
 
-                // Send / Stop Circular Button (Voice is omitted per instruction)
+                // Send / Stop Circular Button (Primary color restored)
                 Material(
                   color: isWorking
                       ? Colors.redAccent
                       : (hasText
-                          ? (isDark ? Colors.white : theme.colorScheme.primary)
+                          ? theme.colorScheme.primary
                           : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0))),
                   shape: const CircleBorder(),
                   clipBehavior: Clip.antiAlias,
@@ -2513,7 +2767,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         color: isWorking
                             ? Colors.white
                             : (hasText
-                                ? (isDark ? Colors.black : Colors.white)
+                                ? Colors.white
                                 : (isDark ? Colors.white30 : Colors.black26)),
                       ),
                     ),

@@ -150,5 +150,16 @@
   "pasteClipboard": "粘贴剪贴板内容",
   "commonPrompts": "常用提示词",
   "noFilesInProject": "当前项目暂无文件",
-  "inputBoxHint": "问问任何问题或提需求..."
+  "inputBoxHint": "问问任何问题或提需求...",
+  "noProject": "无项目",
+  "changeProject": "更改项目",
+  "selectProjectForSession": "选择此会话所属的项目",
+  "thoughtDuration": "已思考 {seconds} 秒",
+  "@thoughtDuration": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -4,11 +4,13 @@ import '../../../l10n/app_localizations.dart';
 class ThoughtCard extends StatefulWidget {
   final String thought;
   final bool isStreaming;
+  final int? durationSeconds;
 
   const ThoughtCard({
     super.key,
     required this.thought,
     this.isStreaming = false,
+    this.durationSeconds,
   });
 
   @override
@@ -22,6 +24,15 @@ class _ThoughtCardState extends State<ThoughtCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+
+    final String titleText;
+    if (widget.isStreaming) {
+      titleText = l10n?.thinking ?? '思考中...';
+    } else if (widget.durationSeconds != null) {
+      titleText = l10n?.thoughtDuration(widget.durationSeconds!) ?? '已思考 ${widget.durationSeconds} 秒';
+    } else {
+      titleText = l10n?.reasoningProcess ?? '思考过程';
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -53,9 +64,7 @@ class _ThoughtCardState extends State<ThoughtCard> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    widget.isStreaming
-                        ? (l10n?.thinking ?? 'Thinking...')
-                        : (l10n?.reasoningProcess ?? 'Reasoning Process'),
+                    titleText,
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,

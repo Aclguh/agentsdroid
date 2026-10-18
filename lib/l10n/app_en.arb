@@ -150,5 +150,16 @@
   "pasteClipboard": "Paste Clipboard Content",
   "commonPrompts": "Common Developer Prompts",
   "noFilesInProject": "No files in current project",
-  "inputBoxHint": "Ask any question or prompt..."
+  "inputBoxHint": "Ask any question or prompt...",
+  "noProject": "No Project",
+  "changeProject": "Change Project",
+  "selectProjectForSession": "Select project for this session",
+  "thoughtDuration": "Thought for {seconds}s",
+  "@thoughtDuration": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
 }

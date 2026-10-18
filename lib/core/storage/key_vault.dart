@@ -208,6 +208,26 @@ class KeyVault {
     await _prefs.setStringList(_prefExpandedProjects, projects.toList());
   }
 
+  // --- Section Expansion Persistence in Drawer ---
+  static const _prefProjectsSectionExpanded = 'pref_projects_section_expanded';
+  static const _prefConversationsSectionExpanded = 'pref_conversations_section_expanded';
+
+  bool isProjectsSectionExpanded() {
+    return _prefs.getBool(_prefProjectsSectionExpanded) ?? true;
+  }
+
+  Future<void> setProjectsSectionExpanded(bool expanded) async {
+    await _prefs.setBool(_prefProjectsSectionExpanded, expanded);
+  }
+
+  bool isConversationsSectionExpanded() {
+    return _prefs.getBool(_prefConversationsSectionExpanded) ?? true;
+  }
+
+  Future<void> setConversationsSectionExpanded(bool expanded) async {
+    await _prefs.setBool(_prefConversationsSectionExpanded, expanded);
+  }
+
   // Export environment variables map for PRoot Linux environment injection
   Future<Map<String, String>> exportEnvironmentVariables() async {
     final env = <String, String>{};

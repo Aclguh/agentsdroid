@@ -482,4 +482,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inputBoxHint => 'Ask any question or prompt...';
+
+  @override
+  String get noProject => 'No Project';
+
+  @override
+  String get changeProject => 'Change Project';
+
+  @override
+  String get selectProjectForSession => 'Select project for this session';
+
+  @override
+  String thoughtDuration(int seconds) {
+    return 'Thought for ${seconds}s';
+  }
 }

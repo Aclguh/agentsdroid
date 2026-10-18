@@ -463,4 +463,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get inputBoxHint => '问问任何问题或提需求...';
+
+  @override
+  String get noProject => '无项目';
+
+  @override
+  String get changeProject => '更改项目';
+
+  @override
+  String get selectProjectForSession => '选择此会话所属的项目';
+
+  @override
+  String thoughtDuration(int seconds) {
+    return '已思考 $seconds 秒';
+  }
 }

@@ -1003,6 +1003,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'问问任何问题或提需求...'**
   String get inputBoxHint;
+
+  /// No description provided for @noProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'无项目'**
+  String get noProject;
+
+  /// No description provided for @changeProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'更改项目'**
+  String get changeProject;
+
+  /// No description provided for @selectProjectForSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择此会话所属的项目'**
+  String get selectProjectForSession;
+
+  /// No description provided for @thoughtDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'已思考 {seconds} 秒'**
+  String thoughtDuration(int seconds);
 }
 
 class _AppLocalizationsDelegate
