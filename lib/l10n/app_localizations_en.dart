@@ -189,4 +189,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clearLog => 'Clear';
+
+  @override
+  String get agentEngine => 'Agent Engine';
+
+  @override
+  String get engineBuiltin => 'Built-in Light Agent';
+
+  @override
+  String get engineClaudeCode => 'Official Claude Code CLI';
+
+  @override
+  String get engineSwitchTitle => 'Select Agent Execution Engine';
+
+  @override
+  String get engineBuiltinDesc =>
+      'Ultra-fast & light, directly calls LLM API without npm dependencies.';
+
+  @override
+  String get engineClaudeCodeDesc =>
+      'Official Anthropic Claude Code CLI running inside embedded PRoot Linux.';
+
+  @override
+  String get engineNotReady => 'Engine Environment Not Ready';
+
+  @override
+  String get goToSubsystemTerminal => 'Go to Subsystem Console';
+
+  @override
+  String get goToSettings => 'Go to Settings';
+
+  @override
+  String get cancel => 'Cancel';
 }

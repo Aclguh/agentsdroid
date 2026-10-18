@@ -51,6 +51,23 @@ class ToolchainStatus {
   bool get hasClaudeCode => claudeCodeVersion != null && claudeCodeVersion!.isNotEmpty;
 }
 
+/// An interactive process running inside PRoot Linux subsystem
+class PRootProcess {
+  final Process process;
+  final Stream<String> stdout;
+  final Stream<String> stderr;
+
+  PRootProcess({
+    required this.process,
+    required this.stdout,
+    required this.stderr,
+  });
+
+  IOSink get stdin => process.stdin;
+  Future<int> get exitCode => process.exitCode;
+  bool kill([ProcessSignal signal = ProcessSignal.sigterm]) => process.kill(signal);
+}
+
 class PRootManager {
   Directory? _rootfsDir;
   Directory? _binDir;
@@ -258,6 +275,52 @@ class PRootManager {
     process.stderr.transform(utf8.decoder).listen((data) => onOutput(data));
 
     return await process.exitCode;
+  }
+
+  /// Start an interactive process inside the subsystem with full stdin/stdout access
+  Future<PRootProcess> startProcess(
+    String command, {
+    Map<String, String>? environment,
+    String? workingDir,
+  }) async {
+    if (!await isInstalled()) {
+      throw StateError('Linux subsystem is not installed yet.');
+    }
+
+    final fullEnv = _buildEnvironment(environment);
+
+    Process process;
+    if (_prootBin != null && await _prootBin!.exists()) {
+      final args = _buildPRootArgs(command, workingDir: workingDir);
+      process = await Process.start(
+        _prootBin!.path,
+        args,
+        environment: fullEnv,
+        workingDirectory: _rootfsDir!.path,
+      );
+    } else {
+      final effectiveWd = workingDir != null
+          ? (_workspacePath != null && workingDir.startsWith('/workspace')
+              ? _workspacePath!
+              : p.join(_rootfsDir!.path, workingDir.replaceFirst('/', '')))
+          : _workspacePath;
+
+      process = await Process.start(
+        'sh',
+        ['-c', command],
+        workingDirectory: effectiveWd,
+        environment: fullEnv,
+      );
+    }
+
+    final stdoutStream = process.stdout.transform(utf8.decoder).asBroadcastStream();
+    final stderrStream = process.stderr.transform(utf8.decoder).asBroadcastStream();
+
+    return PRootProcess(
+      process: process,
+      stdout: stdoutStream,
+      stderr: stderrStream,
+    );
   }
 
   /// Inspect installed developer toolchains inside the subsystem

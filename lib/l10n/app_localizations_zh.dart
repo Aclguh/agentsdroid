@@ -183,4 +183,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get clearLog => '清屏';
+
+  @override
+  String get agentEngine => 'Agent 引擎';
+
+  @override
+  String get engineBuiltin => '内置轻量 Agent';
+
+  @override
+  String get engineClaudeCode => '官方 Claude Code CLI';
+
+  @override
+  String get engineSwitchTitle => '选择 Agent 执行引擎';
+
+  @override
+  String get engineBuiltinDesc => '轻量极速，直接调用大模型 API，无需额外安装 npm 依赖。';
+
+  @override
+  String get engineClaudeCodeDesc =>
+      'Anthropic 官方 Claude Code CLI，运行于嵌入式 Linux PRoot 沙箱内。';
+
+  @override
+  String get engineNotReady => '引擎环境尚未就绪';
+
+  @override
+  String get goToSubsystemTerminal => '前往子系统终端';
+
+  @override
+  String get goToSettings => '前往设置';
+
+  @override
+  String get cancel => '取消';
 }

@@ -57,5 +57,15 @@
   "quickCommands": "常用指令",
   "commandHint": "输入 Linux 命令 (如 node -v, git status)...",
   "notInstalledWarning": "Linux 子系统尚未安装，请前往「设置」进行安装",
-  "clearLog": "清屏"
+  "clearLog": "清屏",
+  "agentEngine": "Agent 引擎",
+  "engineBuiltin": "内置轻量 Agent",
+  "engineClaudeCode": "官方 Claude Code CLI",
+  "engineSwitchTitle": "选择 Agent 执行引擎",
+  "engineBuiltinDesc": "轻量极速，直接调用大模型 API，无需额外安装 npm 依赖。",
+  "engineClaudeCodeDesc": "Anthropic 官方 Claude Code CLI，运行于嵌入式 Linux PRoot 沙箱内。",
+  "engineNotReady": "引擎环境尚未就绪",
+  "goToSubsystemTerminal": "前往子系统终端",
+  "goToSettings": "前往设置",
+  "cancel": "取消"
 }

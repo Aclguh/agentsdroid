@@ -445,6 +445,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'清屏'**
   String get clearLog;
+
+  /// No description provided for @agentEngine.
+  ///
+  /// In zh, this message translates to:
+  /// **'Agent 引擎'**
+  String get agentEngine;
+
+  /// No description provided for @engineBuiltin.
+  ///
+  /// In zh, this message translates to:
+  /// **'内置轻量 Agent'**
+  String get engineBuiltin;
+
+  /// No description provided for @engineClaudeCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'官方 Claude Code CLI'**
+  String get engineClaudeCode;
+
+  /// No description provided for @engineSwitchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择 Agent 执行引擎'**
+  String get engineSwitchTitle;
+
+  /// No description provided for @engineBuiltinDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'轻量极速，直接调用大模型 API，无需额外安装 npm 依赖。'**
+  String get engineBuiltinDesc;
+
+  /// No description provided for @engineClaudeCodeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Anthropic 官方 Claude Code CLI，运行于嵌入式 Linux PRoot 沙箱内。'**
+  String get engineClaudeCodeDesc;
+
+  /// No description provided for @engineNotReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'引擎环境尚未就绪'**
+  String get engineNotReady;
+
+  /// No description provided for @goToSubsystemTerminal.
+  ///
+  /// In zh, this message translates to:
+  /// **'前往子系统终端'**
+  String get goToSubsystemTerminal;
+
+  /// No description provided for @goToSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'前往设置'**
+  String get goToSettings;
+
+  /// No description provided for @cancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get cancel;
 }
 
 class _AppLocalizationsDelegate

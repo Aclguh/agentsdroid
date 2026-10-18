@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/builtin/builtin_agent_engine.dart';
+import '../../core/agent/engine_coordinator.dart';
 import '../../core/proot/proot_manager.dart';
 import '../../core/storage/key_vault.dart';
 import '../../core/storage/workspace_service.dart';
@@ -34,7 +34,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  late final BuiltinAgentEngine _engine;
+  late final EngineCoordinator _coordinator;
   StreamSubscription<AgentEvent>? _subscription;
 
   final List<ChatMessage> _messages = [];
@@ -49,16 +49,16 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _engine = BuiltinAgentEngine(
-      widget.keyVault,
-      widget.workspace,
+    _coordinator = EngineCoordinator(
+      keyVault: widget.keyVault,
+      workspace: widget.workspace,
       prootManager: widget.prootManager,
     );
     _listenToEngineEvents();
   }
 
   void _listenToEngineEvents() {
-    _subscription = _engine.eventStream.listen((event) {
+    _subscription = _coordinator.eventStream.listen((event) {
       if (!mounted) return;
 
       setState(() {
@@ -141,13 +141,13 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     _scrollToBottom();
-    await _engine.startTask(text);
+    await _coordinator.startTask(text);
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
-    _engine.dispose();
+    _coordinator.dispose();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -172,8 +172,49 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(l10n.appTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 2),
                 Row(
                   children: [
+                    InkWell(
+                      onTap: () => _showEngineSwitchDialog(l10n),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: _coordinator.currentEngineType == AgentEngineType.builtin
+                              ? Colors.blueAccent.withValues(alpha: 0.15)
+                              : Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: _coordinator.currentEngineType == AgentEngineType.builtin
+                                ? Colors.blueAccent.withValues(alpha: 0.4)
+                                : Colors.amber.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _coordinator.currentEngineType == AgentEngineType.builtin ? Icons.flash_on : Icons.terminal,
+                              size: 10,
+                              color: _coordinator.currentEngineType == AgentEngineType.builtin ? Colors.blueAccent : Colors.amber,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              _coordinator.currentEngineType == AgentEngineType.builtin ? l10n.engineBuiltin : l10n.engineClaudeCode,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: _coordinator.currentEngineType == AgentEngineType.builtin ? Colors.blueAccent : Colors.amber,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(Icons.arrow_drop_down, size: 12, color: Colors.white70),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     Text(
                       activeModel,
                       style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
@@ -236,7 +277,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               );
-              setState(() {}); // Refresh active model name, language and badges
+              final savedEngine = widget.keyVault.getSelectedEngine() == 'claudeCode'
+                  ? AgentEngineType.claudeCode
+                  : AgentEngineType.builtin;
+              if (_coordinator.currentEngineType != savedEngine) {
+                await _coordinator.switchEngine(savedEngine);
+              }
+              setState(() {}); // Refresh active model name, language, engine and badges
             },
           ),
         ],
@@ -278,7 +325,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   if (_agentState != AgentState.idle)
                     GestureDetector(
-                      onTap: () => _engine.interrupt(),
+                      onTap: () => _coordinator.interrupt(),
                       child: Text(
                         l10n.stop,
                         style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
@@ -433,8 +480,8 @@ class _ChatScreenState extends State<ChatScreen> {
             for (final tool in msg.toolCalls)
               ToolApprovalCard(
                 toolCall: tool,
-                onApprove: () => _engine.respondApproval(tool.toolCallId, true),
-                onReject: () => _engine.respondApproval(tool.toolCallId, false),
+                onApprove: () => _coordinator.respondApproval(tool.toolCallId, true),
+                onReject: () => _coordinator.respondApproval(tool.toolCallId, false),
                 onViewDiff: msg.diffs.isNotEmpty
                     ? () {
                         Navigator.push(
@@ -514,12 +561,121 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(width: 8),
           IconButton.filled(
-            onPressed: isWorking ? () => _engine.interrupt() : () => _handleSendMessage(),
+            onPressed: isWorking ? () => _coordinator.interrupt() : () => _handleSendMessage(),
             icon: Icon(isWorking ? Icons.stop : Icons.arrow_upward),
             style: IconButton.styleFrom(
               backgroundColor: isWorking ? Colors.redAccent : theme.colorScheme.primary,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  void _showEngineSwitchDialog(AppLocalizations l10n) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.engineSwitchTitle,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.flash_on, color: Colors.blueAccent),
+                  title: Text(l10n.engineBuiltin, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(l10n.engineBuiltinDesc, style: const TextStyle(fontSize: 12)),
+                  trailing: _coordinator.currentEngineType == AgentEngineType.builtin
+                      ? const Icon(Icons.check, color: Colors.blueAccent)
+                      : null,
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _coordinator.switchEngine(AgentEngineType.builtin);
+                    setState(() {});
+                  },
+                ),
+                const Divider(color: Color(0xFF2A2A2A)),
+                ListTile(
+                  leading: const Icon(Icons.terminal, color: Colors.amber),
+                  title: Text(l10n.engineClaudeCode, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(l10n.engineClaudeCodeDesc, style: const TextStyle(fontSize: 12)),
+                  trailing: _coordinator.currentEngineType == AgentEngineType.claudeCode
+                      ? const Icon(Icons.check, color: Colors.amber)
+                      : null,
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final readiness = await _coordinator.checkEngineReadiness(AgentEngineType.claudeCode);
+                    if (!readiness.isReady) {
+                      _showEngineNotReadyDialog(l10n, readiness);
+                    } else {
+                      await _coordinator.switchEngine(AgentEngineType.claudeCode);
+                      setState(() {});
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEngineNotReadyDialog(AppLocalizations l10n, EngineCheckResult readiness) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text(readiness.issueTitle ?? l10n.engineNotReady),
+        content: Text(readiness.issueDetail ?? ''),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          if (readiness.issueTitle?.contains('Linux') == true || readiness.issueTitle?.contains('Node') == true)
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SubsystemTerminalScreen(
+                      prootManager: widget.prootManager,
+                      keyVault: widget.keyVault,
+                    ),
+                  ),
+                );
+              },
+              child: Text(l10n.goToSubsystemTerminal),
+            )
+          else
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SettingsScreen(
+                      keyVault: widget.keyVault,
+                      prootManager: widget.prootManager,
+                    ),
+                  ),
+                );
+              },
+              child: Text(l10n.goToSettings),
+            ),
         ],
       ),
     );

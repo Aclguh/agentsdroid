@@ -130,6 +130,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 24),
 
+          // Section: Agent Execution Engine
+          Text(l10n.agentEngine, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+          const SizedBox(height: 12),
+          Card(
+            child: Column(
+              children: [
+                RadioListTile<String>(
+                  title: Text(l10n.engineBuiltin, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(l10n.engineBuiltinDesc, style: const TextStyle(fontSize: 12)),
+                  value: 'builtin',
+                  groupValue: widget.keyVault.getSelectedEngine(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        widget.keyVault.setSelectedEngine(val);
+                      });
+                    }
+                  },
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                RadioListTile<String>(
+                  title: Text(l10n.engineClaudeCode, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(l10n.engineClaudeCodeDesc, style: const TextStyle(fontSize: 12)),
+                  value: 'claudeCode',
+                  groupValue: widget.keyVault.getSelectedEngine(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        widget.keyVault.setSelectedEngine(val);
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           // Section: Model Provider
           Text(l10n.modelConfigSection, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
           const SizedBox(height: 12),

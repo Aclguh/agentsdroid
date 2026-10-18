@@ -26,6 +26,7 @@ class KeyVault {
   static const _prefDeepseekBaseUrl = 'pref_deepseek_base_url';
   static const _prefYoloMode = 'pref_yolo_mode';
   static const _prefLanguage = 'pref_language';
+  static const _prefSelectedEngine = 'pref_selected_engine';
 
   final FlutterSecureStorage _secureStorage;
   final SharedPreferences _prefs;
@@ -52,6 +53,17 @@ class KeyVault {
 
   Future<String?> getApiKey(LLMProvider provider) async {
     return await _secureStorage.read(key: _getStorageKey(provider));
+  }
+
+  Future<String?> getAnthropicApiKey() => getApiKey(LLMProvider.anthropic);
+  Future<String?> getOpenAiApiKey() => getApiKey(LLMProvider.openai);
+
+  String getSelectedEngine() {
+    return _prefs.getString(_prefSelectedEngine) ?? 'builtin';
+  }
+
+  Future<void> setSelectedEngine(String engine) async {
+    await _prefs.setString(_prefSelectedEngine, engine);
   }
 
   String _getStorageKey(LLMProvider provider) {

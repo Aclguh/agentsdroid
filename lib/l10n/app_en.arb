@@ -57,5 +57,15 @@
   "quickCommands": "Quick Commands",
   "commandHint": "Enter Linux command (e.g. node -v, git status)...",
   "notInstalledWarning": "Linux Subsystem is not installed yet. Please install it in Settings.",
-  "clearLog": "Clear"
+  "clearLog": "Clear",
+  "agentEngine": "Agent Engine",
+  "engineBuiltin": "Built-in Light Agent",
+  "engineClaudeCode": "Official Claude Code CLI",
+  "engineSwitchTitle": "Select Agent Execution Engine",
+  "engineBuiltinDesc": "Ultra-fast & light, directly calls LLM API without npm dependencies.",
+  "engineClaudeCodeDesc": "Official Anthropic Claude Code CLI running inside embedded PRoot Linux.",
+  "engineNotReady": "Engine Environment Not Ready",
+  "goToSubsystemTerminal": "Go to Subsystem Console",
+  "goToSettings": "Go to Settings",
+  "cancel": "Cancel"
 }
