@@ -61,7 +61,7 @@ class _ChatScreenState extends State<ChatScreen> {
   ChatMessage? _currentAssistantMessage;
   ChatSession? _currentSession;
 
-  final Set<String> _expandedProjects = {'agentsdroid'};
+  final Set<String> _expandedProjects = {};
   bool _showArchived = false;
   ConversationSortOrder _conversationSortOrder = ConversationSortOrder.recent;
   ProjectSortOrder _projectSortOrder = ProjectSortOrder.name;
@@ -77,6 +77,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _foregroundManager = ForegroundServiceManager();
     _foregroundSubscription = _foregroundManager.bindAgentEvents(_coordinator.eventStream);
     _sessionService = widget.sessionService ?? SessionService();
+    _expandedProjects.addAll(widget.keyVault.getExpandedProjects());
     _initSessionService();
     _listenToEngineEvents();
   }
@@ -85,7 +86,6 @@ class _ChatScreenState extends State<ChatScreen> {
     if (widget.sessionService == null) {
       await _sessionService.init();
     }
-    _expandedProjects.add(widget.workspace.currentProjectName);
     // Requirement: Software opens with a standalone session not belonging to any project
     _currentSession = await _sessionService.createSession(
       title: '新会话',
@@ -425,6 +425,7 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _expandedProjects.add(projectName);
       });
+      await widget.keyVault.setExpandedProjects(_expandedProjects);
       await _handleNewSession(l10n, projectName: projectName);
     }
   }
@@ -662,9 +663,27 @@ class _ChatScreenState extends State<ChatScreen> {
       child: SafeArea(
         child: Column(
           children: [
+            // App Name Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+              child: Row(
+                children: [
+                  Text(
+                    l10n.appTitle,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // Top Action Buttons (Matching reference UI)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
               child: Column(
                 children: [
                   // + New Conversation Button
@@ -1107,6 +1126,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 _expandedProjects.add(projectName);
               }
             });
+            widget.keyVault.setExpandedProjects(_expandedProjects);
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),

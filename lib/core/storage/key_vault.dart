@@ -139,6 +139,21 @@ class KeyVault {
     await _prefs.setString(_prefLanguage, langCode);
   }
 
+  // --- Expanded Projects Persistence ---
+  static const _prefExpandedProjects = 'pref_expanded_projects';
+
+  Set<String> getExpandedProjects() {
+    final list = _prefs.getStringList(_prefExpandedProjects);
+    if (list != null) {
+      return list.toSet();
+    }
+    return {'agentsdroid'};
+  }
+
+  Future<void> setExpandedProjects(Set<String> projects) async {
+    await _prefs.setStringList(_prefExpandedProjects, projects.toList());
+  }
+
   // Export environment variables map for PRoot Linux environment injection
   Future<Map<String, String>> exportEnvironmentVariables() async {
     final env = <String, String>{};
