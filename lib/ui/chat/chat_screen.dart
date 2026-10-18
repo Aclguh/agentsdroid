@@ -20,6 +20,7 @@ import '../diff/diff_viewer_screen.dart';
 import '../explorer/workspace_explorer_screen.dart';
 import '../settings/settings_screen.dart';
 import '../terminal/subsystem_terminal_screen.dart';
+import 'widgets/agents_droid_mark.dart';
 import 'widgets/thought_card.dart';
 import 'widgets/tool_approval_card.dart';
 
@@ -1727,8 +1728,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.code_outlined,
+              child: AgentsDroidMark(
                 size: 48,
                 color: theme.colorScheme.primary,
               ),
