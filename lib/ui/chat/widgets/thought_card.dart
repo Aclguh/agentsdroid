@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ThoughtCard extends StatefulWidget {
   final String thought;
@@ -20,14 +21,15 @@ class _ThoughtCardState extends State<ThoughtCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6.0),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.35),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.4),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
         ),
       ),
       child: Column(
@@ -51,7 +53,9 @@ class _ThoughtCardState extends State<ThoughtCard> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    widget.isStreaming ? 'Thinking...' : 'Reasoning Process',
+                    widget.isStreaming
+                        ? (l10n?.thinking ?? 'Thinking...')
+                        : (l10n?.reasoningProcess ?? 'Reasoning Process'),
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
@@ -84,7 +88,7 @@ class _ThoughtCardState extends State<ThoughtCard> {
                 widget.thought,
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontFamily: 'monospace',
-                  color: theme.colorScheme.onSurface.withOpacity(0.85),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
                   height: 1.4,
                 ),
               ),

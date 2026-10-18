@@ -25,6 +25,7 @@ class KeyVault {
   static const _prefCustomBaseUrl = 'pref_custom_base_url';
   static const _prefDeepseekBaseUrl = 'pref_deepseek_base_url';
   static const _prefYoloMode = 'pref_yolo_mode';
+  static const _prefLanguage = 'pref_language';
 
   final FlutterSecureStorage _secureStorage;
   final SharedPreferences _prefs;
@@ -115,6 +116,15 @@ class KeyVault {
 
   Future<void> setYoloMode(bool enabled) async {
     await _prefs.setBool(_prefYoloMode, enabled);
+  }
+
+  // --- Localization Language (Default: 'zh') ---
+  String getLanguage() {
+    return _prefs.getString(_prefLanguage) ?? 'zh';
+  }
+
+  Future<void> setLanguage(String langCode) async {
+    await _prefs.setString(_prefLanguage, langCode);
   }
 
   // Export environment variables map for PRoot Linux environment injection

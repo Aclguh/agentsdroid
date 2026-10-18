@@ -49,11 +49,11 @@ class DiffViewerScreen extends StatelessWidget {
     String prefix = ' ';
 
     if (line.type == DiffLineType.added) {
-      bgColor = Colors.green.withOpacity(0.18);
+      bgColor = Colors.green.withValues(alpha: 0.18);
       textColor = const Color(0xFFB5E8A9);
       prefix = '+';
     } else if (line.type == DiffLineType.removed) {
-      bgColor = Colors.red.withOpacity(0.18);
+      bgColor = Colors.red.withValues(alpha: 0.18);
       textColor = const Color(0xFFF4A8A8);
       prefix = '-';
     }

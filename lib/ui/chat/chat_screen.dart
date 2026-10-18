@@ -7,6 +7,7 @@ import '../../core/builtin/builtin_agent_engine.dart';
 import '../../core/proot/proot_manager.dart';
 import '../../core/storage/key_vault.dart';
 import '../../core/storage/workspace_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/agent_event.dart';
 import '../../models/chat_message.dart';
 import '../diff/diff_viewer_screen.dart';
@@ -150,6 +151,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final activeModel = widget.keyVault.getActiveModel();
     final isYolo = widget.keyVault.isYoloMode();
 
@@ -164,7 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('AgentsDroid', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(l10n.appTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 Row(
                   children: [
                     Text(
@@ -176,7 +178,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.2),
+                          color: Colors.amber.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text('YOLO', style: TextStyle(fontSize: 9, color: Colors.amber, fontWeight: FontWeight.bold)),
@@ -191,7 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.folder_outlined),
-            tooltip: 'Workspace Files',
+            tooltip: l10n.workspaceFiles,
             onPressed: () {
               Navigator.push(
                 context,
@@ -203,7 +205,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
+            tooltip: l10n.settings,
             onPressed: () async {
               await Navigator.push(
                 context,
@@ -214,7 +216,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               );
-              setState(() {}); // Refresh active model name and badges
+              setState(() {}); // Refresh active model name, language and badges
             },
           ),
         ],
@@ -227,8 +229,8 @@ class _ChatScreenState extends State<ChatScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               color: _agentState == AgentState.waitingApproval
-                  ? Colors.amber.withOpacity(0.15)
-                  : theme.colorScheme.primaryContainer.withOpacity(0.4),
+                  ? Colors.amber.withValues(alpha: 0.15)
+                  : theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
               child: Row(
                 children: [
                   SizedBox(
@@ -244,7 +246,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      _statusMessage ?? 'Agent is working...',
+                      _statusMessage ?? l10n.agentWorking,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -257,9 +259,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   if (_agentState != AgentState.idle)
                     GestureDetector(
                       onTap: () => _engine.interrupt(),
-                      child: const Text(
-                        'Stop',
-                        style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                      child: Text(
+                        l10n.stop,
+                        style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ),
                 ],
@@ -269,26 +271,26 @@ class _ChatScreenState extends State<ChatScreen> {
           // Chat Messages
           Expanded(
             child: _messages.isEmpty
-                ? _buildEmptyState(theme)
+                ? _buildEmptyState(theme, l10n)
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final msg = _messages[index];
-                      return _buildMessageItem(msg, theme);
+                      return _buildMessageItem(msg, theme, l10n);
                     },
                   ),
           ),
 
           // Bottom Input Bar
-          _buildInputBar(theme),
+          _buildInputBar(theme, l10n),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
+  Widget _buildEmptyState(ThemeData theme, AppLocalizations l10n) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -298,19 +300,19 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.terminal, size: 48, color: theme.colorScheme.primary),
             ),
             const SizedBox(height: 16),
             Text(
-              'Welcome to AgentsDroid',
+              l10n.welcomeTitle,
               style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Your mobile AI programming workspace.\nInspect files, edit code, and run tests right on your phone.',
+              l10n.welcomeSubtitle,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -324,18 +326,18 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 ActionChip(
                   avatar: const Icon(Icons.info_outline, size: 16),
-                  label: const Text('Read README.md and explain project'),
-                  onPressed: () => _handleSendMessage('Please read README.md and summarize this project for me.'),
+                  label: Text(l10n.promptSummary),
+                  onPressed: () => _handleSendMessage(l10n.promptSummaryQuery),
                 ),
                 ActionChip(
                   avatar: const Icon(Icons.code, size: 16),
-                  label: const Text('Add Fibonacci function to main.py'),
-                  onPressed: () => _handleSendMessage('Please inspect main.py and add a recursive Fibonacci function with test output.'),
+                  label: Text(l10n.promptFibonacci),
+                  onPressed: () => _handleSendMessage(l10n.promptFibonacciQuery),
                 ),
                 ActionChip(
                   avatar: const Icon(Icons.folder_open, size: 16),
-                  label: const Text('List all project files'),
-                  onPressed: () => _handleSendMessage('Please list all files in the current workspace and show the directory structure.'),
+                  label: Text(l10n.promptListFiles),
+                  onPressed: () => _handleSendMessage(l10n.promptListFilesQuery),
                 ),
               ],
             ),
@@ -345,7 +347,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessageItem(ChatMessage msg, ThemeData theme) {
+  Widget _buildMessageItem(ChatMessage msg, ThemeData theme, AppLocalizations l10n) {
     final isUser = msg.role == MessageRole.user;
 
     if (isUser) {
@@ -390,7 +392,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withOpacity(0.35),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: MarkdownBody(
@@ -434,7 +436,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   leading: const Icon(Icons.difference_outlined, color: Colors.greenAccent),
                   title: Text(diff.filePath, style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 13)),
                   subtitle: Text(
-                    'Diff generated (${diff.diffLines.length} lines)',
+                    '${l10n.diffGenerated} (${diff.diffLines.length} lines)',
                     style: const TextStyle(color: Colors.white60, fontSize: 11),
                   ),
                   trailing: const Icon(Icons.chevron_right, color: Colors.white54),
@@ -454,7 +456,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildInputBar(ThemeData theme) {
+  Widget _buildInputBar(ThemeData theme, AppLocalizations l10n) {
     final isWorking = _agentState != AgentState.idle;
 
     return Container(
@@ -467,7 +469,7 @@ class _ChatScreenState extends State<ChatScreen> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(
-          top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
+          top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
         ),
       ),
       child: Row(
@@ -478,13 +480,13 @@ class _ChatScreenState extends State<ChatScreen> {
               minLines: 1,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: isWorking ? 'Agent is executing...' : 'Ask agent to inspect, code, or run...',
+                hintText: isWorking ? l10n.inputHintWorking : l10n.inputHintIdle,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+                fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
               onSubmitted: (_) => _handleSendMessage(),

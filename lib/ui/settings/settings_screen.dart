@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/proot/proot_manager.dart';
 import '../../core/storage/key_vault.dart';
+import '../../l10n/app_localizations.dart';
+import '../../main.dart';
 
 class SettingsScreen extends StatefulWidget {
   final KeyVault keyVault;
@@ -24,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   bool _obscureKey = true;
   bool _isYolo = false;
+  late String _currentLanguage;
   PRootProgress? _prootProgress;
 
   @override
@@ -32,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _selectedProvider = widget.keyVault.getActiveProvider();
     _modelController.text = widget.keyVault.getActiveModel();
     _isYolo = widget.keyVault.isYoloMode();
+    _currentLanguage = widget.keyVault.getLanguage();
 
     _loadProviderData(_selectedProvider);
 
@@ -70,8 +74,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await widget.keyVault.setYoloMode(_isYolo);
 
     if (mounted) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved successfully!')),
+        SnackBar(content: Text(l10n.settingsSaved)),
       );
     }
   }
@@ -79,23 +84,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings & Providers'),
+        title: Text(l10n.settingsTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: _saveCurrentProvider,
-            tooltip: 'Save',
+            tooltip: l10n.saveSettings,
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Section: Language Switcher
+          Text(l10n.language, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: DropdownButtonFormField<String>(
+                initialValue: _currentLanguage,
+                decoration: InputDecoration(
+                  labelText: l10n.language,
+                  border: InputBorder.none,
+                ),
+                items: [
+                  DropdownMenuItem(value: 'zh', child: Text(l10n.languageChinese)),
+                  DropdownMenuItem(value: 'en', child: Text(l10n.languageEnglish)),
+                ],
+                onChanged: (val) {
+                  if (val != null && val != _currentLanguage) {
+                    setState(() {
+                      _currentLanguage = val;
+                    });
+                    AgentsDroidApp.setLocale(context, Locale(val));
+                  }
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           // Section: Model Provider
-          Text('Model & API Configuration', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+          Text(l10n.modelConfigSection, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
           const SizedBox(height: 12),
 
           Card(
@@ -106,9 +142,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   DropdownButtonFormField<LLMProvider>(
                     initialValue: _selectedProvider,
-                    decoration: const InputDecoration(
-                      labelText: 'Active AI Provider',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.activeProvider,
+                      border: const OutlineInputBorder(),
                     ),
                     items: LLMProvider.values.map((p) {
                       return DropdownMenuItem(value: p, child: Text(p.displayName));
@@ -127,9 +163,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                   TextField(
                     controller: _modelController,
-                    decoration: const InputDecoration(
-                      labelText: 'Model Name',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.modelName,
+                      border: const OutlineInputBorder(),
                       helperText: 'e.g. claude-3-7-sonnet-20250219, deepseek-chat, gpt-4o',
                     ),
                   ),
@@ -139,7 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     controller: _apiKeyController,
                     obscureText: _obscureKey,
                     decoration: InputDecoration(
-                      labelText: 'API Key (${_selectedProvider.displayName})',
+                      labelText: '${l10n.apiKey} (${_selectedProvider.displayName})',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(_obscureKey ? Icons.visibility_off : Icons.visibility),
@@ -153,7 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     TextField(
                       controller: _baseUrlController,
                       decoration: InputDecoration(
-                        labelText: 'API Base URL',
+                        labelText: l10n.apiBaseUrl,
                         border: const OutlineInputBorder(),
                         helperText: _selectedProvider == LLMProvider.deepseek
                             ? 'Default: https://api.deepseek.com'
@@ -169,14 +205,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // Section: Execution Safety & Autonomous Mode
-          Text('Execution Safety', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+          Text(l10n.safetySection, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
           const SizedBox(height: 12),
           Card(
             child: SwitchListTile(
-              title: const Text('Autonomous Mode (YOLO Mode)'),
-              subtitle: const Text(
-                'Automatically approve all tool executions and file modifications without manual confirmation cards.',
-                style: TextStyle(fontSize: 12),
+              title: Text(l10n.yoloMode),
+              subtitle: Text(
+                l10n.yoloModeDesc,
+                style: const TextStyle(fontSize: 12),
               ),
               value: _isYolo,
               activeThumbColor: Colors.amber,
@@ -190,7 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // Section: In-App Linux Subsystem (PRoot)
-          Text('Embedded Linux Subsystem (PRoot)', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+          Text(l10n.subsystemSection, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
           const SizedBox(height: 12),
           Card(
             child: Padding(
@@ -210,14 +246,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Status: ${widget.prootManager.currentStatus == PRootStatus.ready ? 'Installed & Ready' : 'Not Installed'}',
+                        '${l10n.settings}: ${widget.prootManager.currentStatus == PRootStatus.ready ? l10n.subsystemReady : l10n.subsystemNotInstalled}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Runs Debian-arm64 directly inside the app sandbox via PRoot. Zero root required, supports official @anthropic-ai/claude-code & aider.',
+                    l10n.subsystemDesc,
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                   if (_prootProgress != null &&
@@ -236,8 +272,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.download),
                     label: Text(
                       widget.prootManager.currentStatus == PRootStatus.ready
-                          ? 'Subsystem Ready'
-                          : 'Download & Install Subsystem',
+                          ? l10n.subsystemReady
+                          : l10n.installSubsystem,
                     ),
                   ),
                 ],
@@ -250,7 +286,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: FilledButton.tonalIcon(
               onPressed: _saveCurrentProvider,
               icon: const Icon(Icons.save),
-              label: const Text('Save Settings'),
+              label: Text(l10n.saveSettings),
             ),
           ),
         ],

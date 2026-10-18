@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import '../../core/storage/workspace_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class WorkspaceExplorerScreen extends StatefulWidget {
   final WorkspaceService workspace;
@@ -38,15 +39,16 @@ class _WorkspaceExplorerScreenState extends State<WorkspaceExplorerScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Workspace Files'),
+        title: Text(l10n.workspaceFiles),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadFiles,
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -59,7 +61,7 @@ class _WorkspaceExplorerScreenState extends State<WorkspaceExplorerScreen> {
                     children: [
                       Icon(Icons.folder_open, size: 48, color: theme.colorScheme.onSurfaceVariant),
                       const SizedBox(height: 12),
-                      Text('No files in workspace yet.', style: theme.textTheme.bodyMedium),
+                      Text(l10n.noFilesInWorkspace, style: theme.textTheme.bodyMedium),
                     ],
                   ),
                 )

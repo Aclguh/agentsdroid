@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../models/agent_event.dart';
 
 class ToolApprovalCard extends StatelessWidget {
@@ -19,6 +20,7 @@ class ToolApprovalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final isPending = toolCall.status == ToolCallStatus.pending;
 
     return Container(
@@ -50,7 +52,7 @@ class ToolApprovalCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                _buildStatusChip(theme),
+                _buildStatusChip(theme, l10n),
               ],
             ),
           ),
@@ -104,7 +106,7 @@ class ToolApprovalCard extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: onViewDiff,
                       icon: const Icon(Icons.difference_outlined, size: 16),
-                      label: const Text('Review Diff'),
+                      label: Text(l10n?.reviewDiff ?? 'Review Diff'),
                       style: OutlinedButton.styleFrom(
                         visualDensity: VisualDensity.compact,
                       ),
@@ -116,13 +118,13 @@ class ToolApprovalCard extends StatelessWidget {
                       foregroundColor: theme.colorScheme.error,
                       visualDensity: VisualDensity.compact,
                     ),
-                    child: const Text('Reject'),
+                    child: Text(l10n?.reject ?? 'Reject'),
                   ),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: onApprove,
                     icon: const Icon(Icons.check, size: 16),
-                    label: const Text('Approve'),
+                    label: Text(l10n?.approve ?? 'Approve'),
                     style: FilledButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                     ),
@@ -184,33 +186,35 @@ class ToolApprovalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(ThemeData theme) {
+  Widget _buildStatusChip(ThemeData theme, AppLocalizations? l10n) {
     String label;
     Color color;
 
     switch (toolCall.status) {
       case ToolCallStatus.pending:
-        label = 'Needs Approval';
+        label = l10n?.needsApproval ?? 'Needs Approval';
         color = Colors.amber;
         break;
       case ToolCallStatus.approved:
-        label = 'Approved';
+        label = l10n?.approved ?? 'Approved';
         color = Colors.lightBlue;
         break;
       case ToolCallStatus.executing:
-        label = 'Running...';
+        label = l10n?.executing ?? 'Running...';
         color = Colors.lightBlueAccent;
         break;
       case ToolCallStatus.completed:
-        label = toolCall.autoApproved ? 'Auto Executed' : 'Completed';
+        label = toolCall.autoApproved
+            ? (l10n?.autoExecuted ?? 'Auto Executed')
+            : (l10n?.completed ?? 'Completed');
         color = Colors.green;
         break;
       case ToolCallStatus.rejected:
-        label = 'Rejected';
+        label = l10n?.rejected ?? 'Rejected';
         color = Colors.redAccent;
         break;
       case ToolCallStatus.failed:
-        label = 'Failed';
+        label = l10n?.failed ?? 'Failed';
         color = Colors.red;
         break;
     }
@@ -218,9 +222,9 @@ class ToolApprovalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         label,
@@ -235,16 +239,16 @@ class ToolApprovalCard extends StatelessWidget {
 
   Color _getCardBackground(ThemeData theme) {
     if (toolCall.status == ToolCallStatus.pending) {
-      return Colors.amber.withOpacity(0.08);
+      return Colors.amber.withValues(alpha: 0.08);
     }
-    return theme.colorScheme.surfaceVariant.withOpacity(0.25);
+    return theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25);
   }
 
   Color _getCardBorderColor(ThemeData theme) {
     if (toolCall.status == ToolCallStatus.pending) {
-      return Colors.amber.withOpacity(0.6);
+      return Colors.amber.withValues(alpha: 0.6);
     }
-    return theme.colorScheme.outlineVariant.withOpacity(0.3);
+    return theme.colorScheme.outlineVariant.withValues(alpha: 0.3);
   }
 
   Color _getStatusColor(ThemeData theme) {

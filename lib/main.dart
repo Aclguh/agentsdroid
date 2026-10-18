@@ -4,31 +4,72 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/proot/proot_manager.dart';
 import 'core/storage/key_vault.dart';
 import 'core/storage/workspace_service.dart';
+import 'l10n/app_localizations.dart';
 import 'ui/chat/chat_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Core Services
-  final keyVault = await KeyVault.create();
-  final workspaceService = WorkspaceService();
-  await workspaceService.init();
+  try {
+    // Initialize Core Services
+    final keyVault = await KeyVault.create();
+    final workspaceService = WorkspaceService();
+    await workspaceService.init();
 
-  final prootManager = PRootManager();
-  await prootManager.init();
+    final prootManager = PRootManager();
+    await prootManager.init();
 
-  runApp(
-    ProviderScope(
-      child: AgentsDroidApp(
-        keyVault: keyVault,
-        workspaceService: workspaceService,
-        prootManager: prootManager,
+    runApp(
+      ProviderScope(
+        child: AgentsDroidApp(
+          keyVault: keyVault,
+          workspaceService: workspaceService,
+          prootManager: prootManager,
+        ),
       ),
-    ),
-  );
+    );
+  } catch (e, stackTrace) {
+    debugPrint('Initialization error: $e\n$stackTrace');
+    runApp(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        themeMode: ThemeMode.dark,
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF0F0F0F),
+        ),
+        home: Scaffold(
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'AgentsDroid 启动遇到问题',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '$e',
+                      style: const TextStyle(fontSize: 13, color: Colors.white70),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class AgentsDroidApp extends StatelessWidget {
+class AgentsDroidApp extends StatefulWidget {
   final KeyVault keyVault;
   final WorkspaceService workspaceService;
   final PRootManager prootManager;
@@ -40,12 +81,40 @@ class AgentsDroidApp extends StatelessWidget {
     required this.prootManager,
   });
 
+  static void setLocale(BuildContext context, Locale newLocale) {
+    final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
+    state?.setLocale(newLocale);
+  }
+
+  @override
+  State<AgentsDroidApp> createState() => _AgentsDroidAppState();
+}
+
+class _AgentsDroidAppState extends State<AgentsDroidApp> {
+  late Locale _locale;
+
+  @override
+  void initState() {
+    super.initState();
+    _locale = Locale(widget.keyVault.getLanguage());
+  }
+
+  void setLocale(Locale newLocale) {
+    setState(() {
+      _locale = newLocale;
+    });
+    widget.keyVault.setLanguage(newLocale.languageCode);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AgentsDroid',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
+      locale: _locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
@@ -70,9 +139,9 @@ class AgentsDroidApp extends StatelessWidget {
         ),
       ),
       home: ChatScreen(
-        keyVault: keyVault,
-        workspace: workspaceService,
-        prootManager: prootManager,
+        keyVault: widget.keyVault,
+        workspace: widget.workspaceService,
+        prootManager: widget.prootManager,
       ),
     );
   }
