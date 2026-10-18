@@ -376,4 +376,91 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noMatchingConversations => '未找到匹配会话';
+
+  @override
+  String get approvalTitle => '应如何批准 Agent 操作？';
+
+  @override
+  String get approvalSubtitle => '此设置适用于此会话中的命令执行和文件修改。您可以随时进行更改。';
+
+  @override
+  String get approvalAlwaysAsk => '请求批准';
+
+  @override
+  String get approvalAlwaysAskDesc => '建议大多数用户使用。对所有操作请求批准。';
+
+  @override
+  String get approvalAutoApprove => '帮我批准';
+
+  @override
+  String get approvalAutoApproveDesc => '推荐用于快速、协作的会话。只读操作自动批准，有副作用的操作请求批准。';
+
+  @override
+  String get approvalYolo => '完全访问权限';
+
+  @override
+  String get approvalYoloDesc => '需要完全信任。不进行审批即可完全访问环境（包括编辑文件和执行命令）。';
+
+  @override
+  String get thinkingTitle => '思考';
+
+  @override
+  String get thinkingIntensity => '思考强度';
+
+  @override
+  String get thinkingOff => '关闭';
+
+  @override
+  String get thinkingLow => '低';
+
+  @override
+  String get thinkingMedium => '中';
+
+  @override
+  String get thinkingHigh => '高';
+
+  @override
+  String get thinkingVeryHigh => '极高';
+
+  @override
+  String get thinkingOffDesc => '关闭：不进行额外思考推理，响应速度最快。';
+
+  @override
+  String get thinkingLowDesc => '低：快速思考，适合简单修改与轻量问答。';
+
+  @override
+  String get thinkingMediumDesc => '中：适度思考，兼顾推理质量与响应速度。';
+
+  @override
+  String get thinkingHighDesc => '高：深入思考，适用于大多数代码开发与重构任务。';
+
+  @override
+  String get thinkingVeryHighDesc => '极高：模型将进行深入思考并探索多种解决途径，适用于复杂编码任务。';
+
+  @override
+  String get resetToDefault => '重置为默认';
+
+  @override
+  String get selectModel => '切换模型';
+
+  @override
+  String get moreModelSettings => '更多设置与 API Key...';
+
+  @override
+  String get addContext => '添加上下文';
+
+  @override
+  String get addProjectFile => '引用项目文件 (@file)';
+
+  @override
+  String get pasteClipboard => '粘贴剪贴板内容';
+
+  @override
+  String get commonPrompts => '常用提示词';
+
+  @override
+  String get noFilesInProject => '当前项目暂无文件';
+
+  @override
+  String get inputBoxHint => '问问任何问题或提需求...';
 }

@@ -829,6 +829,180 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未找到匹配会话'**
   String get noMatchingConversations;
+
+  /// No description provided for @approvalTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'应如何批准 Agent 操作？'**
+  String get approvalTitle;
+
+  /// No description provided for @approvalSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'此设置适用于此会话中的命令执行和文件修改。您可以随时进行更改。'**
+  String get approvalSubtitle;
+
+  /// No description provided for @approvalAlwaysAsk.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求批准'**
+  String get approvalAlwaysAsk;
+
+  /// No description provided for @approvalAlwaysAskDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议大多数用户使用。对所有操作请求批准。'**
+  String get approvalAlwaysAskDesc;
+
+  /// No description provided for @approvalAutoApprove.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮我批准'**
+  String get approvalAutoApprove;
+
+  /// No description provided for @approvalAutoApproveDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐用于快速、协作的会话。只读操作自动批准，有副作用的操作请求批准。'**
+  String get approvalAutoApproveDesc;
+
+  /// No description provided for @approvalYolo.
+  ///
+  /// In zh, this message translates to:
+  /// **'完全访问权限'**
+  String get approvalYolo;
+
+  /// No description provided for @approvalYoloDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要完全信任。不进行审批即可完全访问环境（包括编辑文件和执行命令）。'**
+  String get approvalYoloDesc;
+
+  /// No description provided for @thinkingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'思考'**
+  String get thinkingTitle;
+
+  /// No description provided for @thinkingIntensity.
+  ///
+  /// In zh, this message translates to:
+  /// **'思考强度'**
+  String get thinkingIntensity;
+
+  /// No description provided for @thinkingOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get thinkingOff;
+
+  /// No description provided for @thinkingLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低'**
+  String get thinkingLow;
+
+  /// No description provided for @thinkingMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'中'**
+  String get thinkingMedium;
+
+  /// No description provided for @thinkingHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高'**
+  String get thinkingHigh;
+
+  /// No description provided for @thinkingVeryHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'极高'**
+  String get thinkingVeryHigh;
+
+  /// No description provided for @thinkingOffDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭：不进行额外思考推理，响应速度最快。'**
+  String get thinkingOffDesc;
+
+  /// No description provided for @thinkingLowDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'低：快速思考，适合简单修改与轻量问答。'**
+  String get thinkingLowDesc;
+
+  /// No description provided for @thinkingMediumDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'中：适度思考，兼顾推理质量与响应速度。'**
+  String get thinkingMediumDesc;
+
+  /// No description provided for @thinkingHighDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'高：深入思考，适用于大多数代码开发与重构任务。'**
+  String get thinkingHighDesc;
+
+  /// No description provided for @thinkingVeryHighDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'极高：模型将进行深入思考并探索多种解决途径，适用于复杂编码任务。'**
+  String get thinkingVeryHighDesc;
+
+  /// No description provided for @resetToDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置为默认'**
+  String get resetToDefault;
+
+  /// No description provided for @selectModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换模型'**
+  String get selectModel;
+
+  /// No description provided for @moreModelSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'更多设置与 API Key...'**
+  String get moreModelSettings;
+
+  /// No description provided for @addContext.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加上下文'**
+  String get addContext;
+
+  /// No description provided for @addProjectFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用项目文件 (@file)'**
+  String get addProjectFile;
+
+  /// No description provided for @pasteClipboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴剪贴板内容'**
+  String get pasteClipboard;
+
+  /// No description provided for @commonPrompts.
+  ///
+  /// In zh, this message translates to:
+  /// **'常用提示词'**
+  String get commonPrompts;
+
+  /// No description provided for @noFilesInProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前项目暂无文件'**
+  String get noFilesInProject;
+
+  /// No description provided for @inputBoxHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'问问任何问题或提需求...'**
+  String get inputBoxHint;
 }
 
 class _AppLocalizationsDelegate

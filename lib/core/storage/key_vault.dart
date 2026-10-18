@@ -13,6 +13,23 @@ enum LLMProvider {
   const LLMProvider(this.displayName, this.defaultModel);
 }
 
+enum ApprovalMode {
+  alwaysAsk,
+  autoApprove,
+  yolo,
+}
+
+enum ThinkingIntensity {
+  off(0),
+  low(1),
+  medium(2),
+  high(3),
+  veryHigh(4);
+
+  final int level;
+  const ThinkingIntensity(this.level);
+}
+
 class KeyVault {
   static const _anthropicKey = 'key_anthropic';
   static const _openaiKey = 'key_openai';
@@ -25,6 +42,8 @@ class KeyVault {
   static const _prefCustomBaseUrl = 'pref_custom_base_url';
   static const _prefDeepseekBaseUrl = 'pref_deepseek_base_url';
   static const _prefYoloMode = 'pref_yolo_mode';
+  static const _prefApprovalMode = 'pref_approval_mode';
+  static const _prefThinkingIntensity = 'pref_thinking_intensity';
   static const _prefLanguage = 'pref_language';
   static const _prefSelectedEngine = 'pref_selected_engine';
 
@@ -121,13 +140,48 @@ class KeyVault {
     await _prefs.setString(_prefDeepseekBaseUrl, url.trim());
   }
 
-  // --- YOLO Mode (Auto-approve) ---
+  // --- Approval Mode ---
+  ApprovalMode getApprovalMode() {
+    final name = _prefs.getString(_prefApprovalMode);
+    if (name != null) {
+      try {
+        return ApprovalMode.values.byName(name);
+      } catch (_) {}
+    }
+    // Backward compatibility with legacy YOLO toggle
+    if (_prefs.getBool(_prefYoloMode) == true) {
+      return ApprovalMode.yolo;
+    }
+    return ApprovalMode.autoApprove;
+  }
+
+  Future<void> setApprovalMode(ApprovalMode mode) async {
+    await _prefs.setString(_prefApprovalMode, mode.name);
+    await _prefs.setBool(_prefYoloMode, mode == ApprovalMode.yolo);
+  }
+
+  // Backward compatibility helpers
   bool isYoloMode() {
-    return _prefs.getBool(_prefYoloMode) ?? false;
+    return getApprovalMode() == ApprovalMode.yolo;
   }
 
   Future<void> setYoloMode(bool enabled) async {
-    await _prefs.setBool(_prefYoloMode, enabled);
+    await setApprovalMode(enabled ? ApprovalMode.yolo : ApprovalMode.autoApprove);
+  }
+
+  // --- Thinking Intensity ---
+  ThinkingIntensity getThinkingIntensity() {
+    final name = _prefs.getString(_prefThinkingIntensity);
+    if (name != null) {
+      try {
+        return ThinkingIntensity.values.byName(name);
+      } catch (_) {}
+    }
+    return ThinkingIntensity.high;
+  }
+
+  Future<void> setThinkingIntensity(ThinkingIntensity intensity) async {
+    await _prefs.setString(_prefThinkingIntensity, intensity.name);
   }
 
   // --- Localization Language (Default: 'zh') ---

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -172,8 +174,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _foregroundSubscription = _foregroundManager.bindAgentEvents(_coordinator.eventStream);
     _sessionService = widget.sessionService ?? SessionService();
     _expandedProjects.addAll(widget.keyVault.getExpandedProjects());
+    _textController.addListener(_onTextChanged);
     _initSessionService();
     _listenToEngineEvents();
+  }
+
+  void _onTextChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _initSessionService() async {
@@ -573,6 +580,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _foregroundManager.dispose();
     _subscription?.cancel();
     _coordinator.dispose();
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     _inputFocusNode.dispose();
     _scrollController.dispose();
@@ -1587,53 +1595,934 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  IconData _getApprovalModeIcon(ApprovalMode mode) {
+    switch (mode) {
+      case ApprovalMode.alwaysAsk:
+        return Icons.pan_tool_outlined;
+      case ApprovalMode.autoApprove:
+        return Icons.shield_outlined;
+      case ApprovalMode.yolo:
+        return Icons.warning_amber_rounded;
+    }
+  }
+
+  String _getApprovalModeLabel(ApprovalMode mode, AppLocalizations l10n) {
+    switch (mode) {
+      case ApprovalMode.alwaysAsk:
+        return l10n.approvalAlwaysAsk;
+      case ApprovalMode.autoApprove:
+        return l10n.approvalAutoApprove;
+      case ApprovalMode.yolo:
+        return l10n.approvalYolo;
+    }
+  }
+
+  String _getApprovalModeDesc(ApprovalMode mode, AppLocalizations l10n) {
+    switch (mode) {
+      case ApprovalMode.alwaysAsk:
+        return l10n.approvalAlwaysAskDesc;
+      case ApprovalMode.autoApprove:
+        return l10n.approvalAutoApproveDesc;
+      case ApprovalMode.yolo:
+        return l10n.approvalYoloDesc;
+    }
+  }
+
+  String _getThinkingLabel(ThinkingIntensity intensity, AppLocalizations l10n) {
+    switch (intensity) {
+      case ThinkingIntensity.off:
+        return l10n.thinkingOff;
+      case ThinkingIntensity.low:
+        return l10n.thinkingLow;
+      case ThinkingIntensity.medium:
+        return l10n.thinkingMedium;
+      case ThinkingIntensity.high:
+        return l10n.thinkingHigh;
+      case ThinkingIntensity.veryHigh:
+        return l10n.thinkingVeryHigh;
+    }
+  }
+
+  String _getThinkingDesc(ThinkingIntensity intensity, AppLocalizations l10n) {
+    switch (intensity) {
+      case ThinkingIntensity.off:
+        return l10n.thinkingOffDesc;
+      case ThinkingIntensity.low:
+        return l10n.thinkingLowDesc;
+      case ThinkingIntensity.medium:
+        return l10n.thinkingMediumDesc;
+      case ThinkingIntensity.high:
+        return l10n.thinkingHighDesc;
+      case ThinkingIntensity.veryHigh:
+        return l10n.thinkingVeryHighDesc;
+    }
+  }
+
+  String _getDisplayModelName(String model) {
+    if (model.contains('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
+    if (model.contains('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
+    if (model == 'deepseek-chat') return 'DeepSeek V3';
+    if (model == 'deepseek-reasoner') return 'DeepSeek R1';
+    if (model == 'gpt-4o') return 'GPT-4o';
+    if (model == 'gpt-4o-mini') return 'GPT-4o mini';
+    if (model == 'o3-mini') return 'o3-mini';
+    if (model.contains('gemini-2.5-flash')) return 'Gemini 2.5 Flash';
+    if (model.contains('gemini-2.5-pro')) return 'Gemini 2.5 Pro';
+    if (model.length > 16) return '${model.substring(0, 14)}...';
+    return model;
+  }
+
+  void _showApprovalModeSheet(BuildContext context, AppLocalizations l10n) {
+    final currentMode = widget.keyVault.getApprovalMode();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  l10n.approvalTitle,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.approvalSubtitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.white60,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                for (final mode in ApprovalMode.values) ...[
+                  Material(
+                    color: currentMode == mode ? const Color(0xFF2A2A2A) : const Color(0xFF222222),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        await widget.keyVault.setApprovalMode(mode);
+                        if (mounted) setState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: currentMode == mode ? Colors.white24 : const Color(0xFF333333),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _getApprovalModeIcon(mode),
+                              size: 22,
+                              color: mode == ApprovalMode.yolo ? Colors.amber : Colors.white70,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _getApprovalModeLabel(mode, l10n),
+                                    style: const TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    _getApprovalModeDesc(mode, l10n),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white60,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (currentMode == mode) ...[
+                              const SizedBox(width: 8),
+                              const Icon(Icons.check, color: Colors.white, size: 20),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showThinkingIntensitySheet(BuildContext context, AppLocalizations l10n) {
+    var intensity = widget.keyVault.getThinkingIntensity();
+    final activeModel = widget.keyVault.getActiveModel();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (sheetCtx, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Header row: Thinking label on left, Model switch + Reset on right
+                    Row(
+                      children: [
+                        Text(
+                          '${l10n.thinkingTitle}：${_getThinkingLabel(intensity, l10n)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Spacer(),
+                        // Model switch button
+                        Material(
+                          color: const Color(0xFF2C2C2C),
+                          borderRadius: BorderRadius.circular(14),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _showModelPickerSheet(context, l10n);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFF3D3D3D), width: 0.8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _getDisplayModelName(activeModel),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right, size: 16, color: Colors.white54),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Reset button
+                        IconButton(
+                          icon: const Icon(Icons.refresh_rounded, size: 20, color: Colors.white70),
+                          tooltip: l10n.resetToDefault,
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          onPressed: () {
+                            setModalState(() {
+                              intensity = ThinkingIntensity.high;
+                            });
+                            widget.keyVault.setThinkingIntensity(ThinkingIntensity.high);
+                            if (mounted) setState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Discrete Slider
+                    SliderTheme(
+                      data: SliderTheme.of(sheetCtx).copyWith(
+                        activeTrackColor: Colors.white,
+                        inactiveTrackColor: Colors.white24,
+                        thumbColor: Colors.white,
+                        overlayColor: Colors.white12,
+                        tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 2.5),
+                        activeTickMarkColor: Colors.white70,
+                        inactiveTickMarkColor: Colors.white30,
+                        trackHeight: 3.5,
+                      ),
+                      child: Slider(
+                        value: intensity.level.toDouble(),
+                        min: 0,
+                        max: 4,
+                        divisions: 4,
+                        onChanged: (val) {
+                          final newIntensity = ThinkingIntensity.values[val.round()];
+                          setModalState(() {
+                            intensity = newIntensity;
+                          });
+                          widget.keyVault.setThinkingIntensity(newIntensity);
+                          if (mounted) setState(() {});
+                        },
+                      ),
+                    ),
+                    // Labels under ticks
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          for (final t in ThinkingIntensity.values)
+                            Text(
+                              _getThinkingLabel(t, l10n),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: t == intensity ? Colors.white : Colors.white38,
+                                fontWeight: t == intensity ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Description box
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF262626),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF333333), width: 0.8),
+                      ),
+                      child: Text(
+                        _getThinkingDesc(intensity, l10n),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.white70,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showModelPickerSheet(BuildContext context, AppLocalizations l10n) {
+    final currentModel = widget.keyVault.getActiveModel();
+    final models = [
+      (provider: LLMProvider.anthropic, id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet'),
+      (provider: LLMProvider.anthropic, id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'),
+      (provider: LLMProvider.deepseek, id: 'deepseek-chat', name: 'DeepSeek Chat (V3)'),
+      (provider: LLMProvider.deepseek, id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)'),
+      (provider: LLMProvider.openai, id: 'gpt-4o', name: 'OpenAI GPT-4o'),
+      (provider: LLMProvider.openai, id: 'o3-mini', name: 'OpenAI o3-mini'),
+      (provider: LLMProvider.gemini, id: 'gemini-2.5-flash', name: 'Google Gemini 2.5 Flash'),
+      (provider: LLMProvider.gemini, id: 'gemini-2.5-pro', name: 'Google Gemini 2.5 Pro'),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.selectModel,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: models.length,
+                    separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                    itemBuilder: (c, idx) {
+                      final m = models[idx];
+                      final isSelected = m.id == currentModel;
+                      return ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        title: Text(
+                          m.name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? Colors.white : Colors.white70,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${m.provider.displayName} • ${m.id}',
+                          style: const TextStyle(fontSize: 11, color: Colors.white38),
+                        ),
+                        trailing: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await widget.keyVault.setActiveProvider(m.provider);
+                          await widget.keyVault.setActiveModel(m.id);
+                          if (mounted) setState(() {});
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SettingsScreen(
+                          keyVault: widget.keyVault,
+                          prootManager: widget.prootManager,
+                        ),
+                      ),
+                    ).then((_) {
+                      if (mounted) setState(() {});
+                    });
+                  },
+                  child: Text(l10n.moreModelSettings, style: const TextStyle(color: Colors.white60, fontSize: 13)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAttachmentMenu(BuildContext context, AppLocalizations l10n) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.addContext,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ListTile(
+                  leading: const Icon(Icons.insert_drive_file_outlined, color: Colors.white70),
+                  title: Text(l10n.addProjectFile, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showFilePickerSheet(l10n);
+                  },
+                ),
+                const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                ListTile(
+                  leading: const Icon(Icons.content_paste_outlined, color: Colors.white70),
+                  title: Text(l10n.pasteClipboard, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data?.text != null && data!.text!.isNotEmpty) {
+                      final currentText = _textController.text;
+                      final selection = _textController.selection;
+                      if (selection.isValid && selection.start >= 0) {
+                        final newText = currentText.replaceRange(selection.start, selection.end, data.text!);
+                        _textController.text = newText;
+                        _textController.selection = TextSelection.collapsed(offset: selection.start + data.text!.length);
+                      } else {
+                        _textController.text = currentText.isEmpty ? data.text! : '$currentText\n${data.text}';
+                        _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+                      }
+                      _inputFocusNode.requestFocus();
+                    }
+                  },
+                ),
+                const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                ListTile(
+                  leading: const Icon(Icons.lightbulb_outline_rounded, color: Colors.white70),
+                  title: Text(l10n.commonPrompts, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showCommonPromptsSheet(context, l10n);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFilePickerSheet(AppLocalizations l10n) async {
+    final proj = (_currentSession?.projectName != null &&
+            _currentSession!.projectName!.isNotEmpty &&
+            _currentSession!.projectName != WorkspaceService.defaultProjectName)
+        ? 'projects/${_currentSession!.projectName}'
+        : 'projects/${WorkspaceService.defaultProjectName}';
+    final files = await widget.workspace.listFiles(relativePath: proj);
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.addProjectFile,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (files.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        l10n.noFilesInProject,
+                        style: const TextStyle(color: Colors.white38, fontSize: 13),
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: files.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                      itemBuilder: (c, idx) {
+                        final file = files[idx];
+                        final name = file.path.split(Platform.pathSeparator).last;
+                        final isDir = file is Directory;
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            isDir ? Icons.folder_outlined : Icons.insert_drive_file_outlined,
+                            size: 20,
+                            color: isDir ? Colors.amber : Colors.white70,
+                          ),
+                          title: Text(
+                            name,
+                            style: const TextStyle(fontSize: 13.5, color: Colors.white),
+                          ),
+                          onTap: () {
+                            final tag = '@$name ';
+                            final currentText = _textController.text;
+                            final selection = _textController.selection;
+                            if (selection.isValid && selection.start >= 0) {
+                              final newText = currentText.replaceRange(selection.start, selection.end, tag);
+                              _textController.text = newText;
+                              _textController.selection = TextSelection.collapsed(offset: selection.start + tag.length);
+                            } else {
+                              _textController.text = currentText.isEmpty ? tag : '$currentText $tag';
+                              _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+                            }
+                            Navigator.pop(ctx);
+                            _inputFocusNode.requestFocus();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCommonPromptsSheet(BuildContext context, AppLocalizations l10n) {
+    final prompts = [
+      '请分析当前项目的架构设计与模块分工',
+      '请审查代码中是否存在潜在 Bug 或未捕获的边界异常',
+      '请为核心函数编写对应的单元测试用例',
+      '请重构此段代码以提高执行效率与可维护性',
+      '请为项目编写清晰的 API 文档与使用说明',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.commonPrompts,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (final p in prompts)
+                  ListTile(
+                    dense: true,
+                    title: Text(p, style: const TextStyle(fontSize: 13.5, color: Colors.white)),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white38),
+                    onTap: () {
+                      _textController.text = p;
+                      _textController.selection = TextSelection.collapsed(offset: p.length);
+                      Navigator.pop(ctx);
+                      _inputFocusNode.requestFocus();
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildInputBar(ThemeData theme, AppLocalizations l10n) {
     final isWorking = _agentState != AgentState.idle;
+    final isDark = theme.brightness == Brightness.dark;
+    final approvalMode = widget.keyVault.getApprovalMode();
+    final thinkingIntensity = widget.keyVault.getThinkingIntensity();
+    final activeModel = widget.keyVault.getActiveModel();
+    final hasText = _textController.text.trim().isNotEmpty;
 
     return Container(
+      color: Colors.transparent,
       padding: EdgeInsets.only(
         left: 12,
         right: 12,
-        top: 8,
+        top: 4,
         bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF212121) : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB),
+            width: 1,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Multiline Input Field
+            TextField(
               controller: _textController,
               focusNode: _inputFocusNode,
               autofocus: false,
               minLines: 1,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: isWorking ? l10n.inputHintWorking : l10n.inputHintIdle,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              maxLines: 6,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.white : Colors.black87,
+                height: 1.35,
               ),
-              onSubmitted: (_) => _handleSendMessage(),
+              decoration: InputDecoration.collapsed(
+                hintText: isWorking ? l10n.inputHintWorking : l10n.inputBoxHint,
+                hintStyle: TextStyle(
+                  fontSize: 15,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          IconButton.filled(
-            onPressed: isWorking ? () => _coordinator.interrupt() : () => _handleSendMessage(),
-            icon: Icon(isWorking ? Icons.stop : Icons.arrow_upward),
-            style: IconButton.styleFrom(
-              backgroundColor: isWorking ? Colors.redAccent : theme.colorScheme.primary,
+            const SizedBox(height: 10),
+            // Bottom Action Bar
+            Row(
+              children: [
+                // + Attachment Button
+                Material(
+                  color: isDark ? const Color(0xFF2E2E2E) : const Color(0xFFE5E7EB),
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => _showAttachmentMenu(context, l10n),
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: Icon(
+                        Icons.add,
+                        size: 18,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Approval Mode Pill
+                Material(
+                  color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(16),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => _showApprovalModeSheet(context, l10n),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFD1D5DB),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _getApprovalModeIcon(approvalMode),
+                            size: 14,
+                            color: approvalMode == ApprovalMode.yolo
+                                ? Colors.amber
+                                : (isDark ? Colors.white70 : Colors.black87),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _getApprovalModeLabel(approvalMode, l10n),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 14,
+                            color: isDark ? Colors.white54 : Colors.black54,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const Spacer(),
+
+                // Model & Thinking Intensity Pill
+                Flexible(
+                  child: Material(
+                    color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(16),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => _showThinkingIntensitySheet(context, l10n),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFD1D5DB),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                '${_getDisplayModelName(activeModel)} · ${l10n.thinkingTitle} · ${_getThinkingLabel(thinkingIntensity, l10n)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 14,
+                              color: isDark ? Colors.white54 : Colors.black54,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // Send / Stop Circular Button (Voice is omitted per instruction)
+                Material(
+                  color: isWorking
+                      ? Colors.redAccent
+                      : (hasText
+                          ? (isDark ? Colors.white : theme.colorScheme.primary)
+                          : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0))),
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: isWorking
+                        ? () => _coordinator.interrupt()
+                        : (hasText ? () => _handleSendMessage() : null),
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: Icon(
+                        isWorking ? Icons.stop_rounded : Icons.arrow_upward_rounded,
+                        size: 18,
+                        color: isWorking
+                            ? Colors.white
+                            : (hasText
+                                ? (isDark ? Colors.black : Colors.white)
+                                : (isDark ? Colors.white30 : Colors.black26)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -262,12 +262,23 @@ class BuiltinAgentEngine implements AgentEngine {
       _setState(AgentState.thinking, 'Analyzing codebase & planning next step...');
 
       final url = Uri.parse('$baseUrl/chat/completions');
-      final requestBody = {
+      final thinkingIntensity = _keyVault.getThinkingIntensity();
+      final requestBody = <String, dynamic>{
         'model': model,
         'messages': _openaiHistory,
         'tools': _getOpenAiTools(),
         'tool_choice': 'auto',
       };
+      if (thinkingIntensity != ThinkingIntensity.off) {
+        if (model.startsWith('o1') || model.startsWith('o3')) {
+          String effort = 'medium';
+          if (thinkingIntensity == ThinkingIntensity.low) effort = 'low';
+          if (thinkingIntensity == ThinkingIntensity.high || thinkingIntensity == ThinkingIntensity.veryHigh) {
+            effort = 'high';
+          }
+          requestBody['reasoning_effort'] = effort;
+        }
+      }
 
       final response = await http.post(
         url,
@@ -287,6 +298,11 @@ class BuiltinAgentEngine implements AgentEngine {
       final message = choice['message'];
       final content = message['content'];
       final toolCalls = message['tool_calls'];
+
+      final reasoningContent = message['reasoning_content'];
+      if (reasoningContent != null && reasoningContent.toString().isNotEmpty) {
+        _eventController.add(ThoughtEvent(thought: reasoningContent.toString()));
+      }
 
       if (content != null && content.toString().isNotEmpty) {
         _eventController.add(MessageEvent(text: content.toString(), isComplete: toolCalls == null));
@@ -360,13 +376,41 @@ class BuiltinAgentEngine implements AgentEngine {
       turnCount++;
       _setState(AgentState.thinking, 'Claude is reasoning...');
 
-      final requestBody = {
+      final thinkingIntensity = _keyVault.getThinkingIntensity();
+      final requestBody = <String, dynamic>{
         'model': model,
-        'max_tokens': 4096,
         'system': _getSystemPrompt(),
         'messages': _anthropicHistory,
         'tools': _getAnthropicTools(),
       };
+
+      if (thinkingIntensity != ThinkingIntensity.off && model.contains('3-7')) {
+        int budgetTokens;
+        switch (thinkingIntensity) {
+          case ThinkingIntensity.low:
+            budgetTokens = 1024;
+            break;
+          case ThinkingIntensity.medium:
+            budgetTokens = 2048;
+            break;
+          case ThinkingIntensity.high:
+            budgetTokens = 4096;
+            break;
+          case ThinkingIntensity.veryHigh:
+            budgetTokens = 8192;
+            break;
+          case ThinkingIntensity.off:
+            budgetTokens = 0;
+            break;
+        }
+        requestBody['thinking'] = {
+          'type': 'enabled',
+          'budget_tokens': budgetTokens,
+        };
+        requestBody['max_tokens'] = budgetTokens + 4096;
+      } else {
+        requestBody['max_tokens'] = 4096;
+      }
 
       final response = await http.post(
         Uri.parse(url),
@@ -393,6 +437,11 @@ class BuiltinAgentEngine implements AgentEngine {
           textBlocks.add(block['text']);
         } else if (block['type'] == 'tool_use') {
           toolUses.add(block);
+        } else if (block['type'] == 'thinking') {
+          final thoughtText = block['thinking'] as String? ?? '';
+          if (thoughtText.isNotEmpty) {
+            _eventController.add(ThoughtEvent(thought: thoughtText));
+          }
         }
       }
 
@@ -443,6 +492,21 @@ class BuiltinAgentEngine implements AgentEngine {
   }
 
   // --- Common Tool Execution & Approval Logic ---
+  @visibleForTesting
+  Future<void> handleToolExecutionForTesting({
+    required String callId,
+    required String toolName,
+    required Map<String, dynamic> arguments,
+    required Function(String) onResult,
+  }) {
+    return _handleToolExecution(
+      callId: callId,
+      toolName: toolName,
+      arguments: arguments,
+      onResult: onResult,
+    );
+  }
+
   Future<void> _handleToolExecution({
     required String callId,
     required String toolName,
@@ -453,8 +517,19 @@ class BuiltinAgentEngine implements AgentEngine {
         toolName == 'list_directory' ||
         toolName == 'search_files';
 
-    final isYolo = _keyVault.isYoloMode();
-    final autoApprove = isReadOnly || isYolo;
+    final approvalMode = _keyVault.getApprovalMode();
+    final bool autoApprove;
+    switch (approvalMode) {
+      case ApprovalMode.alwaysAsk:
+        autoApprove = false;
+        break;
+      case ApprovalMode.autoApprove:
+        autoApprove = isReadOnly;
+        break;
+      case ApprovalMode.yolo:
+        autoApprove = true;
+        break;
+    }
 
     // Check if we need to show a Diff before approval
     if (toolName == 'write_file' || toolName == 'patch_file') {

@@ -387,4 +387,99 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noMatchingConversations => 'No matching conversations found';
+
+  @override
+  String get approvalTitle => 'How should Agent actions be approved?';
+
+  @override
+  String get approvalSubtitle =>
+      'This applies to command execution and file edits in this session. You can change it anytime.';
+
+  @override
+  String get approvalAlwaysAsk => 'Ask for approval';
+
+  @override
+  String get approvalAlwaysAskDesc =>
+      'Recommended for most users. Asks for approval on all actions.';
+
+  @override
+  String get approvalAutoApprove => 'Approve for me';
+
+  @override
+  String get approvalAutoApproveDesc =>
+      'Recommended for fast, collaborative sessions. Read-only actions auto-approve, actions with side effects require approval.';
+
+  @override
+  String get approvalYolo => 'Full access';
+
+  @override
+  String get approvalYoloDesc =>
+      'Requires full trust. Full access without approval (including editing files and running commands).';
+
+  @override
+  String get thinkingTitle => 'Thinking';
+
+  @override
+  String get thinkingIntensity => 'Reasoning Intensity';
+
+  @override
+  String get thinkingOff => 'Off';
+
+  @override
+  String get thinkingLow => 'Low';
+
+  @override
+  String get thinkingMedium => 'Medium';
+
+  @override
+  String get thinkingHigh => 'High';
+
+  @override
+  String get thinkingVeryHigh => 'Very High';
+
+  @override
+  String get thinkingOffDesc => 'Off: No extra reasoning, fastest response.';
+
+  @override
+  String get thinkingLowDesc =>
+      'Low: Quick reasoning, suitable for light tasks.';
+
+  @override
+  String get thinkingMediumDesc =>
+      'Medium: Moderate reasoning, balancing quality and speed.';
+
+  @override
+  String get thinkingHighDesc =>
+      'High: In-depth reasoning, suitable for development and refactoring.';
+
+  @override
+  String get thinkingVeryHighDesc =>
+      'Very High: Deep reasoning across alternative solutions, ideal for complex coding.';
+
+  @override
+  String get resetToDefault => 'Reset to default';
+
+  @override
+  String get selectModel => 'Switch Model';
+
+  @override
+  String get moreModelSettings => 'More Settings & API Key...';
+
+  @override
+  String get addContext => 'Add Context';
+
+  @override
+  String get addProjectFile => 'Reference Project File (@file)';
+
+  @override
+  String get pasteClipboard => 'Paste Clipboard Content';
+
+  @override
+  String get commonPrompts => 'Common Developer Prompts';
+
+  @override
+  String get noFilesInProject => 'No files in current project';
+
+  @override
+  String get inputBoxHint => 'Ask any question or prompt...';
 }
