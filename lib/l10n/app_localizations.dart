@@ -458,11 +458,23 @@ abstract class AppLocalizations {
   /// **'内置轻量 Agent'**
   String get engineBuiltin;
 
+  /// No description provided for @engineBuiltinShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'内置 Agent'**
+  String get engineBuiltinShort;
+
   /// No description provided for @engineClaudeCode.
   ///
   /// In zh, this message translates to:
   /// **'官方 Claude Code CLI'**
   String get engineClaudeCode;
+
+  /// No description provided for @engineClaudeCodeShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'Claude CLI'**
+  String get engineClaudeCodeShort;
 
   /// No description provided for @engineSwitchTitle.
   ///

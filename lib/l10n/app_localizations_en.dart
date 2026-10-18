@@ -197,7 +197,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get engineBuiltin => 'Built-in Light Agent';
 
   @override
+  String get engineBuiltinShort => 'Built-in';
+
+  @override
   String get engineClaudeCode => 'Official Claude Code CLI';
+
+  @override
+  String get engineClaudeCodeShort => 'Claude CLI';
 
   @override
   String get engineSwitchTitle => 'Select Agent Execution Engine';

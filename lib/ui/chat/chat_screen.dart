@@ -169,83 +169,105 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 0,
+        titleSpacing: 12,
         title: Row(
           children: [
-            const SizedBox(width: 16),
-            const Icon(Icons.smart_toy_outlined, color: Colors.blueAccent),
+            const Icon(Icons.smart_toy_outlined, color: Colors.blueAccent, size: 22),
             const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.appTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () => _showEngineSwitchDialog(l10n),
-                      borderRadius: BorderRadius.circular(4),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: _coordinator.currentEngineType == AgentEngineType.builtin
-                              ? Colors.blueAccent.withValues(alpha: 0.15)
-                              : Colors.amber.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.appTitle,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        onTap: () => _showEngineSwitchDialog(l10n),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
                             color: _coordinator.currentEngineType == AgentEngineType.builtin
-                                ? Colors.blueAccent.withValues(alpha: 0.4)
-                                : Colors.amber.withValues(alpha: 0.4),
+                                ? Colors.blueAccent.withValues(alpha: 0.15)
+                                : Colors.amber.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: _coordinator.currentEngineType == AgentEngineType.builtin
+                                  ? Colors.blueAccent.withValues(alpha: 0.4)
+                                  : Colors.amber.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _coordinator.currentEngineType == AgentEngineType.builtin
+                                    ? Icons.flash_on
+                                    : Icons.terminal,
+                                size: 10,
+                                color: _coordinator.currentEngineType == AgentEngineType.builtin
+                                    ? Colors.blueAccent
+                                    : Colors.amber,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                _coordinator.currentEngineType == AgentEngineType.builtin
+                                    ? l10n.engineBuiltinShort
+                                    : l10n.engineClaudeCodeShort,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: _coordinator.currentEngineType == AgentEngineType.builtin
+                                      ? Colors.blueAccent
+                                      : Colors.amber,
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down, size: 12, color: Colors.white70),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _coordinator.currentEngineType == AgentEngineType.builtin ? Icons.flash_on : Icons.terminal,
-                              size: 10,
-                              color: _coordinator.currentEngineType == AgentEngineType.builtin ? Colors.blueAccent : Colors.amber,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              _coordinator.currentEngineType == AgentEngineType.builtin ? l10n.engineBuiltin : l10n.engineClaudeCode,
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: _coordinator.currentEngineType == AgentEngineType.builtin ? Colors.blueAccent : Colors.amber,
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            const Icon(Icons.arrow_drop_down, size: 12, color: Colors.white70),
-                          ],
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          activeModel,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      activeModel,
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                    if (isYolo) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
+                      if (isYolo) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: const Text('YOLO', style: TextStyle(fontSize: 8, color: Colors.amber, fontWeight: FontWeight.bold)),
                         ),
-                        child: const Text('YOLO', style: TextStyle(fontSize: 9, color: Colors.amber, fontWeight: FontWeight.bold)),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.folder_outlined),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             tooltip: l10n.workspaceFiles,
             onPressed: () {
               Navigator.push(
@@ -261,6 +283,8 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.terminal_outlined),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             tooltip: l10n.subsystemTerminal,
             onPressed: () {
               Navigator.push(
@@ -276,6 +300,8 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             tooltip: l10n.settings,
             onPressed: () async {
               await Navigator.push(

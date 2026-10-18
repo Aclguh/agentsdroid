@@ -191,7 +191,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get engineBuiltin => '内置轻量 Agent';
 
   @override
+  String get engineBuiltinShort => '内置 Agent';
+
+  @override
   String get engineClaudeCode => '官方 Claude Code CLI';
+
+  @override
+  String get engineClaudeCodeShort => 'Claude CLI';
 
   @override
   String get engineSwitchTitle => '选择 Agent 执行引擎';
