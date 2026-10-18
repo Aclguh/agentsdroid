@@ -204,6 +204,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _textController.clear();
 
+    final priorMessages = List<ChatMessage>.from(_messages);
+
     final userMessage = ChatMessage(
       id: _uuid.v4(),
       role: MessageRole.user,
@@ -226,7 +228,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     _scrollToBottom();
-    await _coordinator.startTask(text);
+    await _coordinator.startTask(text, priorMessages: priorMessages);
   }
 
   Future<void> _handleNewSession(AppLocalizations l10n, {String? projectName}) async {

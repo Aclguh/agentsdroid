@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../models/agent_event.dart';
+import '../../models/chat_message.dart';
 import '../agent/agent_engine.dart';
 import '../proot/proot_manager.dart';
 import '../storage/key_vault.dart';
@@ -30,6 +32,12 @@ class BuiltinAgentEngine implements AgentEngine {
   final List<Map<String, dynamic>> _openaiHistory = [];
   final List<Map<String, dynamic>> _anthropicHistory = [];
 
+  @visibleForTesting
+  List<Map<String, dynamic>> get openaiHistory => List.unmodifiable(_openaiHistory);
+
+  @visibleForTesting
+  List<Map<String, dynamic>> get anthropicHistory => List.unmodifiable(_anthropicHistory);
+
   BuiltinAgentEngine(this._keyVault, this._workspace, {this.prootManager});
 
   void _setState(AgentState state, [String? message]) {
@@ -37,10 +45,153 @@ class BuiltinAgentEngine implements AgentEngine {
     _eventController.add(StatusEvent(state, message: message));
   }
 
+  void syncSessionHistory(List<ChatMessage> priorMessages) {
+    _openaiHistory.clear();
+    _anthropicHistory.clear();
+
+    _openaiHistory.add({
+      'role': 'system',
+      'content': _getSystemPrompt(),
+    });
+
+    final messagesToSync = priorMessages.length > 30
+        ? priorMessages.sublist(priorMessages.length - 30)
+        : priorMessages;
+
+    for (final msg in messagesToSync) {
+      if (msg.role == MessageRole.user) {
+        if (msg.content.trim().isNotEmpty) {
+          _openaiHistory.add({
+            'role': 'user',
+            'content': msg.content.trim(),
+          });
+          if (_anthropicHistory.isNotEmpty && _anthropicHistory.last['role'] == 'user') {
+            final lastContent = _anthropicHistory.last['content'];
+            if (lastContent is String) {
+              _anthropicHistory.last['content'] = '$lastContent\n\n${msg.content.trim()}';
+            } else if (lastContent is List) {
+              lastContent.add({'type': 'text', 'text': msg.content.trim()});
+            }
+          } else {
+            _anthropicHistory.add({
+              'role': 'user',
+              'content': msg.content.trim(),
+            });
+          }
+        }
+      } else if (msg.role == MessageRole.assistant) {
+        final textContent = msg.content.trim();
+        final toolCalls = msg.blocks.whereType<ToolCallBlock>().toList();
+
+        if (toolCalls.isNotEmpty) {
+          final toolCallsJson = <Map<String, dynamic>>[];
+          for (final tc in toolCalls) {
+            toolCallsJson.add({
+              'id': tc.toolCall.toolCallId,
+              'type': 'function',
+              'function': {
+                'name': tc.toolCall.toolName,
+                'arguments': jsonEncode(tc.toolCall.arguments),
+              },
+            });
+          }
+
+          _openaiHistory.add({
+            'role': 'assistant',
+            'content': null,
+            'tool_calls': toolCallsJson,
+          });
+
+          for (final tc in toolCalls) {
+            final res = tc.toolCall.result?.toString() ??
+                tc.toolCall.errorMessage ??
+                (tc.toolCall.status == ToolCallStatus.rejected ? 'Operation rejected by user' : 'Completed');
+            _openaiHistory.add({
+              'role': 'tool',
+              'tool_call_id': tc.toolCall.toolCallId,
+              'content': res,
+            });
+          }
+
+          if (textContent.isNotEmpty) {
+            _openaiHistory.add({
+              'role': 'assistant',
+              'content': textContent,
+            });
+          }
+
+          final anthropicToolUses = <Map<String, dynamic>>[];
+          for (final tc in toolCalls) {
+            anthropicToolUses.add({
+              'type': 'tool_use',
+              'id': tc.toolCall.toolCallId,
+              'name': tc.toolCall.toolName,
+              'input': tc.toolCall.arguments,
+            });
+          }
+          _anthropicHistory.add({
+            'role': 'assistant',
+            'content': anthropicToolUses,
+          });
+
+          final toolResults = <Map<String, dynamic>>[];
+          for (final tc in toolCalls) {
+            final res = tc.toolCall.result?.toString() ??
+                tc.toolCall.errorMessage ??
+                'Completed';
+            toolResults.add({
+              'type': 'tool_result',
+              'tool_use_id': tc.toolCall.toolCallId,
+              'content': res,
+            });
+          }
+          _anthropicHistory.add({
+            'role': 'user',
+            'content': toolResults,
+          });
+
+          if (textContent.isNotEmpty) {
+            _anthropicHistory.add({
+              'role': 'assistant',
+              'content': textContent,
+            });
+          }
+        } else if (textContent.isNotEmpty) {
+          _openaiHistory.add({
+            'role': 'assistant',
+            'content': textContent,
+          });
+          if (_anthropicHistory.isNotEmpty && _anthropicHistory.last['role'] == 'assistant') {
+            final lastContent = _anthropicHistory.last['content'];
+            if (lastContent is String) {
+              _anthropicHistory.last['content'] = '$lastContent\n\n$textContent';
+            } else if (lastContent is List) {
+              lastContent.add({'type': 'text', 'text': textContent});
+            }
+          } else {
+            _anthropicHistory.add({
+              'role': 'assistant',
+              'content': textContent,
+            });
+          }
+        }
+      }
+    }
+
+    // Ensure Anthropic starts with user message if not empty
+    while (_anthropicHistory.isNotEmpty && _anthropicHistory.first['role'] != 'user') {
+      _anthropicHistory.removeAt(0);
+    }
+  }
+
   @override
-  Future<void> startTask(String prompt) async {
+  Future<void> startTask(String prompt, {List<ChatMessage>? priorMessages}) async {
     _isInterrupted = false;
     _setState(AgentState.thinking, 'Thinking...');
+
+    if (priorMessages != null) {
+      syncSessionHistory(priorMessages);
+    }
 
     final provider = _keyVault.getActiveProvider();
     final apiKey = await _keyVault.getApiKey(provider);
@@ -178,10 +329,29 @@ class BuiltinAgentEngine implements AgentEngine {
     final model = _keyVault.getActiveModel();
     const url = 'https://api.anthropic.com/v1/messages';
 
-    _anthropicHistory.add({
-      'role': 'user',
-      'content': prompt,
-    });
+    if (_anthropicHistory.isNotEmpty && _anthropicHistory.last['role'] == 'user') {
+      final lastContent = _anthropicHistory.last['content'];
+      if (lastContent is String) {
+        _anthropicHistory.last['content'] = '$lastContent\n\n$prompt';
+      } else if (lastContent is List) {
+        final list = List<dynamic>.from(lastContent);
+        list.add({
+          'type': 'text',
+          'text': prompt,
+        });
+        _anthropicHistory.last['content'] = list;
+      } else {
+        _anthropicHistory.add({
+          'role': 'user',
+          'content': prompt,
+        });
+      }
+    } else {
+      _anthropicHistory.add({
+        'role': 'user',
+        'content': prompt,
+      });
+    }
 
     int turnCount = 0;
     const maxTurns = 15;

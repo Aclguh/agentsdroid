@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../../models/agent_event.dart';
+import '../../models/chat_message.dart';
 import '../builtin/builtin_agent_engine.dart';
 import '../cli/claude_code_adapter.dart';
 import '../proot/proot_manager.dart';
@@ -159,8 +160,8 @@ class EngineCoordinator implements AgentEngine {
   }
 
   @override
-  Future<void> startTask(String prompt) async {
-    return await _activeEngine.startTask(prompt);
+  Future<void> startTask(String prompt, {List<ChatMessage>? priorMessages}) async {
+    return await _activeEngine.startTask(prompt, priorMessages: priorMessages);
   }
 
   @override

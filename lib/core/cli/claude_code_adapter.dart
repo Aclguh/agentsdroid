@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import '../../models/agent_event.dart';
+import '../../models/chat_message.dart';
 import '../agent/agent_engine.dart';
 import '../proot/proot_manager.dart';
 import '../storage/key_vault.dart';
@@ -33,7 +34,7 @@ class ClaudeCodeAdapter implements AgentEngine {
   });
 
   @override
-  Future<void> startTask(String prompt) async {
+  Future<void> startTask(String prompt, {List<ChatMessage>? priorMessages}) async {
     if (_currentState != AgentState.idle && _currentState != AgentState.completed && _currentState != AgentState.error) {
       throw StateError('Agent is already running a task.');
     }
