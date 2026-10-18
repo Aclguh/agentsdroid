@@ -81,3 +81,9 @@ flutter run
 ```bash
 flutter build apk --release
 ```
+
+---
+
+## 开源协议
+
+本项目采用 [MIT License](LICENSE) 开源协议。

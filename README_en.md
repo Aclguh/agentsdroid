@@ -74,3 +74,9 @@ flutter run
 ```bash
 flutter build apk --release
 ```
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
