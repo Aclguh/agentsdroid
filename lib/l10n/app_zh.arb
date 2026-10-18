@@ -161,5 +161,61 @@
         "type": "int"
       }
     }
-  }
+  },
+  "modelsAndProviders": "模型与服务商",
+  "modelsAndProvidersDesc": "管理 AI 服务商、Base URL、API Key 与可用模型",
+  "agentEngineDesc": "选择内置轻量 Agent 或官方 Claude Code CLI",
+  "safetySectionDesc": "设置自主审批等级与 YOLO 模式",
+  "languageDesc": "切换应用界面显示语言",
+  "subsystemSectionDesc": "查看嵌入式 Linux Debian 沙箱运行与安装状态",
+  "addProvider": "添加服务商",
+  "editProvider": "编辑服务商",
+  "deleteProvider": "删除服务商",
+  "deleteProviderConfirm": "确定要删除服务商「{name}」及其所有模型吗？",
+  "@deleteProviderConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "providerName": "服务商名称",
+  "providerNameHint": "如：SiliconFlow, Ollama, OpenRouter",
+  "apiProtocol": "接口协议",
+  "protocolOpenAi": "OpenAI 兼容协议",
+  "protocolAnthropic": "Anthropic 协议",
+  "modelsCount": "{count} 个模型",
+  "@modelsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addModel": "添加模型",
+  "deleteModel": "删除模型",
+  "deleteModelConfirm": "确定要删除模型「{name}」吗？",
+  "@deleteModelConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "modelId": "模型标识 (Model ID)",
+  "modelIdHint": "如：deepseek-chat, gpt-4o",
+  "modelDisplayName": "显示名称",
+  "modelDisplayNameHint": "如：DeepSeek Chat (V3)",
+  "supportsThinking": "支持思考推理 (Reasoning)",
+  "supportsThinkingDesc": "启用后模型可输出思考过程与调节思考强度",
+  "customProviderTag": "自定义",
+  "apiKeyConfigured": "已配置密钥",
+  "apiKeyMissing": "未配置密钥",
+  "activeModelBadge": "当前生效",
+  "setAsActive": "设为当前生效模型",
+  "openTerminal": "打开 Linux 终端",
+  "configuredProviders": "已配置的服务商",
+  "currentActiveModel": "当前生效模型",
+  "enterApiKeyHint": "输入或粘贴 API Key",
+  "confirm": "确定"
 }

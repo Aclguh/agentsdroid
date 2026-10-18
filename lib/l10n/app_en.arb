@@ -161,5 +161,61 @@
         "type": "int"
       }
     }
-  }
+  },
+  "modelsAndProviders": "Models & Providers",
+  "modelsAndProvidersDesc": "Configure LLM providers, API keys and available models",
+  "agentEngineDesc": "Switch between Built-in Agent and Claude Code CLI",
+  "safetySectionDesc": "Configure approval level and YOLO mode",
+  "languageDesc": "Switch application display language",
+  "subsystemSectionDesc": "Manage Linux Debian PRoot sandbox status",
+  "addProvider": "Add Provider",
+  "editProvider": "Edit Provider",
+  "deleteProvider": "Delete Provider",
+  "deleteProviderConfirm": "Are you sure you want to delete provider \"{name}\" and its models?",
+  "@deleteProviderConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "providerName": "Provider Name",
+  "providerNameHint": "e.g. SiliconFlow, Ollama, OpenRouter",
+  "apiProtocol": "API Protocol",
+  "protocolOpenAi": "OpenAI Compatible",
+  "protocolAnthropic": "Anthropic Protocol",
+  "modelsCount": "{count} models",
+  "@modelsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addModel": "Add Model",
+  "deleteModel": "Delete Model",
+  "deleteModelConfirm": "Are you sure you want to delete model \"{name}\"?",
+  "@deleteModelConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "modelId": "Model ID",
+  "modelIdHint": "e.g. deepseek-chat, gpt-4o",
+  "modelDisplayName": "Display Name",
+  "modelDisplayNameHint": "e.g. DeepSeek Chat (V3)",
+  "supportsThinking": "Supports Reasoning (Thinking)",
+  "supportsThinkingDesc": "Allows reasoning collapse and thinking intensity control",
+  "customProviderTag": "Custom",
+  "apiKeyConfigured": "Key Configured",
+  "apiKeyMissing": "No Key",
+  "activeModelBadge": "Active",
+  "setAsActive": "Set as Active Model",
+  "openTerminal": "Open Linux Terminal",
+  "configuredProviders": "Configured Providers",
+  "currentActiveModel": "Active Model",
+  "enterApiKeyHint": "Enter or paste API Key",
+  "confirm": "Confirm"
 }

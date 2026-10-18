@@ -496,4 +496,118 @@ class AppLocalizationsEn extends AppLocalizations {
   String thoughtDuration(int seconds) {
     return 'Thought for ${seconds}s';
   }
+
+  @override
+  String get modelsAndProviders => 'Models & Providers';
+
+  @override
+  String get modelsAndProvidersDesc =>
+      'Configure LLM providers, API keys and available models';
+
+  @override
+  String get agentEngineDesc =>
+      'Switch between Built-in Agent and Claude Code CLI';
+
+  @override
+  String get safetySectionDesc => 'Configure approval level and YOLO mode';
+
+  @override
+  String get languageDesc => 'Switch application display language';
+
+  @override
+  String get subsystemSectionDesc => 'Manage Linux Debian PRoot sandbox status';
+
+  @override
+  String get addProvider => 'Add Provider';
+
+  @override
+  String get editProvider => 'Edit Provider';
+
+  @override
+  String get deleteProvider => 'Delete Provider';
+
+  @override
+  String deleteProviderConfirm(String name) {
+    return 'Are you sure you want to delete provider \"$name\" and its models?';
+  }
+
+  @override
+  String get providerName => 'Provider Name';
+
+  @override
+  String get providerNameHint => 'e.g. SiliconFlow, Ollama, OpenRouter';
+
+  @override
+  String get apiProtocol => 'API Protocol';
+
+  @override
+  String get protocolOpenAi => 'OpenAI Compatible';
+
+  @override
+  String get protocolAnthropic => 'Anthropic Protocol';
+
+  @override
+  String modelsCount(int count) {
+    return '$count models';
+  }
+
+  @override
+  String get addModel => 'Add Model';
+
+  @override
+  String get deleteModel => 'Delete Model';
+
+  @override
+  String deleteModelConfirm(String name) {
+    return 'Are you sure you want to delete model \"$name\"?';
+  }
+
+  @override
+  String get modelId => 'Model ID';
+
+  @override
+  String get modelIdHint => 'e.g. deepseek-chat, gpt-4o';
+
+  @override
+  String get modelDisplayName => 'Display Name';
+
+  @override
+  String get modelDisplayNameHint => 'e.g. DeepSeek Chat (V3)';
+
+  @override
+  String get supportsThinking => 'Supports Reasoning (Thinking)';
+
+  @override
+  String get supportsThinkingDesc =>
+      'Allows reasoning collapse and thinking intensity control';
+
+  @override
+  String get customProviderTag => 'Custom';
+
+  @override
+  String get apiKeyConfigured => 'Key Configured';
+
+  @override
+  String get apiKeyMissing => 'No Key';
+
+  @override
+  String get activeModelBadge => 'Active';
+
+  @override
+  String get setAsActive => 'Set as Active Model';
+
+  @override
+  String get openTerminal => 'Open Linux Terminal';
+
+  @override
+  String get configuredProviders => 'Configured Providers';
+
+  @override
+  String get currentActiveModel => 'Active Model';
+
+  @override
+  String get enterApiKeyHint => 'Enter or paste API Key';
+
+  @override
+  String get confirm => 'Confirm';
 }

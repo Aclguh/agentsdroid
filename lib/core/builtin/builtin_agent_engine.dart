@@ -193,13 +193,15 @@ class BuiltinAgentEngine implements AgentEngine {
       syncSessionHistory(priorMessages);
     }
 
-    final provider = _keyVault.getActiveProvider();
-    final apiKey = await _keyVault.getApiKey(provider);
+    final providerId = _keyVault.getActiveProviderId();
+    final providerConfig = _keyVault.getProvider(providerId);
+    final apiKey = await _keyVault.getApiKeyForProvider(providerId);
+    final providerDisplayName = providerConfig?.name ?? _keyVault.getActiveProvider().displayName;
 
     if (apiKey == null || apiKey.isEmpty) {
-      _setState(AgentState.error, 'Please configure the API Key for ${provider.displayName} in Settings first.');
+      _setState(AgentState.error, 'Please configure the API Key for $providerDisplayName in Settings first.');
       _eventController.add(MessageEvent(
-        text: '⚠️ **API Key missing**: Please open Settings (gear icon in the top right) and enter your API Key for **${provider.displayName}** to start coding.',
+        text: '⚠️ **API Key missing**: Please open Settings (gear icon in the top right) and enter your API Key for **$providerDisplayName** to start coding.',
         isComplete: true,
       ));
       _setState(AgentState.idle);
@@ -207,10 +209,16 @@ class BuiltinAgentEngine implements AgentEngine {
     }
 
     try {
-      if (provider == LLMProvider.anthropic) {
-        await _runAnthropicLoop(prompt, apiKey);
+      final isAnthropic = (providerConfig != null && providerConfig.apiType == 'anthropic') ||
+          (_keyVault.getActiveProvider() == LLMProvider.anthropic);
+      if (isAnthropic) {
+        await _runAnthropicLoop(prompt, apiKey, providerConfig?.baseUrl);
       } else {
-        await _runOpenAiCompatibleLoop(prompt, apiKey, provider);
+        final baseUrl = providerConfig?.baseUrl ??
+            (_keyVault.getActiveProvider() == LLMProvider.deepseek
+                ? _keyVault.getDeepseekBaseUrl()
+                : _keyVault.getCustomBaseUrl());
+        await _runOpenAiCompatibleLoop(prompt, apiKey, baseUrl);
       }
     } catch (e) {
       _setState(AgentState.error, e.toString());
@@ -224,18 +232,11 @@ class BuiltinAgentEngine implements AgentEngine {
   }
 
   // --- OpenAI Compatible Loop (OpenAI, DeepSeek, Gemini, Custom) ---
-  Future<void> _runOpenAiCompatibleLoop(String prompt, String apiKey, LLMProvider provider) async {
-    String baseUrl;
-    if (provider == LLMProvider.deepseek) {
-      baseUrl = _keyVault.getDeepseekBaseUrl();
-    } else if (provider == LLMProvider.custom) {
-      baseUrl = _keyVault.getCustomBaseUrl();
-    } else if (provider == LLMProvider.gemini) {
-      baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
-    } else {
+  Future<void> _runOpenAiCompatibleLoop(String prompt, String apiKey, String customBaseUrl) async {
+    String baseUrl = customBaseUrl.trim();
+    if (baseUrl.isEmpty) {
       baseUrl = 'https://api.openai.com/v1';
     }
-
     if (baseUrl.endsWith('/')) {
       baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
@@ -341,9 +342,15 @@ class BuiltinAgentEngine implements AgentEngine {
   }
 
   // --- Anthropic Loop (Claude) ---
-  Future<void> _runAnthropicLoop(String prompt, String apiKey) async {
+  Future<void> _runAnthropicLoop(String prompt, String apiKey, [String? customBaseUrl]) async {
     final model = _keyVault.getActiveModel();
-    const url = 'https://api.anthropic.com/v1/messages';
+    String base = (customBaseUrl != null && customBaseUrl.trim().isNotEmpty)
+        ? customBaseUrl.trim()
+        : 'https://api.anthropic.com';
+    if (base.endsWith('/')) {
+      base = base.substring(0, base.length - 1);
+    }
+    final url = base.endsWith('/v1/messages') ? base : '$base/v1/messages';
 
     if (_anthropicHistory.isNotEmpty && _anthropicHistory.last['role'] == 'user') {
       final lastContent = _anthropicHistory.last['content'];

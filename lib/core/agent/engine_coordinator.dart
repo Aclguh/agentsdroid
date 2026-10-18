@@ -93,12 +93,14 @@ class EngineCoordinator implements AgentEngine {
   /// Check whether an engine is ready to run, or what dependencies are missing
   Future<EngineCheckResult> checkEngineReadiness(AgentEngineType type) async {
     if (type == AgentEngineType.builtin) {
-      final provider = keyVault.getActiveProvider();
-      final key = await keyVault.getApiKey(provider);
+      final providerId = keyVault.getActiveProviderId();
+      final provider = keyVault.getProvider(providerId);
+      final key = await keyVault.getApiKeyForProvider(providerId);
+      final displayName = provider?.name ?? keyVault.getActiveProvider().displayName;
       if (key == null || key.isEmpty) {
         return EngineCheckResult(
           isReady: false,
-          issueTitle: '未配置 ${provider.displayName} API Key',
+          issueTitle: '未配置 $displayName API Key',
           issueDetail: '请前往设置填入 API Key 即可使用内置 Agent。',
         );
       }

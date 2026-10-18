@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import '../../core/proot/proot_manager.dart';
 import '../../core/storage/key_vault.dart';
 import '../../l10n/app_localizations.dart';
-import '../../main.dart';
+import 'engine_settings_screen.dart';
+import 'language_settings_screen.dart';
+import 'model_settings_screen.dart';
+import 'safety_settings_screen.dart';
+import 'subsystem_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final KeyVault keyVault;
@@ -19,316 +23,211 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late LLMProvider _selectedProvider;
-  final _modelController = TextEditingController();
-  final _apiKeyController = TextEditingController();
-  final _baseUrlController = TextEditingController();
-
-  bool _obscureKey = true;
-  bool _isYolo = false;
-  late String _currentLanguage;
-  PRootProgress? _prootProgress;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedProvider = widget.keyVault.getActiveProvider();
-    _modelController.text = widget.keyVault.getActiveModel();
-    _isYolo = widget.keyVault.isYoloMode();
-    _currentLanguage = widget.keyVault.getLanguage();
-
-    _loadProviderData(_selectedProvider);
-
-    widget.prootManager.statusStream.listen((progress) {
-      if (mounted) {
-        setState(() {
-          _prootProgress = progress;
-        });
-      }
-    });
-  }
-
-  Future<void> _loadProviderData(LLMProvider provider) async {
-    final key = await widget.keyVault.getApiKey(provider);
-    _apiKeyController.text = key ?? '';
-
-    if (provider == LLMProvider.deepseek) {
-      _baseUrlController.text = widget.keyVault.getDeepseekBaseUrl();
-    } else if (provider == LLMProvider.custom) {
-      _baseUrlController.text = widget.keyVault.getCustomBaseUrl();
-    } else {
-      _baseUrlController.text = '';
-    }
-  }
-
-  Future<void> _saveCurrentProvider() async {
-    await widget.keyVault.setActiveProvider(_selectedProvider);
-    await widget.keyVault.setActiveModel(_modelController.text.trim());
-    await widget.keyVault.setApiKey(_selectedProvider, _apiKeyController.text.trim());
-
-    if (_selectedProvider == LLMProvider.deepseek) {
-      await widget.keyVault.setDeepseekBaseUrl(_baseUrlController.text.trim());
-    } else if (_selectedProvider == LLMProvider.custom) {
-      await widget.keyVault.setCustomBaseUrl(_baseUrlController.text.trim());
-    }
-    await widget.keyVault.setYoloMode(_isYolo);
-
-    if (mounted) {
-      final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsSaved)),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+
+    final activeProviderId = widget.keyVault.getActiveProviderId();
+    final activeProvider = widget.keyVault.getProvider(activeProviderId);
+    final activeProviderName = activeProvider?.name ?? widget.keyVault.getActiveProvider().displayName;
+    final activeModelId = widget.keyVault.getActiveModel();
+    final activeModel = widget.keyVault.getModel(activeModelId);
+    final activeModelName = activeModel?.name ?? activeModelId;
+
+    final selectedEngine = widget.keyVault.getSelectedEngine();
+    final engineSubtitle = selectedEngine == 'claudeCode' ? l10n.engineClaudeCode : l10n.engineBuiltin;
+
+    final approvalMode = widget.keyVault.getApprovalMode();
+    final String safetySubtitle;
+    switch (approvalMode) {
+      case ApprovalMode.yolo:
+        safetySubtitle = l10n.approvalYolo;
+        break;
+      case ApprovalMode.alwaysAsk:
+        safetySubtitle = l10n.approvalAlwaysAsk;
+        break;
+      case ApprovalMode.autoApprove:
+        safetySubtitle = l10n.approvalAutoApprove;
+        break;
+    }
+
+    final currentLang = widget.keyVault.getLanguage();
+    final langSubtitle = currentLang == 'en' ? l10n.languageEnglish : l10n.languageChinese;
+
+    final isSubsystemReady = widget.prootManager.currentStatus == PRootStatus.ready;
+    final subsystemSubtitle = isSubsystemReady ? l10n.subsystemReady : l10n.subsystemNotInstalled;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.settingsTitle),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _saveCurrentProvider,
-            tooltip: l10n.saveSettings,
+        title: Text(l10n.settings),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        children: [
+          _buildSummaryCard(
+            context: context,
+            icon: Icons.smart_toy_outlined,
+            iconColor: Colors.cyanAccent,
+            title: l10n.modelsAndProviders,
+            subtitle: '$activeProviderName • $activeModelName',
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ModelSettingsScreen(keyVault: widget.keyVault),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryCard(
+            context: context,
+            icon: Icons.bolt_outlined,
+            iconColor: Colors.amberAccent,
+            title: l10n.agentEngine,
+            subtitle: engineSubtitle,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EngineSettingsScreen(
+                    keyVault: widget.keyVault,
+                    prootManager: widget.prootManager,
+                  ),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryCard(
+            context: context,
+            icon: Icons.security_outlined,
+            iconColor: Colors.greenAccent,
+            title: l10n.safetySection,
+            subtitle: safetySubtitle,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SafetySettingsScreen(keyVault: widget.keyVault),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryCard(
+            context: context,
+            icon: Icons.translate_outlined,
+            iconColor: Colors.lightBlueAccent,
+            title: l10n.language,
+            subtitle: langSubtitle,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LanguageSettingsScreen(keyVault: widget.keyVault),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryCard(
+            context: context,
+            icon: Icons.terminal_outlined,
+            iconColor: Colors.orangeAccent,
+            title: l10n.subsystemSection,
+            subtitle: subsystemSubtitle,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SubsystemSettingsScreen(
+                    keyVault: widget.keyVault,
+                    prootManager: widget.prootManager,
+                  ),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Section: Language Switcher
-          Text(l10n.language, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: DropdownButtonFormField<String>(
-                initialValue: _currentLanguage,
-                decoration: InputDecoration(
-                  labelText: l10n.language,
-                  border: InputBorder.none,
+    );
+  }
+
+  Widget _buildSummaryCard({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                items: [
-                  DropdownMenuItem(value: 'zh', child: Text(l10n.languageChinese)),
-                  DropdownMenuItem(value: 'en', child: Text(l10n.languageEnglish)),
-                ],
-                onChanged: (val) {
-                  if (val != null && val != _currentLanguage) {
-                    setState(() {
-                      _currentLanguage = val;
-                    });
-                    AgentsDroidApp.setLocale(context, Locale(val));
-                  }
-                },
+                child: Icon(icon, color: iconColor, size: 22),
               ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Section: Agent Execution Engine
-          Text(l10n.agentEngine, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
-          const SizedBox(height: 12),
-          Card(
-            child: Column(
-              children: [
-                RadioListTile<String>(
-                  title: Text(l10n.engineBuiltin, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(l10n.engineBuiltinDesc, style: const TextStyle(fontSize: 12)),
-                  value: 'builtin',
-                  groupValue: widget.keyVault.getSelectedEngine(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        widget.keyVault.setSelectedEngine(val);
-                      });
-                    }
-                  },
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                RadioListTile<String>(
-                  title: Text(l10n.engineClaudeCode, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(l10n.engineClaudeCodeDesc, style: const TextStyle(fontSize: 12)),
-                  value: 'claudeCode',
-                  groupValue: widget.keyVault.getSelectedEngine(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        widget.keyVault.setSelectedEngine(val);
-                      });
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Section: Model Provider
-          Text(l10n.modelConfigSection, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
-          const SizedBox(height: 12),
-
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DropdownButtonFormField<LLMProvider>(
-                    initialValue: _selectedProvider,
-                    decoration: InputDecoration(
-                      labelText: l10n.activeProvider,
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: LLMProvider.values.map((p) {
-                      return DropdownMenuItem(value: p, child: Text(p.displayName));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          _selectedProvider = val;
-                          _modelController.text = val.defaultModel;
-                        });
-                        _loadProviderData(val);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextField(
-                    controller: _modelController,
-                    decoration: InputDecoration(
-                      labelText: l10n.modelName,
-                      border: const OutlineInputBorder(),
-                      helperText: 'e.g. claude-3-7-sonnet-20250219, deepseek-chat, gpt-4o',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextField(
-                    controller: _apiKeyController,
-                    obscureText: _obscureKey,
-                    decoration: InputDecoration(
-                      labelText: '${l10n.apiKey} (${_selectedProvider.displayName})',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscureKey ? Icons.visibility_off : Icons.visibility),
-                        onPressed: () => setState(() => _obscureKey = !_obscureKey),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-
-                  if (_selectedProvider == LLMProvider.deepseek || _selectedProvider == LLMProvider.custom) ...[
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _baseUrlController,
-                      decoration: InputDecoration(
-                        labelText: l10n.apiBaseUrl,
-                        border: const OutlineInputBorder(),
-                        helperText: _selectedProvider == LLMProvider.deepseek
-                            ? 'Default: https://api.deepseek.com'
-                            : 'OpenAI-compatible endpoint, e.g. https://api.openai.com/v1',
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Section: Execution Safety & Autonomous Mode
-          Text(l10n.safetySection, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
-          const SizedBox(height: 12),
-          Card(
-            child: SwitchListTile(
-              title: Text(l10n.yoloMode),
-              subtitle: Text(
-                l10n.yoloModeDesc,
-                style: const TextStyle(fontSize: 12),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               ),
-              value: _isYolo,
-              activeThumbColor: Colors.amber,
-              onChanged: (val) {
-                setState(() => _isYolo = val);
-                widget.keyVault.setYoloMode(val);
-              },
-            ),
+            ],
           ),
-
-          const SizedBox(height: 24),
-
-          // Section: In-App Linux Subsystem (PRoot)
-          Text(l10n.subsystemSection, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        widget.prootManager.currentStatus == PRootStatus.ready
-                            ? Icons.check_circle
-                            : Icons.info_outline,
-                        color: widget.prootManager.currentStatus == PRootStatus.ready
-                            ? Colors.greenAccent
-                            : Colors.amber,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${l10n.settings}: ${widget.prootManager.currentStatus == PRootStatus.ready ? l10n.subsystemReady : l10n.subsystemNotInstalled}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.subsystemDesc,
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  if (_prootProgress != null &&
-                      (_prootProgress!.status == PRootStatus.downloading ||
-                          _prootProgress!.status == PRootStatus.extracting)) ...[
-                    const SizedBox(height: 16),
-                    LinearProgressIndicator(value: _prootProgress!.progress),
-                    const SizedBox(height: 8),
-                    Text(_prootProgress!.message, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-                  ],
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: widget.prootManager.currentStatus == PRootStatus.ready
-                        ? null
-                        : () => widget.prootManager.installSubsystem(),
-                    icon: const Icon(Icons.download),
-                    label: Text(
-                      widget.prootManager.currentStatus == PRootStatus.ready
-                          ? l10n.subsystemReady
-                          : l10n.installSubsystem,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 32),
-          Center(
-            child: FilledButton.tonalIcon(
-              onPressed: _saveCurrentProvider,
-              icon: const Icon(Icons.save),
-              label: Text(l10n.saveSettings),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

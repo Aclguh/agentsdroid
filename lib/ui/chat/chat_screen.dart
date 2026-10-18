@@ -18,6 +18,7 @@ import '../../models/chat_message.dart';
 import '../../models/chat_session.dart';
 import '../diff/diff_viewer_screen.dart';
 import '../explorer/workspace_explorer_screen.dart';
+import '../settings/model_settings_screen.dart';
 import '../settings/settings_screen.dart';
 import '../terminal/subsystem_terminal_screen.dart';
 import 'widgets/agents_droid_mark.dart';
@@ -2012,6 +2013,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   String _getDisplayModelName(String model) {
+    final config = widget.keyVault.getModel(model);
+    if (config != null) return config.name;
     if (model.contains('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
     if (model.contains('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
     if (model == 'deepseek-chat') return 'DeepSeek V3';
@@ -2343,16 +2346,7 @@ class _ChatScreenState extends State<ChatScreen> {
     FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
 
     final currentModel = widget.keyVault.getActiveModel();
-    final models = [
-      (provider: LLMProvider.anthropic, id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet'),
-      (provider: LLMProvider.anthropic, id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'),
-      (provider: LLMProvider.deepseek, id: 'deepseek-chat', name: 'DeepSeek Chat (V3)'),
-      (provider: LLMProvider.deepseek, id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)'),
-      (provider: LLMProvider.openai, id: 'gpt-4o', name: 'OpenAI GPT-4o'),
-      (provider: LLMProvider.openai, id: 'o3-mini', name: 'OpenAI o3-mini'),
-      (provider: LLMProvider.gemini, id: 'gemini-2.5-flash', name: 'Google Gemini 2.5 Flash'),
-      (provider: LLMProvider.gemini, id: 'gemini-2.5-pro', name: 'Google Gemini 2.5 Pro'),
-    ];
+    final providers = widget.keyVault.getProviders();
 
     showModalBottomSheet(
       context: context,
@@ -2363,91 +2357,177 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       builder: (ctx) {
         return SafeArea(
-          child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+            ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.selectModel,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: models.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFF2C2C2C)),
-                    itemBuilder: (c, idx) {
-                      final m = models[idx];
-                      final isSelected = m.id == currentModel;
-                      return ListTile(
-                        dense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        title: Text(
-                          m.name,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? Colors.white : Colors.white70,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${m.provider.displayName} • ${m.id}',
-                          style: const TextStyle(fontSize: 11, color: Colors.white38),
-                        ),
-                        trailing: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
-                        onTap: () async {
-                          Navigator.pop(ctx);
-                          await widget.keyVault.setActiveProvider(m.provider);
-                          await widget.keyVault.setActiveModel(m.id);
-                          if (mounted) setState(() {});
-                        },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SettingsScreen(
-                          keyVault: widget.keyVault,
-                          prootManager: widget.prootManager,
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.selectModel,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                    ).then((_) {
-                      if (mounted) setState(() {});
-                    });
-                  },
-                  child: Text(l10n.moreModelSettings, style: const TextStyle(color: Colors.white60, fontSize: 13)),
-                ),
-              ],
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.tune, size: 16, color: Colors.white70),
+                        label: Text(l10n.modelsAndProviders, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ModelSettingsScreen(
+                                keyVault: widget.keyVault,
+                              ),
+                            ),
+                          ).then((_) {
+                            if (mounted) setState(() {});
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: providers.length,
+                      itemBuilder: (c, pIdx) {
+                        final p = providers[pIdx];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 10, bottom: 4, left: 4),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    p.name,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white54,
+                                    ),
+                                  ),
+                                  if (p.isCustom) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white10,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        l10n.customProviderTag,
+                                        style: const TextStyle(fontSize: 9, color: Colors.white60),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            ...p.models.map((m) {
+                              final isSelected = m.id == currentModel;
+                              return ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                title: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        m.name,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                          color: isSelected ? Colors.white : Colors.white70,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (m.supportsThinking) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: Colors.purple.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text(
+                                          'Thinking',
+                                          style: TextStyle(fontSize: 9, color: Colors.purpleAccent),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                subtitle: Text(
+                                  '${p.name} • ${m.id}',
+                                  style: const TextStyle(fontSize: 11, color: Colors.white38),
+                                ),
+                                trailing: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                                onTap: () async {
+                                  Navigator.pop(ctx);
+                                  await widget.keyVault.setActiveProviderId(p.id);
+                                  await widget.keyVault.setActiveModel(m.id);
+                                  if (mounted) setState(() {});
+                                },
+                              );
+                            }),
+                            const Divider(height: 12, color: Color(0xFF2A2A2A)),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SettingsScreen(
+                            keyVault: widget.keyVault,
+                            prootManager: widget.prootManager,
+                          ),
+                        ),
+                      ).then((_) {
+                        if (mounted) setState(() {});
+                      });
+                    },
+                    child: Text(l10n.moreModelSettings, style: const TextStyle(color: Colors.white60, fontSize: 13)),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
+        );
+      },
     ).then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);

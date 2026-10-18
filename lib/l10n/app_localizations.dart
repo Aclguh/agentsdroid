@@ -1027,6 +1027,216 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已思考 {seconds} 秒'**
   String thoughtDuration(int seconds);
+
+  /// No description provided for @modelsAndProviders.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型与服务商'**
+  String get modelsAndProviders;
+
+  /// No description provided for @modelsAndProvidersDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理 AI 服务商、Base URL、API Key 与可用模型'**
+  String get modelsAndProvidersDesc;
+
+  /// No description provided for @agentEngineDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择内置轻量 Agent 或官方 Claude Code CLI'**
+  String get agentEngineDesc;
+
+  /// No description provided for @safetySectionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置自主审批等级与 YOLO 模式'**
+  String get safetySectionDesc;
+
+  /// No description provided for @languageDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换应用界面显示语言'**
+  String get languageDesc;
+
+  /// No description provided for @subsystemSectionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看嵌入式 Linux Debian 沙箱运行与安装状态'**
+  String get subsystemSectionDesc;
+
+  /// No description provided for @addProvider.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加服务商'**
+  String get addProvider;
+
+  /// No description provided for @editProvider.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑服务商'**
+  String get editProvider;
+
+  /// No description provided for @deleteProvider.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除服务商'**
+  String get deleteProvider;
+
+  /// No description provided for @deleteProviderConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要删除服务商「{name}」及其所有模型吗？'**
+  String deleteProviderConfirm(String name);
+
+  /// No description provided for @providerName.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务商名称'**
+  String get providerName;
+
+  /// No description provided for @providerNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'如：SiliconFlow, Ollama, OpenRouter'**
+  String get providerNameHint;
+
+  /// No description provided for @apiProtocol.
+  ///
+  /// In zh, this message translates to:
+  /// **'接口协议'**
+  String get apiProtocol;
+
+  /// No description provided for @protocolOpenAi.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenAI 兼容协议'**
+  String get protocolOpenAi;
+
+  /// No description provided for @protocolAnthropic.
+  ///
+  /// In zh, this message translates to:
+  /// **'Anthropic 协议'**
+  String get protocolAnthropic;
+
+  /// No description provided for @modelsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个模型'**
+  String modelsCount(int count);
+
+  /// No description provided for @addModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加模型'**
+  String get addModel;
+
+  /// No description provided for @deleteModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除模型'**
+  String get deleteModel;
+
+  /// No description provided for @deleteModelConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要删除模型「{name}」吗？'**
+  String deleteModelConfirm(String name);
+
+  /// No description provided for @modelId.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型标识 (Model ID)'**
+  String get modelId;
+
+  /// No description provided for @modelIdHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'如：deepseek-chat, gpt-4o'**
+  String get modelIdHint;
+
+  /// No description provided for @modelDisplayName.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示名称'**
+  String get modelDisplayName;
+
+  /// No description provided for @modelDisplayNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'如：DeepSeek Chat (V3)'**
+  String get modelDisplayNameHint;
+
+  /// No description provided for @supportsThinking.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持思考推理 (Reasoning)'**
+  String get supportsThinking;
+
+  /// No description provided for @supportsThinkingDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用后模型可输出思考过程与调节思考强度'**
+  String get supportsThinkingDesc;
+
+  /// No description provided for @customProviderTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义'**
+  String get customProviderTag;
+
+  /// No description provided for @apiKeyConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'已配置密钥'**
+  String get apiKeyConfigured;
+
+  /// No description provided for @apiKeyMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置密钥'**
+  String get apiKeyMissing;
+
+  /// No description provided for @activeModelBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前生效'**
+  String get activeModelBadge;
+
+  /// No description provided for @setAsActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为当前生效模型'**
+  String get setAsActive;
+
+  /// No description provided for @openTerminal.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开 Linux 终端'**
+  String get openTerminal;
+
+  /// No description provided for @configuredProviders.
+  ///
+  /// In zh, this message translates to:
+  /// **'已配置的服务商'**
+  String get configuredProviders;
+
+  /// No description provided for @currentActiveModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前生效模型'**
+  String get currentActiveModel;
+
+  /// No description provided for @enterApiKeyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入或粘贴 API Key'**
+  String get enterApiKeyHint;
+
+  /// No description provided for @confirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定'**
+  String get confirm;
 }
 
 class _AppLocalizationsDelegate

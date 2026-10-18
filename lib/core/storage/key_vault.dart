@@ -1,5 +1,87 @@
+import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class ModelConfig {
+  final String id;
+  final String name;
+  final bool supportsThinking;
+
+  const ModelConfig({
+    required this.id,
+    required this.name,
+    this.supportsThinking = false,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'supportsThinking': supportsThinking,
+  };
+
+  factory ModelConfig.fromJson(Map<String, dynamic> json) => ModelConfig(
+    id: json['id'] as String,
+    name: json['name'] as String? ?? json['id'] as String,
+    supportsThinking: json['supportsThinking'] as bool? ?? false,
+  );
+}
+
+class ModelProviderConfig {
+  final String id;
+  final String name;
+  final String baseUrl;
+  final String apiType; // 'openai' or 'anthropic'
+  final List<ModelConfig> models;
+  final bool isCustom;
+
+  const ModelProviderConfig({
+    required this.id,
+    required this.name,
+    required this.baseUrl,
+    this.apiType = 'openai',
+    required this.models,
+    this.isCustom = false,
+  });
+
+  ModelProviderConfig copyWith({
+    String? id,
+    String? name,
+    String? baseUrl,
+    String? apiType,
+    List<ModelConfig>? models,
+    bool? isCustom,
+  }) {
+    return ModelProviderConfig(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      baseUrl: baseUrl ?? this.baseUrl,
+      apiType: apiType ?? this.apiType,
+      models: models ?? this.models,
+      isCustom: isCustom ?? this.isCustom,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'baseUrl': baseUrl,
+    'apiType': apiType,
+    'models': models.map((m) => m.toJson()).toList(),
+    'isCustom': isCustom,
+  };
+
+  factory ModelProviderConfig.fromJson(Map<String, dynamic> json) => ModelProviderConfig(
+    id: json['id'] as String,
+    name: json['name'] as String? ?? json['id'] as String,
+    baseUrl: json['baseUrl'] as String? ?? '',
+    apiType: json['apiType'] as String? ?? 'openai',
+    models: (json['models'] as List<dynamic>?)
+            ?.map((m) => ModelConfig.fromJson(m as Map<String, dynamic>))
+            .toList() ??
+        [],
+    isCustom: json['isCustom'] as bool? ?? false,
+  );
+}
 
 enum LLMProvider {
   anthropic('Anthropic Claude', 'claude-3-7-sonnet-20250219'),
@@ -46,6 +128,7 @@ class KeyVault {
   static const _prefThinkingIntensity = 'pref_thinking_intensity';
   static const _prefLanguage = 'pref_language';
   static const _prefSelectedEngine = 'pref_selected_engine';
+  static const _prefProvidersConfigJson = 'pref_providers_config_json';
 
   final FlutterSecureStorage _secureStorage;
   final SharedPreferences _prefs;
@@ -60,19 +143,217 @@ class KeyVault {
     return KeyVault(secureStorage, prefs);
   }
 
+  // --- Predefined Default Providers ---
+  static List<ModelProviderConfig> getDefaultProviders() {
+    return [
+      const ModelProviderConfig(
+        id: 'deepseek',
+        name: 'DeepSeek',
+        baseUrl: 'https://api.deepseek.com',
+        apiType: 'openai',
+        models: [
+          ModelConfig(id: 'deepseek-chat', name: 'DeepSeek Chat (V3)'),
+          ModelConfig(id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)', supportsThinking: true),
+        ],
+        isCustom: false,
+      ),
+      const ModelProviderConfig(
+        id: 'openai',
+        name: 'OpenAI',
+        baseUrl: 'https://api.openai.com/v1',
+        apiType: 'openai',
+        models: [
+          ModelConfig(id: 'gpt-4o', name: 'OpenAI GPT-4o'),
+          ModelConfig(id: 'gpt-4o-mini', name: 'OpenAI GPT-4o Mini'),
+          ModelConfig(id: 'o3-mini', name: 'OpenAI o3-mini', supportsThinking: true),
+          ModelConfig(id: 'o1', name: 'OpenAI o1', supportsThinking: true),
+        ],
+        isCustom: false,
+      ),
+      const ModelProviderConfig(
+        id: 'anthropic',
+        name: 'Anthropic',
+        baseUrl: 'https://api.anthropic.com',
+        apiType: 'anthropic',
+        models: [
+          ModelConfig(id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', supportsThinking: true),
+          ModelConfig(id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'),
+          ModelConfig(id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku'),
+        ],
+        isCustom: false,
+      ),
+      const ModelProviderConfig(
+        id: 'gemini',
+        name: 'Google Gemini',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        apiType: 'openai',
+        models: [
+          ModelConfig(id: 'gemini-2.5-flash', name: 'Google Gemini 2.5 Flash'),
+          ModelConfig(id: 'gemini-2.5-pro', name: 'Google Gemini 2.5 Pro'),
+        ],
+        isCustom: false,
+      ),
+    ];
+  }
+
+  // --- Provider Management ---
+  List<ModelProviderConfig> getProviders() {
+    final raw = _prefs.getString(_prefProvidersConfigJson);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final list = jsonDecode(raw) as List<dynamic>;
+        final providers = list
+            .map((item) => ModelProviderConfig.fromJson(item as Map<String, dynamic>))
+            .toList();
+        if (providers.isNotEmpty) {
+          return providers;
+        }
+      } catch (_) {}
+    }
+
+    final defaults = getDefaultProviders();
+    final customDeepseekUrl = _prefs.getString(_prefDeepseekBaseUrl);
+    if (customDeepseekUrl != null && customDeepseekUrl.isNotEmpty) {
+      final idx = defaults.indexWhere((p) => p.id == 'deepseek');
+      if (idx >= 0) {
+        defaults[idx] = defaults[idx].copyWith(baseUrl: customDeepseekUrl);
+      }
+    }
+    return defaults;
+  }
+
+  Future<void> saveProviders(List<ModelProviderConfig> providers) async {
+    final jsonStr = jsonEncode(providers.map((p) => p.toJson()).toList());
+    await _prefs.setString(_prefProvidersConfigJson, jsonStr);
+  }
+
+  ModelProviderConfig? getProvider(String providerId) {
+    final providers = getProviders();
+    try {
+      return providers.firstWhere((p) => p.id == providerId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> addOrUpdateProvider(ModelProviderConfig provider) async {
+    final providers = getProviders();
+    final index = providers.indexWhere((p) => p.id == provider.id);
+    if (index >= 0) {
+      providers[index] = provider;
+    } else {
+      providers.add(provider);
+    }
+    await saveProviders(providers);
+  }
+
+  Future<void> deleteProvider(String providerId) async {
+    final providers = getProviders();
+    providers.removeWhere((p) => p.id == providerId);
+    await saveProviders(providers);
+    await deleteApiKeyForProvider(providerId);
+
+    if (getActiveProviderId() == providerId) {
+      if (providers.isNotEmpty) {
+        await setActiveProviderId(providers.first.id);
+        if (providers.first.models.isNotEmpty) {
+          await setActiveModel(providers.first.models.first.id);
+        }
+      }
+    }
+  }
+
+  Future<void> addModelToProvider(String providerId, ModelConfig model) async {
+    final providers = getProviders();
+    final index = providers.indexWhere((p) => p.id == providerId);
+    if (index >= 0) {
+      final existing = providers[index];
+      final models = List<ModelConfig>.from(existing.models);
+      final mIndex = models.indexWhere((m) => m.id == model.id);
+      if (mIndex >= 0) {
+        models[mIndex] = model;
+      } else {
+        models.add(model);
+      }
+      providers[index] = existing.copyWith(models: models);
+      await saveProviders(providers);
+    }
+  }
+
+  Future<void> removeModelFromProvider(String providerId, String modelId) async {
+    final providers = getProviders();
+    final index = providers.indexWhere((p) => p.id == providerId);
+    if (index >= 0) {
+      final existing = providers[index];
+      final models = List<ModelConfig>.from(existing.models);
+      models.removeWhere((m) => m.id == modelId);
+      providers[index] = existing.copyWith(models: models);
+      await saveProviders(providers);
+
+      if (getActiveModel() == modelId) {
+        if (models.isNotEmpty) {
+          await setActiveModel(models.first.id);
+        }
+      }
+    }
+  }
+
+  ModelConfig? getModel(String modelId) {
+    for (final p in getProviders()) {
+      for (final m in p.models) {
+        if (m.id == modelId) return m;
+      }
+    }
+    return null;
+  }
+
   // --- API Keys ---
-  Future<void> setApiKey(LLMProvider provider, String key) async {
-    final storageKey = _getStorageKey(provider);
+  Future<void> setApiKeyForProvider(String providerId, String key) async {
+    final storageKey = 'key_provider_$providerId';
     if (key.trim().isEmpty) {
       await _secureStorage.delete(key: storageKey);
     } else {
       await _secureStorage.write(key: storageKey, value: key.trim());
     }
+
+    // Maintain backward compatibility for built-in enum keys
+    try {
+      final enumVal = LLMProvider.values.firstWhere((e) => e.name == providerId);
+      final legacyKey = _getStorageKey(enumVal);
+      if (key.trim().isEmpty) {
+        await _secureStorage.delete(key: legacyKey);
+      } else {
+        await _secureStorage.write(key: legacyKey, value: key.trim());
+      }
+    } catch (_) {}
   }
 
-  Future<String?> getApiKey(LLMProvider provider) async {
-    return await _secureStorage.read(key: _getStorageKey(provider));
+  Future<String?> getApiKeyForProvider(String providerId) async {
+    final val = await _secureStorage.read(key: 'key_provider_$providerId');
+    if (val != null && val.isNotEmpty) return val;
+
+    // Fallback to legacy key
+    try {
+      final enumVal = LLMProvider.values.firstWhere((e) => e.name == providerId);
+      return await _secureStorage.read(key: _getStorageKey(enumVal));
+    } catch (_) {
+      return null;
+    }
   }
+
+  Future<void> deleteApiKeyForProvider(String providerId) async {
+    await _secureStorage.delete(key: 'key_provider_$providerId');
+    try {
+      final enumVal = LLMProvider.values.firstWhere((e) => e.name == providerId);
+      await _secureStorage.delete(key: _getStorageKey(enumVal));
+    } catch (_) {}
+  }
+
+  Future<void> setApiKey(LLMProvider provider, String key) =>
+      setApiKeyForProvider(provider.name, key);
+
+  Future<String?> getApiKey(LLMProvider provider) =>
+      getApiKeyForProvider(provider.name);
 
   Future<String?> getAnthropicApiKey() => getApiKey(LLMProvider.anthropic);
   Future<String?> getOpenAiApiKey() => getApiKey(LLMProvider.openai);
@@ -101,22 +382,35 @@ class KeyVault {
   }
 
   // --- Active Provider & Model ---
+  String getActiveProviderId() {
+    return _prefs.getString(_prefActiveProvider) ?? 'deepseek';
+  }
+
+  Future<void> setActiveProviderId(String providerId) async {
+    await _prefs.setString(_prefActiveProvider, providerId);
+  }
+
   LLMProvider getActiveProvider() {
-    final name = _prefs.getString(_prefActiveProvider);
-    if (name != null) {
-      try {
-        return LLMProvider.values.firstWhere((e) => e.name == name);
-      } catch (_) {}
+    final name = getActiveProviderId();
+    try {
+      return LLMProvider.values.firstWhere((e) => e.name == name);
+    } catch (_) {
+      return LLMProvider.custom;
     }
-    return LLMProvider.deepseek; // Default to DeepSeek for cost efficiency
   }
 
   Future<void> setActiveProvider(LLMProvider provider) async {
-    await _prefs.setString(_prefActiveProvider, provider.name);
+    await setActiveProviderId(provider.name);
   }
 
   String getActiveModel() {
-    return _prefs.getString(_prefActiveModel) ?? getActiveProvider().defaultModel;
+    final saved = _prefs.getString(_prefActiveModel);
+    if (saved != null && saved.isNotEmpty) return saved;
+    final provider = getProvider(getActiveProviderId());
+    if (provider != null && provider.models.isNotEmpty) {
+      return provider.models.first.id;
+    }
+    return 'deepseek-chat';
   }
 
   Future<void> setActiveModel(String model) async {
@@ -133,11 +427,17 @@ class KeyVault {
   }
 
   String getDeepseekBaseUrl() {
+    final p = getProvider('deepseek');
+    if (p != null && p.baseUrl.isNotEmpty) return p.baseUrl;
     return _prefs.getString(_prefDeepseekBaseUrl) ?? 'https://api.deepseek.com';
   }
 
   Future<void> setDeepseekBaseUrl(String url) async {
     await _prefs.setString(_prefDeepseekBaseUrl, url.trim());
+    final p = getProvider('deepseek');
+    if (p != null) {
+      await addOrUpdateProvider(p.copyWith(baseUrl: url.trim()));
+    }
   }
 
   // --- Approval Mode ---
@@ -160,7 +460,6 @@ class KeyVault {
     await _prefs.setBool(_prefYoloMode, mode == ApprovalMode.yolo);
   }
 
-  // Backward compatibility helpers
   bool isYoloMode() {
     return getApprovalMode() == ApprovalMode.yolo;
   }
@@ -246,6 +545,15 @@ class KeyVault {
     final geminiKey = await getApiKey(LLMProvider.gemini);
     if (geminiKey != null && geminiKey.isNotEmpty) {
       env['GEMINI_API_KEY'] = geminiKey;
+    }
+
+    final activeProvider = getProvider(getActiveProviderId());
+    if (activeProvider != null && activeProvider.isCustom) {
+      final customKey = await getApiKeyForProvider(activeProvider.id);
+      if (customKey != null && customKey.isNotEmpty) {
+        env['OPENAI_API_KEY'] = customKey;
+        env['OPENAI_BASE_URL'] = activeProvider.baseUrl;
+      }
     }
     return env;
   }

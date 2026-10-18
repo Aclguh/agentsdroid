@@ -477,4 +477,115 @@ class AppLocalizationsZh extends AppLocalizations {
   String thoughtDuration(int seconds) {
     return '已思考 $seconds 秒';
   }
+
+  @override
+  String get modelsAndProviders => '模型与服务商';
+
+  @override
+  String get modelsAndProvidersDesc => '管理 AI 服务商、Base URL、API Key 与可用模型';
+
+  @override
+  String get agentEngineDesc => '选择内置轻量 Agent 或官方 Claude Code CLI';
+
+  @override
+  String get safetySectionDesc => '设置自主审批等级与 YOLO 模式';
+
+  @override
+  String get languageDesc => '切换应用界面显示语言';
+
+  @override
+  String get subsystemSectionDesc => '查看嵌入式 Linux Debian 沙箱运行与安装状态';
+
+  @override
+  String get addProvider => '添加服务商';
+
+  @override
+  String get editProvider => '编辑服务商';
+
+  @override
+  String get deleteProvider => '删除服务商';
+
+  @override
+  String deleteProviderConfirm(String name) {
+    return '确定要删除服务商「$name」及其所有模型吗？';
+  }
+
+  @override
+  String get providerName => '服务商名称';
+
+  @override
+  String get providerNameHint => '如：SiliconFlow, Ollama, OpenRouter';
+
+  @override
+  String get apiProtocol => '接口协议';
+
+  @override
+  String get protocolOpenAi => 'OpenAI 兼容协议';
+
+  @override
+  String get protocolAnthropic => 'Anthropic 协议';
+
+  @override
+  String modelsCount(int count) {
+    return '$count 个模型';
+  }
+
+  @override
+  String get addModel => '添加模型';
+
+  @override
+  String get deleteModel => '删除模型';
+
+  @override
+  String deleteModelConfirm(String name) {
+    return '确定要删除模型「$name」吗？';
+  }
+
+  @override
+  String get modelId => '模型标识 (Model ID)';
+
+  @override
+  String get modelIdHint => '如：deepseek-chat, gpt-4o';
+
+  @override
+  String get modelDisplayName => '显示名称';
+
+  @override
+  String get modelDisplayNameHint => '如：DeepSeek Chat (V3)';
+
+  @override
+  String get supportsThinking => '支持思考推理 (Reasoning)';
+
+  @override
+  String get supportsThinkingDesc => '启用后模型可输出思考过程与调节思考强度';
+
+  @override
+  String get customProviderTag => '自定义';
+
+  @override
+  String get apiKeyConfigured => '已配置密钥';
+
+  @override
+  String get apiKeyMissing => '未配置密钥';
+
+  @override
+  String get activeModelBadge => '当前生效';
+
+  @override
+  String get setAsActive => '设为当前生效模型';
+
+  @override
+  String get openTerminal => '打开 Linux 终端';
+
+  @override
+  String get configuredProviders => '已配置的服务商';
+
+  @override
+  String get currentActiveModel => '当前生效模型';
+
+  @override
+  String get enterApiKeyHint => '输入或粘贴 API Key';
+
+  @override
+  String get confirm => '确定';
 }
