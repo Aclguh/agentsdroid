@@ -12,8 +12,8 @@ class SessionService {
   Future<void> init({Directory? baseDir}) async {
     final appDir = baseDir ?? await getApplicationDocumentsDirectory();
     _sessionsDir = Directory(p.join(appDir.path, 'sessions'));
-    if (!await _sessionsDir!.exists()) {
-      await _sessionsDir!.create(recursive: true);
+    if (!_sessionsDir!.existsSync()) {
+      _sessionsDir!.createSync(recursive: true);
     }
   }
 
@@ -30,7 +30,7 @@ class SessionService {
 
   Future<List<ChatSessionSummary>> listSessions({bool? isArchived}) async {
     final dir = sessionsDir;
-    if (!await dir.exists()) return [];
+    if (!dir.existsSync()) return [];
 
     final List<ChatSessionSummary> summaries = [];
     final entities = dir.listSync();
@@ -38,7 +38,7 @@ class SessionService {
     for (final entity in entities) {
       if (entity is File && entity.path.endsWith('.json')) {
         try {
-          final content = await entity.readAsString();
+          final content = entity.readAsStringSync();
           final json = jsonDecode(content) as Map<String, dynamic>;
           final session = ChatSession.fromJson(json);
           // Only retain sessions that have actual messages
@@ -48,7 +48,7 @@ class SessionService {
             }
           } else {
             // Clean up any empty session file from disk
-            await entity.delete();
+            entity.deleteSync();
           }
         } catch (_) {
           // Gracefully skip invalid or corrupted session files
@@ -63,14 +63,14 @@ class SessionService {
 
   Future<ChatSession?> getSession(String id) async {
     final file = _getSessionFile(id);
-    if (!await file.exists()) return null;
+    if (!file.existsSync()) return null;
 
     try {
-      final content = await file.readAsString();
+      final content = file.readAsStringSync();
       final json = jsonDecode(content) as Map<String, dynamic>;
       final session = ChatSession.fromJson(json);
       if (session.messages.isEmpty) {
-        await file.delete();
+        file.deleteSync();
         return null;
       }
       return session;
@@ -83,21 +83,21 @@ class SessionService {
     final file = _getSessionFile(session.id);
     // If the session has no messages, delete it from disk if exists (do not persist empty sessions)
     if (session.messages.isEmpty) {
-      if (await file.exists()) {
-        await file.delete();
+      if (file.existsSync()) {
+        file.deleteSync();
       }
       return;
     }
 
     session.updatedAt = DateTime.now();
     final jsonString = jsonEncode(session.toJson());
-    await file.writeAsString(jsonString);
+    file.writeAsStringSync(jsonString);
   }
 
   Future<void> deleteSession(String id) async {
     final file = _getSessionFile(id);
-    if (await file.exists()) {
-      await file.delete();
+    if (file.existsSync()) {
+      file.deleteSync();
     }
   }
 

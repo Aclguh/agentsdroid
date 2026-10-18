@@ -54,7 +54,7 @@ class WorkspaceService {
 
   Future<List<String>> listProjects() async {
     final root = workspacesRootDir;
-    if (!await root.exists()) return [];
+    if (!root.existsSync()) return [];
 
     final projects = <String>[];
     final entities = root.listSync();
@@ -75,8 +75,8 @@ class WorkspaceService {
         ? defaultProjectName
         : projectName;
     final target = Directory(p.join(workspacesRootDir.path, targetName));
-    if (!await target.exists()) {
-      await target.create(recursive: true);
+    if (!target.existsSync()) {
+      target.createSync(recursive: true);
     }
     _workspaceDir = target;
     _prootManager?.setWorkspacePath(target.path);
@@ -84,8 +84,8 @@ class WorkspaceService {
 
   Future<void> createProject(String projectName) async {
     final target = Directory(p.join(workspacesRootDir.path, projectName));
-    if (!await target.exists()) {
-      await target.create(recursive: true);
+    if (!target.existsSync()) {
+      target.createSync(recursive: true);
     }
   }
 

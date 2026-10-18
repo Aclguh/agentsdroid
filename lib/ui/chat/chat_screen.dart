@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:uuid/uuid.dart';
 
 import '../../core/agent/engine_coordinator.dart';
@@ -395,6 +395,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
     if (!mounted) return;
 
+    _refreshTreeData();
     setState(() {
       _currentSession = newSession;
       _messages.clear();
@@ -435,6 +436,7 @@ class _ChatScreenState extends State<ChatScreen> {
       await widget.workspace.switchProject(actualProject);
       if (!mounted) return;
 
+      _refreshTreeData();
       setState(() {
         _currentSession = session;
         _messages.clear();
@@ -479,9 +481,9 @@ class _ChatScreenState extends State<ChatScreen> {
         } else {
           await _handleNewSession(l10n, projectName: null);
         }
-      } else {
-        setState(() {});
       }
+      _refreshTreeData();
+      setState(() {});
     }
   }
 
@@ -515,29 +517,36 @@ class _ChatScreenState extends State<ChatScreen> {
     if (newTitle != null && newTitle.isNotEmpty && mounted) {
       await _sessionService.renameSession(summary.id, newTitle);
       if (_currentSession?.id == summary.id) {
-        setState(() {
-          _currentSession?.title = newTitle;
-        });
-      } else {
-        setState(() {});
+        _currentSession?.title = newTitle;
       }
+      _refreshTreeData();
+      setState(() {});
     }
   }
 
   Future<void> _handleArchiveSession(String sessionId, AppLocalizations l10n) async {
-    await _sessionService.archiveSession(sessionId);
+    final isCurrent = _currentSession?.id == sessionId;
+    if (isCurrent && _currentSession != null) {
+      _currentSession!.isArchived = true;
+      _currentSession!.messages.clear();
+      _currentSession!.messages.addAll(_messages);
+      await _sessionService.saveSession(_currentSession!);
+    } else {
+      await _sessionService.archiveSession(sessionId);
+    }
     if (!mounted) return;
 
-    if (_currentSession?.id == sessionId) {
+    if (isCurrent) {
       await _handleNewSession(l10n, projectName: null);
-    } else {
-      setState(() {});
     }
+    _refreshTreeData();
+    setState(() {});
   }
 
   Future<void> _handleUnarchiveSession(String sessionId, AppLocalizations l10n) async {
     await _sessionService.unarchiveSession(sessionId);
     if (mounted) {
+      _refreshTreeData();
       setState(() {});
     }
   }
@@ -592,16 +601,21 @@ class _ChatScreenState extends State<ChatScreen> {
         ? _currentSession!.projectName
         : null;
 
+    _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -700,9 +714,15 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    },
+    ).then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      });
+    });
   }
 
   String _formatRelativeTime(DateTime dateTime) {
@@ -715,6 +735,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showConversationHistorySheet(BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -735,7 +758,12 @@ class _ChatScreenState extends State<ChatScreen> {
           l10n: l10n,
         );
       },
-    );
+    ).then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      });
+    });
   }
 
   @override
@@ -760,8 +788,9 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       onDrawerChanged: (isOpen) {
         if (!isOpen) {
-          _inputFocusNode.unfocus();
-          FocusManager.instance.primaryFocus?.unfocus();
+          _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+          FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+          FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
         }
       },
       drawer: _buildHistoryDrawer(context, l10n, theme),
@@ -772,8 +801,9 @@ class _ChatScreenState extends State<ChatScreen> {
             icon: const Icon(Icons.menu),
             tooltip: l10n.chatHistory,
             onPressed: () {
-              _inputFocusNode.unfocus();
-              FocusManager.instance.primaryFocus?.unfocus();
+              _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+              FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+              FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
               Scaffold.of(ctx).openDrawer();
             },
           ),
@@ -881,71 +911,80 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Agent Status Banner (if working)
-          if (_agentState != AgentState.idle)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: _agentState == AgentState.waitingApproval
-                  ? Colors.amber.withValues(alpha: 0.15)
-                  : theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: _agentState == AgentState.waitingApproval
-                          ? Colors.amber
-                          : theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _statusMessage ?? l10n.agentWorking,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+          FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+          FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        },
+        child: Column(
+          children: [
+            // Agent Status Banner (if working)
+            if (_agentState != AgentState.idle)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                color: _agentState == AgentState.waitingApproval
+                    ? Colors.amber.withValues(alpha: 0.15)
+                    : theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
                         color: _agentState == AgentState.waitingApproval
                             ? Colors.amber
                             : theme.colorScheme.primary,
                       ),
                     ),
-                  ),
-                  if (_agentState != AgentState.idle)
-                    GestureDetector(
-                      onTap: () => _coordinator.interrupt(),
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: Text(
-                        l10n.stop,
-                        style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                        _statusMessage ?? l10n.agentWorking,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: _agentState == AgentState.waitingApproval
+                              ? Colors.amber
+                              : theme.colorScheme.primary,
+                        ),
                       ),
                     ),
-                ],
+                    if (_agentState != AgentState.idle)
+                      GestureDetector(
+                        onTap: () => _coordinator.interrupt(),
+                        child: Text(
+                          l10n.stop,
+                          style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
+                ),
               ),
+
+            // Chat Messages
+            Expanded(
+              child: _messages.isEmpty
+                  ? _buildEmptyState(theme, l10n)
+                  : ListView.builder(
+                      controller: _scrollController,
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[index];
+                        return _buildMessageItem(msg, theme, l10n);
+                      },
+                    ),
             ),
 
-          // Chat Messages
-          Expanded(
-            child: _messages.isEmpty
-                ? _buildEmptyState(theme, l10n)
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = _messages[index];
-                      return _buildMessageItem(msg, theme, l10n);
-                    },
-                  ),
-          ),
-
-          // Input Bar
-          _buildInputBar(theme, l10n),
-        ],
+            // Input Bar
+            _buildInputBar(theme, l10n),
+          ],
+        ),
       ),
     );
   }
@@ -1560,17 +1599,18 @@ class _ChatScreenState extends State<ChatScreen> {
     final isSelected = s.id == _currentSession?.id;
 
     return Padding(
-      padding: EdgeInsets.only(left: indent ? 16.0 : 0.0, top: 1, bottom: 1),
+      padding: EdgeInsets.only(left: indent ? 16.0 : 0.0, top: 0.5, bottom: 0.5),
       child: Container(
+        height: 26,
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF262626) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(5),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(5),
           onTap: () => _handleSwitchSession(s.id),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Row(
               children: [
                 Expanded(
@@ -1579,21 +1619,22 @@ class _ChatScreenState extends State<ChatScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12.5,
+                      height: 1.1,
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                       color: isSelected ? Colors.white : Colors.white70,
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Text(
                   _formatRelativeTime(s.updatedAt),
-                  style: const TextStyle(fontSize: 11, color: Colors.white38),
+                  style: const TextStyle(fontSize: 10, color: Colors.white38),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 15, color: Colors.white38),
+                  icon: const Icon(Icons.more_vert, size: 13, color: Colors.white38),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                   color: const Color(0xFF1E1E1E),
                   onSelected: (val) {
                     if (val == 'rename') {
@@ -1898,6 +1939,21 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  String _getThinkingShortLabel(ThinkingIntensity intensity) {
+    switch (intensity) {
+      case ThinkingIntensity.off:
+        return 'off';
+      case ThinkingIntensity.low:
+        return 'low';
+      case ThinkingIntensity.medium:
+        return 'medium';
+      case ThinkingIntensity.high:
+        return 'high';
+      case ThinkingIntensity.veryHigh:
+        return 'max';
+    }
+  }
+
   String _getThinkingDesc(ThinkingIntensity intensity, AppLocalizations l10n) {
     switch (intensity) {
       case ThinkingIntensity.off:
@@ -1923,134 +1979,152 @@ class _ChatScreenState extends State<ChatScreen> {
     if (model == 'o3-mini') return 'o3-mini';
     if (model.contains('gemini-2.5-flash')) return 'Gemini 2.5 Flash';
     if (model.contains('gemini-2.5-pro')) return 'Gemini 2.5 Pro';
-    if (model.length > 22) return '${model.substring(0, 20)}...';
+    if (model.length > 36) return '${model.substring(0, 33)}...';
     return model;
   }
 
   void _showApprovalModeSheet(BuildContext context, AppLocalizations l10n) {
+    _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+
     final currentMode = widget.keyVault.getApprovalMode();
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  l10n.approvalTitle,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.approvalSubtitle,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.white60,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                for (final mode in ApprovalMode.values) ...[
-                  Material(
-                    color: currentMode == mode ? const Color(0xFF2A2A2A) : const Color(0xFF222222),
-                    borderRadius: BorderRadius.circular(12),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () async {
-                        Navigator.pop(ctx);
-                        await widget.keyVault.setApprovalMode(mode);
-                        if (mounted) setState(() {});
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: currentMode == mode ? Colors.white24 : const Color(0xFF333333),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _getApprovalModeIcon(mode),
-                              size: 22,
-                              color: mode == ApprovalMode.yolo ? Colors.amber : Colors.white70,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _getApprovalModeLabel(mode, l10n),
-                                    style: const TextStyle(
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    _getApprovalModeDesc(mode, l10n),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.white60,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (currentMode == mode) ...[
-                              const SizedBox(width: 8),
-                              const Icon(Icons.check, color: Colors.white, size: 20),
-                            ],
-                          ],
-                        ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
+                  Text(
+                    l10n.approvalTitle,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.approvalSubtitle,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white60,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  for (final mode in ApprovalMode.values) ...[
+                    Material(
+                      color: currentMode == mode ? const Color(0xFF2A2A2A) : const Color(0xFF222222),
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await widget.keyVault.setApprovalMode(mode);
+                          if (mounted) setState(() {});
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: currentMode == mode ? Colors.white24 : const Color(0xFF333333),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _getApprovalModeIcon(mode),
+                                size: 22,
+                                color: mode == ApprovalMode.yolo ? Colors.amber : Colors.white70,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _getApprovalModeLabel(mode, l10n),
+                                      style: const TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      _getApprovalModeDesc(mode, l10n),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white60,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (currentMode == mode) ...[
+                                const SizedBox(width: 8),
+                                const Icon(Icons.check, color: Colors.white, size: 20),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
       },
-    );
+    ).then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      });
+    });
   }
 
   void _showThinkingIntensitySheet(BuildContext context, AppLocalizations l10n) {
+    _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+
     var intensity = widget.keyVault.getThinkingIntensity();
     final activeModel = widget.keyVault.getActiveModel();
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
@@ -2059,12 +2133,13 @@ class _ChatScreenState extends State<ChatScreen> {
         return StatefulBuilder(
           builder: (sheetCtx, setModalState) {
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                     Center(
                       child: Container(
                         width: 36,
@@ -2206,14 +2281,25 @@ class _ChatScreenState extends State<ChatScreen> {
                   ],
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+    ).then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      });
+    });
+}
 
   void _showModelPickerSheet(BuildContext context, AppLocalizations l10n) {
+    _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+
     final currentModel = widget.keyVault.getActiveModel();
     final models = [
       (provider: LLMProvider.anthropic, id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet'),
@@ -2228,18 +2314,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 Center(
                   child: Container(
                     width: 36,
@@ -2315,94 +2403,117 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+    ).then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      });
+    });
+}
 
   void _showAttachmentMenu(BuildContext context, AppLocalizations l10n) {
+    _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.addContext,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.addContext,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                ListTile(
-                  leading: const Icon(Icons.insert_drive_file_outlined, color: Colors.white70),
-                  title: Text(l10n.addProjectFile, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showFilePickerSheet(l10n);
-                  },
-                ),
-                const Divider(height: 1, color: Color(0xFF2C2C2C)),
-                ListTile(
-                  leading: const Icon(Icons.content_paste_outlined, color: Colors.white70),
-                  title: Text(l10n.pasteClipboard, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final data = await Clipboard.getData(Clipboard.kTextPlain);
-                    if (data?.text != null && data!.text!.isNotEmpty) {
-                      final currentText = _textController.text;
-                      final selection = _textController.selection;
-                      if (selection.isValid && selection.start >= 0) {
-                        final newText = currentText.replaceRange(selection.start, selection.end, data.text!);
-                        _textController.text = newText;
-                        _textController.selection = TextSelection.collapsed(offset: selection.start + data.text!.length);
-                      } else {
-                        _textController.text = currentText.isEmpty ? data.text! : '$currentText\n${data.text}';
-                        _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+                  const SizedBox(height: 14),
+                  ListTile(
+                    leading: const Icon(Icons.insert_drive_file_outlined, color: Colors.white70),
+                    title: Text(l10n.addProjectFile, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showFilePickerSheet(l10n);
+                    },
+                  ),
+                  const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                  ListTile(
+                    leading: const Icon(Icons.content_paste_outlined, color: Colors.white70),
+                    title: Text(l10n.pasteClipboard, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final data = await Clipboard.getData(Clipboard.kTextPlain);
+                      if (data?.text != null && data!.text!.isNotEmpty) {
+                        final currentText = _textController.text;
+                        final selection = _textController.selection;
+                        if (selection.isValid && selection.start >= 0) {
+                          final newText = currentText.replaceRange(selection.start, selection.end, data.text!);
+                          _textController.text = newText;
+                          _textController.selection = TextSelection.collapsed(offset: selection.start + data.text!.length);
+                        } else {
+                          _textController.text = currentText.isEmpty ? data.text! : '$currentText\n${data.text}';
+                          _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+                        }
                       }
-                      _inputFocusNode.requestFocus();
-                    }
-                  },
-                ),
-                const Divider(height: 1, color: Color(0xFF2C2C2C)),
-                ListTile(
-                  leading: const Icon(Icons.lightbulb_outline_rounded, color: Colors.white70),
-                  title: Text(l10n.commonPrompts, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showCommonPromptsSheet(context, l10n);
-                  },
-                ),
-              ],
+                    },
+                  ),
+                  const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                  ListTile(
+                    leading: const Icon(Icons.lightbulb_outline_rounded, color: Colors.white70),
+                    title: Text(l10n.commonPrompts, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showCommonPromptsSheet(context, l10n);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
-    );
+    ).then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      });
+    });
   }
 
   void _showFilePickerSheet(AppLocalizations l10n) async {
+    _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+
     final proj = (_currentSession?.projectName != null &&
             _currentSession!.projectName!.isNotEmpty &&
             _currentSession!.projectName != WorkspaceService.defaultProjectName)
@@ -2414,6 +2525,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
@@ -2490,7 +2602,6 @@ class _ChatScreenState extends State<ChatScreen> {
                               _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
                             }
                             Navigator.pop(ctx);
-                            _inputFocusNode.requestFocus();
                           },
                         );
                       },
@@ -2501,10 +2612,20 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         );
       },
-    );
+    ).then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      });
+    });
   }
 
   void _showCommonPromptsSheet(BuildContext context, AppLocalizations l10n) {
+    _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+
     final prompts = [
       '请分析当前项目的架构设计与模块分工',
       '请审查代码中是否存在潜在 Bug 或未捕获的边界异常',
@@ -2515,56 +2636,64 @@ class _ChatScreenState extends State<ChatScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.commonPrompts,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.commonPrompts,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                for (final p in prompts)
-                  ListTile(
-                    dense: true,
-                    title: Text(p, style: const TextStyle(fontSize: 13.5, color: Colors.white)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white38),
-                    onTap: () {
-                      _textController.text = p;
-                      _textController.selection = TextSelection.collapsed(offset: p.length);
-                      Navigator.pop(ctx);
-                      _inputFocusNode.requestFocus();
-                    },
-                  ),
-              ],
+                  const SizedBox(height: 12),
+                  for (final p in prompts)
+                    ListTile(
+                      dense: true,
+                      title: Text(p, style: const TextStyle(fontSize: 13.5, color: Colors.white)),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white38),
+                      onTap: () {
+                        _textController.text = p;
+                        _textController.selection = TextSelection.collapsed(offset: p.length);
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                ],
+              ),
             ),
           ),
         );
       },
-    );
+    ).then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+        FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+      });
+    });
   }
 
   Widget _buildInputBar(ThemeData theme, AppLocalizations l10n) {
@@ -2613,6 +2742,10 @@ class _ChatScreenState extends State<ChatScreen> {
               maxLines: 6,
               keyboardType: TextInputType.multiline,
               textInputAction: TextInputAction.newline,
+              onTapOutside: (_) {
+                _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+                FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+              },
               style: TextStyle(
                 fontSize: 15,
                 color: isDark ? Colors.white : Colors.black87,
@@ -2699,44 +2832,48 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 const SizedBox(width: 8),
 
-                // Model & Thinking Intensity Pill - Expanded to extend left
+                // Model & Thinking Intensity Pill - dynamically expands/shrinks, right-aligned next to send button
                 Expanded(
-                  child: Material(
-                    color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(16),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => _showThinkingIntensitySheet(context, l10n),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFD1D5DB),
-                            width: 0.8,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Material(
+                      color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB),
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => _showThinkingIntensitySheet(context, l10n),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFD1D5DB),
+                              width: 0.8,
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${_getDisplayModelName(activeModel)} · ${l10n.thinkingTitle} · ${_getThinkingLabel(thinkingIntensity, l10n)}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDark ? Colors.white70 : Colors.black87,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  '${_getDisplayModelName(activeModel)} ${_getThinkingShortLabel(thinkingIntensity)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark ? Colors.white70 : Colors.black87,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 2),
-                            Icon(
-                              Icons.keyboard_arrow_down,
-                              size: 14,
-                              color: isDark ? Colors.white54 : Colors.black54,
-                            ),
-                          ],
+                              const SizedBox(width: 2),
+                              Icon(
+                                Icons.keyboard_arrow_down,
+                                size: 14,
+                                color: isDark ? Colors.white54 : Colors.black54,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -2764,11 +2901,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Icon(
                         isWorking ? Icons.stop_rounded : Icons.arrow_upward_rounded,
                         size: 18,
-                        color: isWorking
+                        color: isWorking || hasText
                             ? Colors.white
-                            : (hasText
-                                ? Colors.white
-                                : (isDark ? Colors.white30 : Colors.black26)),
+                            : (isDark ? Colors.white30 : Colors.black26),
                       ),
                     ),
                   ),

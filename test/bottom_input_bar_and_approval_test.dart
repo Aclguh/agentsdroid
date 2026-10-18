@@ -215,8 +215,8 @@ void main() {
       expect(find.text('帮我批准'), findsOneWidget);
       expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
 
-      // 4. Model & Thinking pill
-      expect(find.textContaining('思考 · 高'), findsOneWidget);
+      // 4. Model & Thinking pill (now concise: '<Model> high')
+      expect(find.textContaining('high'), findsOneWidget);
 
       // 5. Send circular button
       expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
@@ -239,7 +239,7 @@ void main() {
       expect(find.byIcon(Icons.pan_tool_outlined), findsOneWidget);
 
       // Test tapping Model & Thinking pill opens intensity sheet
-      await tester.tap(find.textContaining('思考 · 高'));
+      await tester.tap(find.textContaining('high'));
       await tester.pumpAndSettle();
 
       expect(find.text('思考：高'), findsOneWidget);
@@ -249,5 +249,81 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
     });
+
+    testWidgets('model selector dynamically sizes in landscape without stretching across screen', (tester) async {
+      // Landscape physical size: 2400 x 1080 (logical width = 1200 px)
+      tester.view.physicalSize = const Size(2400, 1080);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('zh'), Locale('en')],
+          locale: const Locale('zh'),
+          home: ChatScreen(
+            keyVault: keyVault,
+            workspace: workspace,
+            prootManager: prootManager,
+            sessionService: sessionService,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final modelFinder = find.textContaining('high');
+      expect(modelFinder, findsOneWidget);
+
+      final RenderBox renderBox = tester.renderObject(modelFinder);
+      // In landscape (width 1200), the text and pill must not stretch across the screen
+      expect(renderBox.size.width, lessThan(400.0));
+    });
+
+    testWidgets('returning from modal sheets does not refocus input field', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('zh'), Locale('en')],
+          locale: const Locale('zh'),
+          home: ChatScreen(
+            keyVault: keyVault,
+            workspace: workspace,
+            prootManager: prootManager,
+            sessionService: sessionService,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Focus the input field
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.focusNode?.hasFocus, isTrue);
+
+      // Tap approval mode button while focused
+      await tester.tap(find.text('帮我批准'));
+      await tester.pumpAndSettle();
+
+      // Close modal by selecting an option
+      await tester.tap(find.text('完全访问权限'));
+      await tester.pumpAndSettle();
+
+      // Input field should NOT regain focus!
+      expect(textField.focusNode?.hasFocus, isFalse);
+    });
   });
 }
+

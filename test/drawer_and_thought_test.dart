@@ -10,6 +10,7 @@ import 'package:agentsdroid/core/storage/key_vault.dart';
 import 'package:agentsdroid/core/storage/session_service.dart';
 import 'package:agentsdroid/core/storage/workspace_service.dart';
 import 'package:agentsdroid/l10n/app_localizations.dart';
+import 'package:agentsdroid/models/chat_message.dart';
 import 'package:agentsdroid/ui/chat/chat_screen.dart';
 import 'package:agentsdroid/ui/chat/widgets/thought_card.dart';
 
@@ -106,9 +107,11 @@ void main() {
     });
 
     tearDown(() async {
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
-      }
+      try {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
+      } catch (_) {}
     });
 
     testWidgets('Top bar displays No Project for fresh session and opens switch sheet', (tester) async {
@@ -213,6 +216,79 @@ void main() {
 
       expect(find.text('DemoProject'), findsOneWidget);
       expect(keyVault.isProjectsSectionExpanded(), isTrue);
+    });
+
+    testWidgets('archiving a session removes it from drawer and moves it to archived', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      late String sessionId;
+      await tester.runAsync(() async {
+        final session = await sessionService.createSession(title: 'ToArchive');
+        sessionId = session.id;
+        session.messages.add(ChatMessage(id: 'm1', role: MessageRole.user, content: 'Hi'));
+        await sessionService.saveSession(session);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('zh'), Locale('en')],
+          locale: const Locale('zh'),
+          home: ChatScreen(
+            keyVault: keyVault,
+            workspace: workspace,
+            prootManager: prootManager,
+            sessionService: sessionService,
+          ),
+        ),
+      );
+
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      // Open drawer
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      // Check session appears
+      expect(find.text('ToArchive'), findsOneWidget);
+
+      // Tap popup menu of session specifically for ToArchive
+      final toArchiveRow = find.ancestor(
+        of: find.text('ToArchive'),
+        matching: find.byType(Row),
+      ).first;
+      final moreVertFinder = find.descendant(
+        of: toArchiveRow,
+        matching: find.byIcon(Icons.more_vert),
+      );
+      await tester.tap(moreVertFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Tap 归档
+      await tester.tap(find.text('归档'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // ToArchive should now be gone from the drawer sessions!
+      expect(find.text('ToArchive'), findsNothing);
+
+      // Verify in sessionService
+      final archived = await sessionService.listSessions(isArchived: true);
+      expect(archived.any((s) => s.id == sessionId), isTrue);
     });
   });
 }
