@@ -237,6 +237,20 @@
   "creditsSection": "Credits & Foundations",
   "creditFlutter": "Cross-platform native framework",
   "creditPRoot": "User-space Linux sandbox on Android",
-  "creditClaudeCode": "Anthropic official agent CLI",
-  "copyrightNotice": "AgentsDroid © 2026 Aclguh. All rights reserved."
+  "creditClaudeCode": "Terminal Agent execution engine and protocol reference",
+  "copyrightNotice": "AgentsDroid © 2026 Aclguh. All rights reserved.",
+  "themeMode": "Theme",
+  "themeDesc": "Choose the visual display theme for the application",
+  "themeSystem": "Follow System",
+  "themeSystemDesc": "Match your system appearance preference",
+  "themeLight": "Light Theme",
+  "themeLightDesc": "Clean and bright visual style",
+  "themeDark": "Dark Theme",
+  "themeDarkDesc": "Classic dark visual style for eye comfort",
+  "screenRotation": "Screen Rotation",
+  "screenRotationDesc": "Set the orientation rotation preference for the application",
+  "screenRotationAuto": "Auto-rotate with Gravity",
+  "screenRotationAutoDesc": "Screen automatically switches between portrait and landscape based on device sensor",
+  "screenRotationPortrait": "Lock Portrait",
+  "screenRotationPortraitDesc": "Keep in portrait orientation to prevent accidental rotation when moving device"
 }

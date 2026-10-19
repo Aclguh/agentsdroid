@@ -129,6 +129,7 @@ void main() {
 
     // 滚动至底部确保关于卡片可见
     final aboutCardFinder = find.text('关于');
+    await tester.scrollUntilVisible(aboutCardFinder, 100);
     expect(aboutCardFinder, findsOneWidget);
     expect(find.text('版本、包名与开源信息'), findsOneWidget);
 

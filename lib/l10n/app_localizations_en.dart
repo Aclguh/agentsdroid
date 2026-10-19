@@ -671,9 +671,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creditPRoot => 'User-space Linux sandbox on Android';
 
   @override
-  String get creditClaudeCode => 'Anthropic official agent CLI';
+  String get creditClaudeCode =>
+      'Terminal Agent execution engine and protocol reference';
 
   @override
   String get copyrightNotice =>
       'AgentsDroid © 2026 Aclguh. All rights reserved.';
+
+  @override
+  String get themeMode => 'Theme';
+
+  @override
+  String get themeDesc => 'Choose the visual display theme for the application';
+
+  @override
+  String get themeSystem => 'Follow System';
+
+  @override
+  String get themeSystemDesc => 'Match your system appearance preference';
+
+  @override
+  String get themeLight => 'Light Theme';
+
+  @override
+  String get themeLightDesc => 'Clean and bright visual style';
+
+  @override
+  String get themeDark => 'Dark Theme';
+
+  @override
+  String get themeDarkDesc => 'Classic dark visual style for eye comfort';
+
+  @override
+  String get screenRotation => 'Screen Rotation';
+
+  @override
+  String get screenRotationDesc =>
+      'Set the orientation rotation preference for the application';
+
+  @override
+  String get screenRotationAuto => 'Auto-rotate with Gravity';
+
+  @override
+  String get screenRotationAutoDesc =>
+      'Screen automatically switches between portrait and landscape based on device sensor';
+
+  @override
+  String get screenRotationPortrait => 'Lock Portrait';
+
+  @override
+  String get screenRotationPortraitDesc =>
+      'Keep in portrait orientation to prevent accidental rotation when moving device';
 }

@@ -1355,7 +1355,7 @@ abstract class AppLocalizations {
   /// No description provided for @creditClaudeCode.
   ///
   /// In zh, this message translates to:
-  /// **'Anthropic 官方 Agent CLI'**
+  /// **'终端 Agent 执行引擎与协议参考'**
   String get creditClaudeCode;
 
   /// No description provided for @copyrightNotice.
@@ -1363,6 +1363,90 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'AgentsDroid © 2026 Aclguh. All rights reserved.'**
   String get copyrightNotice;
+
+  /// No description provided for @themeMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'外观主题'**
+  String get themeMode;
+
+  /// No description provided for @themeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择应用程序的视觉显示主题'**
+  String get themeDesc;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统'**
+  String get themeSystem;
+
+  /// No description provided for @themeSystemDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'保持与操作系统深浅色设置一致'**
+  String get themeSystemDesc;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In zh, this message translates to:
+  /// **'浅色模式'**
+  String get themeLight;
+
+  /// No description provided for @themeLightDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'明亮清晰的浅色视觉风格'**
+  String get themeLightDesc;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In zh, this message translates to:
+  /// **'深色模式'**
+  String get themeDark;
+
+  /// No description provided for @themeDarkDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'护眼专注的经典深色视觉风格'**
+  String get themeDarkDesc;
+
+  /// No description provided for @screenRotation.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏幕旋转'**
+  String get screenRotation;
+
+  /// No description provided for @screenRotationDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置应用界面的方向旋转偏好'**
+  String get screenRotationDesc;
+
+  /// No description provided for @screenRotationAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'随重力感应旋转'**
+  String get screenRotationAuto;
+
+  /// No description provided for @screenRotationAutoDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'界面随设备重力感应自动切换横屏与竖屏'**
+  String get screenRotationAutoDesc;
+
+  /// No description provided for @screenRotationPortrait.
+  ///
+  /// In zh, this message translates to:
+  /// **'锁定竖屏'**
+  String get screenRotationPortrait;
+
+  /// No description provided for @screenRotationPortraitDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'始终保持纵向竖屏显示，避免设备晃动时误旋转'**
+  String get screenRotationPortraitDesc;
 }
 
 class _AppLocalizationsDelegate

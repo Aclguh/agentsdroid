@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/proot/proot_manager.dart';
@@ -14,6 +15,8 @@ void main() async {
   try {
     // Initialize Core Services
     final keyVault = await KeyVault.create();
+    AgentsDroidApp.applyScreenOrientation(keyVault.isAutoRotateEnabled());
+
     final workspaceService = WorkspaceService();
     await workspaceService.init();
 
@@ -94,17 +97,45 @@ class AgentsDroidApp extends StatefulWidget {
     state?.setLocale(newLocale);
   }
 
+  static void setThemeMode(BuildContext context, ThemeMode newThemeMode) {
+    final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
+    state?.setThemeMode(newThemeMode);
+  }
+
+  static void setScreenOrientation(BuildContext context, bool autoRotate) {
+    final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
+    state?.setScreenOrientation(autoRotate);
+  }
+
+  static void applyScreenOrientation(bool autoRotate) {
+    if (autoRotate) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+    }
+  }
+
   @override
   State<AgentsDroidApp> createState() => _AgentsDroidAppState();
 }
 
 class _AgentsDroidAppState extends State<AgentsDroidApp> {
   late Locale _locale;
+  late ThemeMode _themeMode;
 
   @override
   void initState() {
     super.initState();
     _locale = Locale(widget.keyVault.getLanguage());
+    _themeMode = widget.keyVault.getThemeMode();
+    AgentsDroidApp.applyScreenOrientation(widget.keyVault.isAutoRotateEnabled());
   }
 
   void setLocale(Locale newLocale) {
@@ -114,15 +145,55 @@ class _AgentsDroidAppState extends State<AgentsDroidApp> {
     widget.keyVault.setLanguage(newLocale.languageCode);
   }
 
+  void setThemeMode(ThemeMode newThemeMode) {
+    setState(() {
+      _themeMode = newThemeMode;
+    });
+    widget.keyVault.setThemeMode(newThemeMode);
+  }
+
+  void setScreenOrientation(bool autoRotate) {
+    AgentsDroidApp.applyScreenOrientation(autoRotate);
+    widget.keyVault.setAutoRotateEnabled(autoRotate);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AgentsDroid',
       debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.dark,
+      themeMode: _themeMode,
       locale: _locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB), // Modern Blue / Indigo
+          brightness: Brightness.light,
+          surface: Colors.white,
+        ).copyWith(
+          primary: const Color(0xFF2563EB),
+          onPrimary: Colors.white,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF0F172A),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+        ),
+        dividerColor: const Color(0xFFE2E8F0),
+      ),
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
@@ -137,6 +208,7 @@ class _AgentsDroidAppState extends State<AgentsDroidApp> {
         scaffoldBackgroundColor: const Color(0xFF0F0F0F),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF141414),
+          foregroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
         ),
@@ -148,6 +220,7 @@ class _AgentsDroidAppState extends State<AgentsDroidApp> {
             side: const BorderSide(color: Color(0xFF2A2A2A)),
           ),
         ),
+        dividerColor: const Color(0xFF2A2A2A),
       ),
       home: ChatScreen(
         keyVault: widget.keyVault,

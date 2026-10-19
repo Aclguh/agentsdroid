@@ -647,9 +647,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creditPRoot => 'Android 用户态 Linux 沙箱环境';
 
   @override
-  String get creditClaudeCode => 'Anthropic 官方 Agent CLI';
+  String get creditClaudeCode => '终端 Agent 执行引擎与协议参考';
 
   @override
   String get copyrightNotice =>
       'AgentsDroid © 2026 Aclguh. All rights reserved.';
+
+  @override
+  String get themeMode => '外观主题';
+
+  @override
+  String get themeDesc => '选择应用程序的视觉显示主题';
+
+  @override
+  String get themeSystem => '跟随系统';
+
+  @override
+  String get themeSystemDesc => '保持与操作系统深浅色设置一致';
+
+  @override
+  String get themeLight => '浅色模式';
+
+  @override
+  String get themeLightDesc => '明亮清晰的浅色视觉风格';
+
+  @override
+  String get themeDark => '深色模式';
+
+  @override
+  String get themeDarkDesc => '护眼专注的经典深色视觉风格';
+
+  @override
+  String get screenRotation => '屏幕旋转';
+
+  @override
+  String get screenRotationDesc => '设置应用界面的方向旋转偏好';
+
+  @override
+  String get screenRotationAuto => '随重力感应旋转';
+
+  @override
+  String get screenRotationAutoDesc => '界面随设备重力感应自动切换横屏与竖屏';
+
+  @override
+  String get screenRotationPortrait => '锁定竖屏';
+
+  @override
+  String get screenRotationPortraitDesc => '始终保持纵向竖屏显示，避免设备晃动时误旋转';
 }

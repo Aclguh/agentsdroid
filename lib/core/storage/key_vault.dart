@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -444,6 +445,37 @@ class KeyVault {
 
   Future<void> setLanguage(String langCode) async {
     await _prefs.setString(_prefLanguage, langCode);
+  }
+
+  // --- Theme Mode (Default: 'dark') ---
+  static const _prefThemeMode = 'pref_theme_mode';
+
+  ThemeMode getThemeMode() {
+    final mode = _prefs.getString(_prefThemeMode);
+    switch (mode) {
+      case 'system':
+        return ThemeMode.system;
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+      default:
+        return ThemeMode.dark;
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    await _prefs.setString(_prefThemeMode, mode.name);
+  }
+
+  // --- Auto-rotate screen (Default: true) ---
+  static const _prefAutoRotate = 'pref_auto_rotate';
+
+  bool isAutoRotateEnabled() {
+    return _prefs.getBool(_prefAutoRotate) ?? true;
+  }
+
+  Future<void> setAutoRotateEnabled(bool enabled) async {
+    await _prefs.setBool(_prefAutoRotate, enabled);
   }
 
   // --- Expanded Projects Persistence ---

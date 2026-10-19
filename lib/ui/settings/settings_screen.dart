@@ -7,7 +7,9 @@ import 'engine_settings_screen.dart';
 import 'language_settings_screen.dart';
 import 'model_settings_screen.dart';
 import 'safety_settings_screen.dart';
+import 'screen_rotation_settings_screen.dart';
 import 'subsystem_settings_screen.dart';
+import 'theme_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final KeyVault keyVault;
@@ -54,6 +56,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final currentLang = widget.keyVault.getLanguage();
     final langSubtitle = currentLang == 'en' ? l10n.languageEnglish : l10n.languageChinese;
+
+    final themeMode = widget.keyVault.getThemeMode();
+    final String themeSubtitle;
+    switch (themeMode) {
+      case ThemeMode.system:
+        themeSubtitle = l10n.themeSystem;
+        break;
+      case ThemeMode.light:
+        themeSubtitle = l10n.themeLight;
+        break;
+      case ThemeMode.dark:
+        themeSubtitle = l10n.themeDark;
+        break;
+    }
+
+    final isAutoRotate = widget.keyVault.isAutoRotateEnabled();
+    final rotationSubtitle = isAutoRotate ? l10n.screenRotationAuto : l10n.screenRotationPortrait;
 
     final isSubsystemReady = widget.prootManager.currentStatus == PRootStatus.ready;
     final subsystemSubtitle = isSubsystemReady ? l10n.subsystemReady : l10n.subsystemNotInstalled;
@@ -107,6 +126,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => SafetySettingsScreen(keyVault: widget.keyVault),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryCard(
+            context: context,
+            title: l10n.themeMode,
+            subtitle: themeSubtitle,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ThemeSettingsScreen(keyVault: widget.keyVault),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryCard(
+            context: context,
+            title: l10n.screenRotation,
+            subtitle: rotationSubtitle,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ScreenRotationSettingsScreen(keyVault: widget.keyVault),
                 ),
               );
               if (mounted) setState(() {});

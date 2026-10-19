@@ -467,7 +467,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
         title: Text(l10n.deleteSession),
         content: Text(l10n.deleteSessionConfirm),
         actions: [
@@ -504,7 +503,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final newTitle = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
         title: Text(l10n.renameSession),
         content: TextField(
           controller: controller,
@@ -568,7 +566,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final projectName = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
         title: Text(l10n.newProject),
         content: TextField(
           controller: controller,
@@ -616,10 +613,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _inputFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
     FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -637,7 +637,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: isDark ? Colors.white24 : theme.colorScheme.outlineVariant,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -645,18 +645,25 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(height: 12),
                 Text(
                   l10n.selectProjectForSession,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : theme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
                   dense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                  leading: const Icon(Icons.folder_off_outlined, color: Colors.white70, size: 20),
-                  title: Text(l10n.noProject, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  leading: Icon(Icons.folder_off_outlined, color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant, size: 20),
+                  title: Text(
+                    l10n.noProject,
+                    style: TextStyle(
+                      color: currentProject == null ? (isDark ? Colors.white : theme.colorScheme.primary) : (isDark ? Colors.white70 : theme.colorScheme.onSurface),
+                      fontSize: 14,
+                      fontWeight: currentProject == null ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
                   trailing: currentProject == null ? const Icon(Icons.check, color: Colors.blueAccent, size: 18) : null,
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -669,23 +676,23 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (mounted) setState(() {});
                   },
                 ),
-                const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                Divider(height: 1, color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.outlineVariant),
                 Flexible(
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: projects.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                    separatorBuilder: (context, index) => Divider(height: 1, color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.outlineVariant),
                     itemBuilder: (c, idx) {
                       final proj = projects[idx];
                       final isSelected = proj == currentProject;
                       return ListTile(
                         dense: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                        leading: const Icon(Icons.folder_outlined, color: Colors.white70, size: 20),
+                        leading: Icon(Icons.folder_outlined, color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant, size: 20),
                         title: Text(
                           proj,
                           style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.white70,
+                            color: isSelected ? (isDark ? Colors.white : theme.colorScheme.primary) : (isDark ? Colors.white70 : theme.colorScheme.onSurface),
                             fontSize: 14,
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           ),
@@ -707,7 +714,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-                const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                Divider(height: 1, color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.outlineVariant),
                 ListTile(
                   dense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1038,8 +1045,9 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
   Widget _buildHistoryDrawer(BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     return Drawer(
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: isDark ? const Color(0xFF141414) : theme.colorScheme.surface,
       child: SafeArea(
         child: Column(
           children: [
@@ -1050,18 +1058,18 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   Text(
                     l10n.appTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.3,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : theme.colorScheme.onSurface,
                     ),
                   ),
                 ],
               ),
             ),
 
-            const Divider(color: Color(0xFF262626), height: 1),
+            Divider(color: isDark ? const Color(0xFF262626) : theme.colorScheme.outlineVariant, height: 1),
             const SizedBox(height: 10),
 
             // Top Action Buttons (Matching reference UI)
@@ -1071,7 +1079,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   // + New Conversation Button
                   Material(
-                    color: const Color(0xFF1E1E1E),
+                    color: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(8),
@@ -1084,18 +1092,21 @@ class _ChatScreenState extends State<ChatScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF2C2C2C), width: 1),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.add, size: 18, color: Colors.white70),
+                            Icon(Icons.add, size: 18, color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant),
                             const SizedBox(width: 10),
                             Text(
                               l10n.newConversation,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.white,
+                                color: isDark ? Colors.white : theme.colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -1106,7 +1117,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(height: 6),
                   // Conversation History Button
                   Material(
-                    color: const Color(0xFF1E1E1E),
+                    color: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(8),
@@ -1116,18 +1127,21 @@ class _ChatScreenState extends State<ChatScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF2C2C2C), width: 1),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.history_rounded, size: 18, color: Colors.white70),
+                            Icon(Icons.history_rounded, size: 18, color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant),
                             const SizedBox(width: 10),
                             Text(
                               l10n.conversationHistory,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.white,
+                                color: isDark ? Colors.white : theme.colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -1139,7 +1153,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
 
-            const Divider(color: Color(0xFF262626), height: 16),
+            Divider(color: isDark ? const Color(0xFF262626) : theme.colorScheme.outlineVariant, height: 16),
 
             if (_showArchived)
               Padding(
@@ -1192,7 +1206,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   : _buildProjectsAndConversationsTree(context, l10n, theme),
             ),
 
-            const Divider(color: Color(0xFF262626), height: 1),
+            Divider(color: isDark ? const Color(0xFF262626) : theme.colorScheme.outlineVariant, height: 1),
 
             // Bottom Shortcuts
             ListTile(
@@ -1237,21 +1251,23 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildDisplayOptionsMenu(AppLocalizations l10n) {
+  Widget _buildDisplayOptionsMenu(AppLocalizations l10n, [ThemeData? theme]) {
+    final isDark = (theme ?? Theme.of(context)).brightness == Brightness.dark;
+    final currentTheme = theme ?? Theme.of(context);
     return PopupMenuButton<String>(
       icon: Icon(
         Icons.filter_list_rounded,
         size: 19,
-        color: _showArchived ? Colors.amber : Colors.white60,
+        color: _showArchived ? Colors.amber : (isDark ? Colors.white60 : currentTheme.colorScheme.onSurfaceVariant),
       ),
       tooltip: l10n.displayOptions,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-      color: const Color(0xFF222222),
+      color: isDark ? const Color(0xFF222222) : currentTheme.colorScheme.surface,
       elevation: 8,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: Color(0xFF333333)),
+        side: BorderSide(color: isDark ? const Color(0xFF333333) : currentTheme.colorScheme.outlineVariant),
       ),
       onSelected: (val) {
         setState(() {
@@ -1444,6 +1460,8 @@ class _ChatScreenState extends State<ChatScreen> {
           });
         }
 
+        final isDark = theme.brightness == Brightness.dark;
+
         return ListView(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           children: [
@@ -1467,26 +1485,26 @@ class _ChatScreenState extends State<ChatScreen> {
                         children: [
                           Text(
                             l10n.projects,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white70,
+                              color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant,
                               letterSpacing: 0.3,
                             ),
                           ),
                           const SizedBox(width: 4),
                           RotatedBox(
                             quarterTurns: _isProjectsSectionExpanded ? 1 : 0,
-                            child: const Icon(Icons.chevron_right, size: 15, color: Colors.white54),
+                            child: Icon(Icons.chevron_right, size: 15, color: isDark ? Colors.white54 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
                           ),
                         ],
                       ),
                     ),
                   ),
                   const Spacer(),
-                  _buildDisplayOptionsMenu(l10n),
+                  _buildDisplayOptionsMenu(l10n, theme),
                   IconButton(
-                    icon: const Icon(Icons.create_new_folder_outlined, size: 19, color: Colors.white60),
+                    icon: Icon(Icons.create_new_folder_outlined, size: 19, color: isDark ? Colors.white60 : theme.colorScheme.onSurfaceVariant),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                     tooltip: l10n.newProject,
@@ -1528,17 +1546,17 @@ class _ChatScreenState extends State<ChatScreen> {
                         children: [
                           Text(
                             l10n.conversations,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white70,
+                              color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant,
                               letterSpacing: 0.3,
                             ),
                           ),
                           const SizedBox(width: 4),
                           RotatedBox(
                             quarterTurns: _isConversationsSectionExpanded ? 1 : 0,
-                            child: const Icon(Icons.chevron_right, size: 15, color: Colors.white54),
+                            child: Icon(Icons.chevron_right, size: 15, color: isDark ? Colors.white54 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
                           ),
                         ],
                       ),
@@ -1546,7 +1564,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.add, size: 20, color: Colors.white60),
+                    icon: Icon(Icons.add, size: 20, color: isDark ? Colors.white60 : theme.colorScheme.onSurfaceVariant),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                     tooltip: l10n.newStandaloneSession,
@@ -1562,7 +1580,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   child: Text(
                     l10n.noHistorySessions,
-                    style: const TextStyle(fontSize: 11, color: Colors.white30, fontStyle: FontStyle.italic),
+                    style: TextStyle(fontSize: 11, color: isDark ? Colors.white30 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontStyle: FontStyle.italic),
                   ),
                 )
               else
@@ -1582,6 +1600,7 @@ class _ChatScreenState extends State<ChatScreen> {
     ThemeData theme,
   ) {
     final isExpanded = _expandedProjects.contains(projectName);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1612,14 +1631,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     Icon(
                       isExpanded ? Icons.folder_open_outlined : Icons.folder_outlined,
                       size: 15,
-                      color: Colors.white70,
+                      color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         projectName,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : theme.colorScheme.onSurface,
                           fontSize: 12.5,
                           height: 1.1,
                           fontWeight: FontWeight.w500,
@@ -1629,7 +1648,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add, size: 15, color: Colors.white38),
+                      icon: Icon(Icons.add, size: 15, color: isDark ? Colors.white38 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
                       tooltip: l10n.newProjectSession,
@@ -1651,7 +1670,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 onTap: () => _handleNewSession(l10n, projectName: projectName),
                 child: Text(
                   '+ ${l10n.newProjectSession}',
-                  style: const TextStyle(fontSize: 11, color: Colors.white30, fontStyle: FontStyle.italic),
+                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white30 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontStyle: FontStyle.italic),
                 ),
               ),
             )
@@ -1670,13 +1689,14 @@ class _ChatScreenState extends State<ChatScreen> {
     required bool indent,
   }) {
     final isSelected = s.id == _currentSession?.id;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
       padding: EdgeInsets.only(left: indent ? 16.0 : 0.0, top: 0.5, bottom: 0.5),
       child: Container(
         height: 26,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF262626) : Colors.transparent,
+          color: isSelected ? (isDark ? const Color(0xFF262626) : theme.colorScheme.surfaceContainerHighest) : Colors.transparent,
           borderRadius: BorderRadius.circular(5),
         ),
         child: InkWell(
@@ -1695,20 +1715,20 @@ class _ChatScreenState extends State<ChatScreen> {
                       fontSize: 12.5,
                       height: 1.1,
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected ? Colors.white : Colors.white70,
+                      color: isSelected ? (isDark ? Colors.white : theme.colorScheme.primary) : (isDark ? Colors.white70 : theme.colorScheme.onSurface),
                     ),
                   ),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   _formatRelativeTime(s.updatedAt),
-                  style: const TextStyle(fontSize: 10, color: Colors.white38),
+                  style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 13, color: Colors.white38),
+                  icon: Icon(Icons.more_vert, size: 13, color: isDark ? Colors.white38 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  color: const Color(0xFF1E1E1E),
+                  color: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surface,
                   onSelected: (val) {
                     if (val == 'rename') {
                       _handleRenameSession(s, l10n);
@@ -2065,11 +2085,13 @@ class _ChatScreenState extends State<ChatScreen> {
     FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
 
     final currentMode = widget.keyVault.getApprovalMode();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -2087,7 +2109,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: isDark ? Colors.white24 : theme.colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -2095,25 +2117,27 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(height: 14),
                   Text(
                     l10n.approvalTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : theme.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     l10n.approvalSubtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white60,
+                      color: isDark ? Colors.white60 : theme.colorScheme.onSurfaceVariant,
                       height: 1.35,
                     ),
                   ),
                   const SizedBox(height: 16),
                   for (final mode in ApprovalMode.values) ...[
                     Material(
-                      color: currentMode == mode ? const Color(0xFF2A2A2A) : const Color(0xFF222222),
+                      color: currentMode == mode
+                          ? (isDark ? const Color(0xFF2A2A2A) : theme.colorScheme.primaryContainer.withValues(alpha: 0.35))
+                          : (isDark ? const Color(0xFF222222) : theme.colorScheme.surfaceContainerHighest),
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
@@ -2127,7 +2151,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: currentMode == mode ? Colors.white24 : const Color(0xFF333333),
+                              color: currentMode == mode
+                                  ? theme.colorScheme.primary
+                                  : (isDark ? const Color(0xFF333333) : theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                               width: 1,
                             ),
                           ),
@@ -2137,7 +2163,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               Icon(
                                 _getApprovalModeIcon(mode),
                                 size: 22,
-                                color: mode == ApprovalMode.yolo ? Colors.amber : Colors.white70,
+                                color: mode == ApprovalMode.yolo ? Colors.amber : (isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -2146,18 +2172,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                   children: [
                                     Text(
                                       _getApprovalModeLabel(mode, l10n),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 14.5,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                                        color: isDark ? Colors.white : theme.colorScheme.onSurface,
                                       ),
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
                                       _getApprovalModeDesc(mode, l10n),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.white60,
+                                        color: isDark ? Colors.white60 : theme.colorScheme.onSurfaceVariant,
                                         height: 1.3,
                                       ),
                                     ),
@@ -2166,7 +2192,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                               if (currentMode == mode) ...[
                                 const SizedBox(width: 8),
-                                const Icon(Icons.check, color: Colors.white, size: 20),
+                                Icon(Icons.check, color: theme.colorScheme.primary, size: 20),
                               ],
                             ],
                           ),
@@ -2197,11 +2223,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     var intensity = widget.keyVault.getThinkingIntensity();
     final activeModel = widget.keyVault.getActiveModel();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -2221,7 +2249,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         width: 36,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.white24,
+                          color: isDark ? Colors.white24 : theme.colorScheme.outlineVariant,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -2232,16 +2260,16 @@ class _ChatScreenState extends State<ChatScreen> {
                       children: [
                         Text(
                           '${l10n.thinkingTitle}：${_getThinkingLabel(intensity, l10n)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: isDark ? Colors.white : theme.colorScheme.onSurface,
                           ),
                         ),
                         const Spacer(),
                         // Model switch button
                         Material(
-                          color: const Color(0xFF2C2C2C),
+                          color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(14),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(14),
@@ -2253,21 +2281,24 @@ class _ChatScreenState extends State<ChatScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFF3D3D3D), width: 0.8),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF3D3D3D) : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                  width: 0.8,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     _getDisplayModelName(activeModel, l10n),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.white70,
+                                      color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.chevron_right, size: 16, color: Colors.white54),
+                                  Icon(Icons.chevron_right, size: 16, color: isDark ? Colors.white54 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                                 ],
                               ),
                             ),
@@ -2276,7 +2307,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         const SizedBox(width: 8),
                         // Reset button
                         IconButton(
-                          icon: const Icon(Icons.refresh_rounded, size: 20, color: Colors.white70),
+                          icon: Icon(Icons.refresh_rounded, size: 20, color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant),
                           tooltip: l10n.resetToDefault,
                           padding: const EdgeInsets.all(4),
                           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -2294,13 +2325,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     // Discrete Slider
                     SliderTheme(
                       data: SliderTheme.of(sheetCtx).copyWith(
-                        activeTrackColor: Colors.white,
-                        inactiveTrackColor: Colors.white24,
-                        thumbColor: Colors.white,
-                        overlayColor: Colors.white12,
+                        activeTrackColor: isDark ? Colors.white : theme.colorScheme.primary,
+                        inactiveTrackColor: isDark ? Colors.white24 : theme.colorScheme.outlineVariant,
+                        thumbColor: isDark ? Colors.white : theme.colorScheme.primary,
+                        overlayColor: (isDark ? Colors.white : theme.colorScheme.primary).withValues(alpha: 0.12),
                         tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 2.5),
-                        activeTickMarkColor: Colors.white70,
-                        inactiveTickMarkColor: Colors.white30,
+                        activeTickMarkColor: isDark ? Colors.white70 : theme.colorScheme.primary,
+                        inactiveTickMarkColor: isDark ? Colors.white30 : theme.colorScheme.outlineVariant,
                         trackHeight: 3.5,
                       ),
                       child: Slider(
@@ -2329,7 +2360,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               _getThinkingLabel(t, l10n),
                               style: TextStyle(
                                 fontSize: 11,
-                                color: t == intensity ? Colors.white : Colors.white38,
+                                color: t == intensity
+                                    ? (isDark ? Colors.white : theme.colorScheme.primary)
+                                    : (isDark ? Colors.white38 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                                 fontWeight: t == intensity ? FontWeight.bold : FontWeight.normal,
                               ),
                             ),
@@ -2341,15 +2374,18 @@ class _ChatScreenState extends State<ChatScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF262626),
+                        color: isDark ? const Color(0xFF262626) : theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF333333), width: 0.8),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF333333) : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                          width: 0.8,
+                        ),
                       ),
                       child: Text(
                         _getThinkingDesc(intensity, l10n),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: Colors.white70,
+                          color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant,
                           height: 1.4,
                         ),
                       ),
@@ -2378,11 +2414,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final currentModel = widget.keyVault.getActiveModel();
     final providers = widget.keyVault.getProviders();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -2403,7 +2441,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: isDark ? Colors.white24 : theme.colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -2414,10 +2452,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Text(
                         l10n.selectModel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: isDark ? Colors.white : theme.colorScheme.onSurface,
                         ),
                       ),
                       TextButton.icon(
@@ -2425,8 +2463,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           visualDensity: VisualDensity.compact,
                         ),
-                        icon: const Icon(Icons.tune, size: 16, color: Colors.white70),
-                        label: Text(l10n.modelsAndProviders, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                        icon: Icon(Icons.tune, size: 16, color: isDark ? Colors.white70 : theme.colorScheme.primary),
+                        label: Text(l10n.modelsAndProviders, style: TextStyle(color: isDark ? Colors.white70 : theme.colorScheme.primary, fontSize: 12)),
                         onPressed: () {
                           Navigator.pop(ctx);
                           Navigator.push(
@@ -2450,7 +2488,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Center(
                         child: Text(
                           l10n.noModelsConfigured,
-                          style: const TextStyle(fontSize: 14, color: Colors.white54),
+                          style: TextStyle(fontSize: 14, color: isDark ? Colors.white54 : theme.colorScheme.onSurfaceVariant),
                         ),
                       ),
                     )
@@ -2470,10 +2508,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                   children: [
                                     Text(
                                       p.name,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white54,
+                                        color: isDark ? Colors.white54 : theme.colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                     if (p.isCustom) ...[
@@ -2481,12 +2519,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                         decoration: BoxDecoration(
-                                          color: Colors.white10,
+                                          color: isDark ? Colors.white10 : theme.colorScheme.surfaceContainerHighest,
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           l10n.customProviderTag,
-                                          style: const TextStyle(fontSize: 9, color: Colors.white60),
+                                          style: TextStyle(fontSize: 9, color: isDark ? Colors.white60 : theme.colorScheme.onSurfaceVariant),
                                         ),
                                       ),
                                     ],
@@ -2506,7 +2544,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                            color: isSelected ? Colors.white : Colors.white70,
+                                            color: isSelected ? (isDark ? Colors.white : theme.colorScheme.primary) : (isDark ? Colors.white70 : theme.colorScheme.onSurface),
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -2529,9 +2567,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                   subtitle: Text(
                                     '${p.name} • ${m.id}',
-                                    style: const TextStyle(fontSize: 11, color: Colors.white38),
+                                    style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                                   ),
-                                  trailing: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                                  trailing: isSelected ? Icon(Icons.check, color: theme.colorScheme.primary, size: 18) : null,
                                   onTap: () async {
                                     Navigator.pop(ctx);
                                     await widget.keyVault.setActiveProviderId(p.id);
@@ -2540,7 +2578,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   },
                                 );
                               }),
-                              const Divider(height: 12, color: Color(0xFF2A2A2A)),
+                              Divider(height: 12, color: isDark ? const Color(0xFF2A2A2A) : theme.colorScheme.outlineVariant),
                             ],
                           );
                         },
@@ -2584,10 +2622,13 @@ class _ChatScreenState extends State<ChatScreen> {
     FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
     FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -2605,7 +2646,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: isDark ? Colors.white24 : theme.colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -2613,25 +2654,25 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(height: 12),
                   Text(
                     l10n.addContext,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : theme.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 14),
                   ListTile(
-                    leading: const Icon(Icons.insert_drive_file_outlined, color: Colors.white70),
-                    title: Text(l10n.addProjectFile, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    leading: Icon(Icons.insert_drive_file_outlined, color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant),
+                    title: Text(l10n.addProjectFile, style: TextStyle(color: isDark ? Colors.white : theme.colorScheme.onSurface, fontSize: 14)),
                     onTap: () {
                       Navigator.pop(ctx);
                       _showFilePickerSheet(l10n);
                     },
                   ),
-                  const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                  Divider(height: 1, color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.outlineVariant),
                   ListTile(
-                    leading: const Icon(Icons.content_paste_outlined, color: Colors.white70),
-                    title: Text(l10n.pasteClipboard, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    leading: Icon(Icons.content_paste_outlined, color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant),
+                    title: Text(l10n.pasteClipboard, style: TextStyle(color: isDark ? Colors.white : theme.colorScheme.onSurface, fontSize: 14)),
                     onTap: () async {
                       Navigator.pop(ctx);
                       final data = await Clipboard.getData(Clipboard.kTextPlain);
@@ -2649,10 +2690,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       }
                     },
                   ),
-                  const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                  Divider(height: 1, color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.outlineVariant),
                   ListTile(
-                    leading: const Icon(Icons.lightbulb_outline_rounded, color: Colors.white70),
-                    title: Text(l10n.commonPrompts, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    leading: Icon(Icons.lightbulb_outline_rounded, color: isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant),
+                    title: Text(l10n.commonPrompts, style: TextStyle(color: isDark ? Colors.white : theme.colorScheme.onSurface, fontSize: 14)),
                     onTap: () {
                       Navigator.pop(ctx);
                       _showCommonPromptsSheet(context, l10n);
@@ -2687,10 +2728,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (!mounted) return;
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -2707,7 +2751,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: isDark ? Colors.white24 : theme.colorScheme.outlineVariant,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2715,10 +2759,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(height: 12),
                 Text(
                   l10n.addProjectFile,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : theme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -2728,7 +2772,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Center(
                       child: Text(
                         l10n.noFilesInProject,
-                        style: const TextStyle(color: Colors.white38, fontSize: 13),
+                        style: TextStyle(color: isDark ? Colors.white38 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13),
                       ),
                     ),
                   )
@@ -2737,7 +2781,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: files.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFF2C2C2C)),
+                      separatorBuilder: (context, index) => Divider(height: 1, color: isDark ? const Color(0xFF2C2C2C) : theme.colorScheme.outlineVariant),
                       itemBuilder: (c, idx) {
                         final file = files[idx];
                         final name = file.path.split(Platform.pathSeparator).last;
@@ -2747,11 +2791,11 @@ class _ChatScreenState extends State<ChatScreen> {
                           leading: Icon(
                             isDir ? Icons.folder_outlined : Icons.insert_drive_file_outlined,
                             size: 20,
-                            color: isDir ? Colors.amber : Colors.white70,
+                            color: isDir ? Colors.amber : (isDark ? Colors.white70 : theme.colorScheme.onSurfaceVariant),
                           ),
                           title: Text(
                             name,
-                            style: const TextStyle(fontSize: 13.5, color: Colors.white),
+                            style: TextStyle(fontSize: 13.5, color: isDark ? Colors.white : theme.colorScheme.onSurface),
                           ),
                           onTap: () {
                             final tag = '@$name ';
@@ -2798,10 +2842,13 @@ class _ChatScreenState extends State<ChatScreen> {
       '请为项目编写清晰的 API 文档与使用说明',
     ];
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -2819,7 +2866,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: isDark ? Colors.white24 : theme.colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -2827,18 +2874,18 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(height: 12),
                   Text(
                     l10n.commonPrompts,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : theme.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 12),
                   for (final p in prompts)
                     ListTile(
                       dense: true,
-                      title: Text(p, style: const TextStyle(fontSize: 13.5, color: Colors.white)),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white38),
+                      title: Text(p, style: TextStyle(fontSize: 13.5, color: isDark ? Colors.white : theme.colorScheme.onSurface)),
+                      trailing: Icon(Icons.arrow_forward_ios, size: 12, color: isDark ? Colors.white38 : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                       onTap: () {
                         _textController.text = p;
                         _textController.selection = TextSelection.collapsed(offset: p.length);
@@ -3180,12 +3227,13 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
     }).toList();
 
     filtered.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
-      decoration: const BoxDecoration(
-        color: Color(0xFF181818),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF181818) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -3195,7 +3243,7 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.white24,
+              color: isDark ? Colors.white24 : Colors.black26,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -3205,15 +3253,19 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Row(
               children: [
-                const Icon(Icons.history_rounded, size: 22, color: Colors.white70),
+                Icon(Icons.history_rounded, size: 22, color: isDark ? Colors.white70 : Colors.black54),
                 const SizedBox(width: 10),
                 Text(
                   widget.l10n.conversationHistory,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 20, color: Colors.white60),
+                  icon: Icon(Icons.close, size: 20, color: isDark ? Colors.white60 : Colors.black45),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -3226,13 +3278,14 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
             child: TextField(
               controller: _searchController,
               onChanged: (_) => setState(() {}),
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
                 hintText: widget.l10n.searchConversations,
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                prefixIcon: const Icon(Icons.search, size: 18, color: Colors.white38),
+                hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontSize: 13),
+                prefixIcon: Icon(Icons.search, size: 18, color: isDark ? Colors.white38 : Colors.black38),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, size: 16, color: Colors.white38),
+                        icon: Icon(Icons.clear, size: 16, color: isDark ? Colors.white38 : Colors.black38),
                         onPressed: () {
                           _searchController.clear();
                           setState(() {});
@@ -3240,7 +3293,7 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
                       )
                     : null,
                 filled: true,
-                fillColor: const Color(0xFF242424),
+                fillColor: isDark ? const Color(0xFF242424) : const Color(0xFFF1F5F9),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -3256,20 +3309,20 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Row(
               children: [
-                _buildFilterChip('all', widget.l10n.allConversations),
+                _buildFilterChip('all', widget.l10n.allConversations, isDark: isDark),
                 const SizedBox(width: 6),
-                _buildFilterChip('standalone', widget.l10n.conversations),
+                _buildFilterChip('standalone', widget.l10n.conversations, isDark: isDark),
                 const SizedBox(width: 6),
                 for (final proj in availableProjects) ...[
-                  _buildFilterChip(proj, proj, isProject: true),
+                  _buildFilterChip(proj, proj, isProject: true, isDark: isDark),
                   const SizedBox(width: 6),
                 ],
-                _buildFilterChip('archived', widget.l10n.archivedSessions),
+                _buildFilterChip('archived', widget.l10n.archivedSessions, isDark: isDark),
               ],
             ),
           ),
 
-          const Divider(color: Color(0xFF262626), height: 1),
+          Divider(color: isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB), height: 1),
 
           // Sessions List
           Expanded(
@@ -3279,7 +3332,7 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
                     ? Center(
                         child: Text(
                           widget.l10n.noMatchingConversations,
-                          style: const TextStyle(color: Colors.white38, fontSize: 13),
+                          style: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontSize: 13),
                         ),
                       )
                     : ListView.separated(
@@ -3292,10 +3345,14 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
 
                           return Container(
                             decoration: BoxDecoration(
-                              color: isCurrent ? const Color(0xFF282828) : const Color(0xFF1E1E1E),
+                              color: isCurrent
+                                  ? (isDark ? const Color(0xFF282828) : const Color(0xFFEFF6FF))
+                                  : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFAFAFA)),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isCurrent ? Colors.blueAccent.withValues(alpha: 0.5) : const Color(0xFF2C2C2C),
+                                color: isCurrent
+                                    ? Colors.blueAccent.withValues(alpha: 0.5)
+                                    : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE2E8F0)),
                               ),
                             ),
                             child: ListTile(
@@ -3312,13 +3369,13 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                                        color: isCurrent ? Colors.white : Colors.white,
+                                        color: isDark ? Colors.white : Colors.black87,
                                       ),
                                     ),
                                   ),
                                   Text(
                                     widget.formatRelativeTime(s.updatedAt),
-                                    style: const TextStyle(fontSize: 11, color: Colors.white38),
+                                    style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black45),
                                   ),
                                 ],
                               ),
@@ -3345,12 +3402,15 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                         decoration: BoxDecoration(
-                                          color: Colors.white10,
+                                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           widget.l10n.conversations,
-                                          style: const TextStyle(fontSize: 10, color: Colors.white60),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: isDark ? Colors.white60 : Colors.black54,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 6),
@@ -3370,16 +3430,19 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
                                     const Spacer(),
                                     Text(
                                       '${s.messageCount} msgs',
-                                      style: const TextStyle(fontSize: 10, color: Colors.white24),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isDark ? Colors.white24 : Colors.black38,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               trailing: PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert, size: 16, color: Colors.white38),
+                                icon: Icon(Icons.more_vert, size: 16, color: isDark ? Colors.white38 : Colors.black45),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                                color: const Color(0xFF252525),
+                                color: isDark ? const Color(0xFF252525) : Colors.white,
                                 onSelected: (val) async {
                                   if (val == 'archive') {
                                     await widget.onArchiveSession(s.id);
@@ -3437,7 +3500,7 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
     );
   }
 
-  Widget _buildFilterChip(String key, String label, {bool isProject = false}) {
+  Widget _buildFilterChip(String key, String label, {bool isProject = false, required bool isDark}) {
     final isSelected = _selectedFilter == key;
     return ChoiceChip(
       label: Text(label),
@@ -3450,13 +3513,15 @@ class _ConversationHistoryModalState extends State<_ConversationHistoryModal> {
       avatar: isProject ? const Icon(Icons.folder_outlined, size: 14) : null,
       labelStyle: TextStyle(
         fontSize: 12,
-        color: isSelected ? Colors.white : Colors.white60,
+        color: isSelected
+            ? (isDark ? Colors.white : Colors.blueAccent)
+            : (isDark ? Colors.white60 : Colors.black54),
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
-      backgroundColor: const Color(0xFF222222),
-      selectedColor: const Color(0xFF333333),
+      backgroundColor: isDark ? const Color(0xFF222222) : const Color(0xFFF1F5F9),
+      selectedColor: isDark ? const Color(0xFF333333) : const Color(0xFFDBEAFE),
       side: BorderSide(
-        color: isSelected ? Colors.blueAccent : const Color(0xFF333333),
+        color: isSelected ? Colors.blueAccent : (isDark ? const Color(0xFF333333) : const Color(0xFFE2E8F0)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
       visualDensity: VisualDensity.compact,

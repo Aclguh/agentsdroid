@@ -237,6 +237,20 @@
   "creditsSection": "致谢与技术基石",
   "creditFlutter": "跨平台原生渲染框架",
   "creditPRoot": "Android 用户态 Linux 沙箱环境",
-  "creditClaudeCode": "Anthropic 官方 Agent CLI",
-  "copyrightNotice": "AgentsDroid © 2026 Aclguh. All rights reserved."
+  "creditClaudeCode": "终端 Agent 执行引擎与协议参考",
+  "copyrightNotice": "AgentsDroid © 2026 Aclguh. All rights reserved.",
+  "themeMode": "外观主题",
+  "themeDesc": "选择应用程序的视觉显示主题",
+  "themeSystem": "跟随系统",
+  "themeSystemDesc": "保持与操作系统深浅色设置一致",
+  "themeLight": "浅色模式",
+  "themeLightDesc": "明亮清晰的浅色视觉风格",
+  "themeDark": "深色模式",
+  "themeDarkDesc": "护眼专注的经典深色视觉风格",
+  "screenRotation": "屏幕旋转",
+  "screenRotationDesc": "设置应用界面的方向旋转偏好",
+  "screenRotationAuto": "随重力感应旋转",
+  "screenRotationAutoDesc": "界面随设备重力感应自动切换横屏与竖屏",
+  "screenRotationPortrait": "锁定竖屏",
+  "screenRotationPortraitDesc": "始终保持纵向竖屏显示，避免设备晃动时误旋转"
 }

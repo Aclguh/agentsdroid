@@ -10,8 +10,10 @@ import 'package:agentsdroid/ui/settings/engine_settings_screen.dart';
 import 'package:agentsdroid/ui/settings/language_settings_screen.dart';
 import 'package:agentsdroid/ui/settings/model_settings_screen.dart';
 import 'package:agentsdroid/ui/settings/safety_settings_screen.dart';
+import 'package:agentsdroid/ui/settings/screen_rotation_settings_screen.dart';
 import 'package:agentsdroid/ui/settings/settings_screen.dart';
 import 'package:agentsdroid/ui/settings/subsystem_settings_screen.dart';
+import 'package:agentsdroid/ui/settings/theme_settings_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -143,6 +145,22 @@ void main() {
       expect(keyVault.getActiveProvider(), equals(LLMProvider.anthropic));
       expect(keyVault.getActiveModel(), equals('claude-3-7-sonnet-20250219'));
     });
+
+    test('ThemeMode defaults to dark and can be updated', () async {
+      expect(keyVault.getThemeMode(), equals(ThemeMode.dark));
+      await keyVault.setThemeMode(ThemeMode.light);
+      expect(keyVault.getThemeMode(), equals(ThemeMode.light));
+      await keyVault.setThemeMode(ThemeMode.system);
+      expect(keyVault.getThemeMode(), equals(ThemeMode.system));
+    });
+
+    test('AutoRotate defaults to true and can be updated', () async {
+      expect(keyVault.isAutoRotateEnabled(), isTrue);
+      await keyVault.setAutoRotateEnabled(false);
+      expect(keyVault.isAutoRotateEnabled(), isFalse);
+      await keyVault.setAutoRotateEnabled(true);
+      expect(keyVault.isAutoRotateEnabled(), isTrue);
+    });
   });
 
   group('SettingsScreen Modular Navigation Widget Tests', () {
@@ -155,7 +173,12 @@ void main() {
       );
     }
 
-    testWidgets('SettingsScreen displays 6 horizontal summary cards and no detailed forms', (tester) async {
+    testWidgets('SettingsScreen displays 8 horizontal summary cards and no detailed forms', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(
         buildTestApp(
           SettingsScreen(
@@ -166,11 +189,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify the 6 summary cards are present
-      expect(find.byType(Card), findsNWidgets(6));
+      // Verify the 8 summary cards are present
+      expect(find.byType(Card), findsNWidgets(8));
       expect(find.text('模型与服务商'), findsOneWidget);
       expect(find.text('Agent 引擎'), findsOneWidget);
       expect(find.text('执行安全策略'), findsOneWidget);
+      expect(find.text('外观主题'), findsOneWidget);
+      expect(find.text('屏幕旋转'), findsOneWidget);
       expect(find.text('界面语言'), findsOneWidget);
       expect(find.text('嵌入式 Linux 子系统 (PRoot)'), findsOneWidget);
       expect(find.text('关于'), findsOneWidget);
@@ -183,6 +208,8 @@ void main() {
       expect(find.byIcon(Icons.smart_toy_outlined), findsNothing);
       expect(find.byIcon(Icons.bolt_outlined), findsNothing);
       expect(find.byIcon(Icons.security_outlined), findsNothing);
+      expect(find.byIcon(Icons.palette_outlined), findsNothing);
+      expect(find.byIcon(Icons.screen_rotation_outlined), findsNothing);
       expect(find.byIcon(Icons.translate_outlined), findsNothing);
       expect(find.byIcon(Icons.terminal_outlined), findsNothing);
     });
@@ -291,6 +318,55 @@ void main() {
       expect(keyVault.getApprovalMode(), equals(ApprovalMode.yolo));
     });
 
+    testWidgets('Tapping Theme card navigates to ThemeSettingsScreen and allows switching theme', (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          SettingsScreen(
+            keyVault: keyVault,
+            prootManager: prootManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('外观主题'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ThemeSettingsScreen), findsOneWidget);
+      expect(find.text('跟随系统'), findsOneWidget);
+      expect(find.text('浅色模式'), findsOneWidget);
+      expect(find.text('深色模式'), findsOneWidget);
+
+      await tester.tap(find.text('浅色模式'));
+      await tester.pumpAndSettle();
+
+      expect(keyVault.getThemeMode(), equals(ThemeMode.light));
+    });
+
+    testWidgets('Tapping Screen Rotation card navigates to ScreenRotationSettingsScreen and allows switching', (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          SettingsScreen(
+            keyVault: keyVault,
+            prootManager: prootManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('屏幕旋转'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ScreenRotationSettingsScreen), findsOneWidget);
+      expect(find.text('随重力感应旋转'), findsOneWidget);
+      expect(find.text('锁定竖屏'), findsOneWidget);
+
+      await tester.tap(find.text('锁定竖屏'));
+      await tester.pumpAndSettle();
+
+      expect(keyVault.isAutoRotateEnabled(), isFalse);
+    });
+
     testWidgets('Tapping Language card navigates to LanguageSettingsScreen', (tester) async {
       await tester.pumpWidget(
         buildTestApp(
@@ -311,6 +387,11 @@ void main() {
     });
 
     testWidgets('Tapping Subsystem card navigates to SubsystemSettingsScreen', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(
         buildTestApp(
           SettingsScreen(
