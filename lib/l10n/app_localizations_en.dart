@@ -722,4 +722,70 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get screenRotationPortraitDesc =>
       'Keep in portrait orientation to prevent accidental rotation when moving device';
+
+  @override
+  String get subsystemInstallMethod => 'Installation Method';
+
+  @override
+  String get subsystemOnlineDownload => 'Online Download';
+
+  @override
+  String get subsystemOfflineImport => 'Offline Import';
+
+  @override
+  String get subsystemMirrorSource => 'Download Mirror Source';
+
+  @override
+  String get subsystemMirrorGhproxy =>
+      'China Accelerator (ghproxy.net - Recommended)';
+
+  @override
+  String get subsystemMirrorOfficial => 'Official Source (GitHub Releases)';
+
+  @override
+  String get subsystemMirrorCustom => 'Custom Download URL';
+
+  @override
+  String get subsystemCustomUrlHint =>
+      'Enter rootfs archive direct download URL';
+
+  @override
+  String get subsystemDetectedArchives => 'Detected Local Archives';
+
+  @override
+  String get subsystemNoArchivesDetected =>
+      'No .tar.xz archive found in Download directory';
+
+  @override
+  String get subsystemRescan => 'Rescan';
+
+  @override
+  String get subsystemManualPath => 'Manual File Path';
+
+  @override
+  String get subsystemManualPathHint =>
+      'e.g. /sdcard/Download/debian-arm64.tar.xz';
+
+  @override
+  String get subsystemStartImport => 'Start Import & Extract';
+
+  @override
+  String get subsystemOfflineHelp =>
+      'Tip: You can download debian-arm64.tar.xz using your browser to the Download folder, then import it here.';
+
+  @override
+  String get subsystemReinstall => 'Reset Subsystem';
+
+  @override
+  String get subsystemReinstallConfirm =>
+      'Are you sure you want to reset the Linux subsystem? Installed packages and configurations will be deleted.';
+
+  @override
+  String get subsystemResetSuccess => 'Subsystem has been reset';
+
+  @override
+  String get subsystemPathEmpty => 'Please enter a valid file path';
+
+  @override
+  String get subsystemFileNotFound => 'Specified file does not exist';
 }

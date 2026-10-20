@@ -1447,6 +1447,126 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'始终保持纵向竖屏显示，避免设备晃动时误旋转'**
   String get screenRotationPortraitDesc;
+
+  /// No description provided for @subsystemInstallMethod.
+  ///
+  /// In zh, this message translates to:
+  /// **'安装方式'**
+  String get subsystemInstallMethod;
+
+  /// No description provided for @subsystemOnlineDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'在线下载'**
+  String get subsystemOnlineDownload;
+
+  /// No description provided for @subsystemOfflineImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线导入'**
+  String get subsystemOfflineImport;
+
+  /// No description provided for @subsystemMirrorSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载镜像源'**
+  String get subsystemMirrorSource;
+
+  /// No description provided for @subsystemMirrorGhproxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'国内加速镜像 (ghproxy.net - 推荐)'**
+  String get subsystemMirrorGhproxy;
+
+  /// No description provided for @subsystemMirrorOfficial.
+  ///
+  /// In zh, this message translates to:
+  /// **'官方源 (GitHub Releases)'**
+  String get subsystemMirrorOfficial;
+
+  /// No description provided for @subsystemMirrorCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义下载 URL'**
+  String get subsystemMirrorCustom;
+
+  /// No description provided for @subsystemCustomUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入 rootfs 压缩包直链下载地址'**
+  String get subsystemCustomUrlHint;
+
+  /// No description provided for @subsystemDetectedArchives.
+  ///
+  /// In zh, this message translates to:
+  /// **'已扫描到的本地离线包'**
+  String get subsystemDetectedArchives;
+
+  /// No description provided for @subsystemNoArchivesDetected.
+  ///
+  /// In zh, this message translates to:
+  /// **'在下载目录中未检测到 .tar.xz 离线包'**
+  String get subsystemNoArchivesDetected;
+
+  /// No description provided for @subsystemRescan.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新扫描'**
+  String get subsystemRescan;
+
+  /// No description provided for @subsystemManualPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动输入文件路径'**
+  String get subsystemManualPath;
+
+  /// No description provided for @subsystemManualPathHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如: /sdcard/Download/debian-arm64.tar.xz'**
+  String get subsystemManualPathHint;
+
+  /// No description provided for @subsystemStartImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始导入解压'**
+  String get subsystemStartImport;
+
+  /// No description provided for @subsystemOfflineHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'提示：可通过手机浏览器直接下载 debian-arm64.tar.xz 到手机 Download 目录后在此导入。'**
+  String get subsystemOfflineHelp;
+
+  /// No description provided for @subsystemReinstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置子系统'**
+  String get subsystemReinstall;
+
+  /// No description provided for @subsystemReinstallConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要清空并重置 Linux 子系统吗？已安装的软件包和配置将被删除。'**
+  String get subsystemReinstallConfirm;
+
+  /// No description provided for @subsystemResetSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'子系统已重置'**
+  String get subsystemResetSuccess;
+
+  /// No description provided for @subsystemPathEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的文件路径'**
+  String get subsystemPathEmpty;
+
+  /// No description provided for @subsystemFileNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'指定的文件不存在'**
+  String get subsystemFileNotFound;
 }
 
 class _AppLocalizationsDelegate

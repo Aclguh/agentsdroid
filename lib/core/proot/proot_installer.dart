@@ -21,9 +21,101 @@ class InstallProgress {
 }
 
 class RootfsInstaller {
-  /// Default minimal Debian-arm64 rootfs mirror
+  /// Default minimal Debian-arm64 rootfs mirror (Official GitHub Releases)
   static const String defaultDebianRootfsUrl =
       'https://github.com/termux/proot-distro/releases/download/v4.7.0/debian-arm64.tar.xz';
+
+  /// China accelerated mirror using ghproxy.net
+  static const String ghproxyDebianRootfsUrl =
+      'https://ghproxy.net/https://github.com/termux/proot-distro/releases/download/v4.7.0/debian-arm64.tar.xz';
+
+  /// Scans common Android Download directories for candidate rootfs archives
+  static Future<List<File>> scanLocalArchives() async {
+    final candidateDirs = <String>[
+      '/storage/emulated/0/Download',
+      '/sdcard/Download',
+    ];
+
+    final foundFiles = <File>[];
+    final seenPaths = <String>{};
+
+    for (final dirPath in candidateDirs) {
+      final dir = Directory(dirPath);
+      if (await dir.exists()) {
+        try {
+          await for (final entity in dir.list(followLinks: false)) {
+            if (entity is File) {
+              final lower = p.basename(entity.path).toLowerCase();
+              if (lower.endsWith('.tar.xz') ||
+                  lower.endsWith('.tar.gz') ||
+                  lower.endsWith('.tgz') ||
+                  lower.endsWith('.tar')) {
+                if (seenPaths.add(entity.path)) {
+                  foundFiles.add(entity);
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    return foundFiles;
+  }
+
+  /// Install and unpack a local rootfs archive file directly to [targetDir]
+  static Future<void> installFromArchive({
+    required File archiveFile,
+    required Directory targetDir,
+    required void Function(InstallProgress) onProgress,
+    bool deleteArchiveAfterInstall = false,
+  }) async {
+    if (!await targetDir.exists()) {
+      await targetDir.create(recursive: true);
+    }
+
+    final fileSize = await archiveFile.length();
+
+    onProgress(InstallProgress(
+      progress: 0.1,
+      downloadedBytes: fileSize,
+      totalBytes: fileSize,
+      stage: 'extracting',
+      message: 'Decompressing archive into ext4 storage...',
+    ));
+
+    await _unpackArchive(
+      archiveFile,
+      targetDir,
+      (extractP) {
+        onProgress(InstallProgress(
+          progress: 0.1 + (extractP * 0.87),
+          downloadedBytes: fileSize,
+          totalBytes: fileSize,
+          stage: 'extracting',
+          message: 'Extracting system files: ${(extractP * 100).toInt()}%',
+        ));
+      },
+      deleteAfter: deleteArchiveAfterInstall,
+    );
+
+    onProgress(InstallProgress(
+      progress: 0.98,
+      downloadedBytes: fileSize,
+      totalBytes: fileSize,
+      stage: 'configuring',
+      message: 'Configuring DNS and workspace bind mounts...',
+    ));
+
+    await configureEnvironment(targetDir);
+
+    onProgress(InstallProgress(
+      progress: 1.0,
+      downloadedBytes: fileSize,
+      totalBytes: fileSize,
+      stage: 'completed',
+      message: 'Linux Subsystem installed and verified!',
+    ));
+  }
 
   /// Download and unpack rootfs archive to [targetDir]
   static Future<void> install({
@@ -125,8 +217,9 @@ class RootfsInstaller {
   static Future<void> _unpackArchive(
     File archiveFile,
     Directory outputDir,
-    void Function(double) onProgress,
-  ) async {
+    void Function(double) onProgress, {
+    bool deleteAfter = true,
+  }) async {
     final bytes = await archiveFile.readAsBytes();
 
     Archive archive;
@@ -173,10 +266,12 @@ class RootfsInstaller {
       }
     }
 
-    // Clean up archive file to save disk space
-    try {
-      await archiveFile.delete();
-    } catch (_) {}
+    // Clean up archive file if requested
+    if (deleteAfter) {
+      try {
+        await archiveFile.delete();
+      } catch (_) {}
+    }
   }
 
   /// Configures network DNS (/etc/resolv.conf), hosts, and workspace directory

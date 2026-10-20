@@ -80,9 +80,9 @@ class PRootManager {
   PRootStatus _currentStatus = PRootStatus.notInstalled;
   PRootStatus get currentStatus => _currentStatus;
 
-  Future<void> init({String? workspacePath}) async {
+  Future<void> init({String? workspacePath, Directory? appSupportDir}) async {
     _workspacePath = workspacePath;
-    final appDir = await getApplicationSupportDirectory();
+    final appDir = appSupportDir ?? await getApplicationSupportDirectory();
     _rootfsDir = Directory(p.join(appDir.path, 'rootfs'));
     _binDir = Directory(p.join(appDir.path, 'bin'));
     _prootBin = File(p.join(_binDir!.path, 'proot'));
@@ -130,7 +130,7 @@ class PRootManager {
 
     try {
       _currentStatus = PRootStatus.downloading;
-      final url = downloadUrl ?? RootfsInstaller.defaultDebianRootfsUrl;
+      final url = downloadUrl ?? RootfsInstaller.ghproxyDebianRootfsUrl;
       final tempArchive = File(p.join(_rootfsDir!.parent.path, 'rootfs_temp.tar.xz'));
 
       if (mockForDev) {
@@ -173,6 +173,73 @@ class PRootManager {
         message: 'Failed to install subsystem: $e',
       ));
     }
+  }
+
+  /// Installs rootfs from a local archive file (e.g. user imported .tar.xz)
+  Future<void> installSubsystemFromArchive(File archiveFile, {bool deleteAfter = false}) async {
+    if (_currentStatus == PRootStatus.downloading || _currentStatus == PRootStatus.extracting) {
+      return;
+    }
+
+    if (!await archiveFile.exists()) {
+      _currentStatus = PRootStatus.error;
+      _statusController.add(PRootProgress(
+        status: PRootStatus.error,
+        progress: 0.0,
+        message: 'File not found: ${archiveFile.path}',
+      ));
+      return;
+    }
+
+    try {
+      _currentStatus = PRootStatus.extracting;
+      await RootfsInstaller.installFromArchive(
+        archiveFile: archiveFile,
+        targetDir: _rootfsDir!,
+        deleteArchiveAfterInstall: deleteAfter,
+        onProgress: (pInfo) {
+          PRootStatus status = PRootStatus.extracting;
+          if (pInfo.stage == 'configuring') status = PRootStatus.configuring;
+          if (pInfo.stage == 'completed') status = PRootStatus.ready;
+
+          _currentStatus = status;
+          _statusController.add(PRootProgress(
+            status: status,
+            progress: pInfo.progress,
+            message: pInfo.message,
+            downloadedBytes: pInfo.downloadedBytes,
+            totalBytes: pInfo.totalBytes,
+          ));
+        },
+      );
+
+      _currentStatus = PRootStatus.ready;
+      _statusController.add(PRootProgress(
+        status: PRootStatus.ready,
+        progress: 1.0,
+        message: 'Debian-arm64 Subsystem installed successfully from local file!',
+      ));
+    } catch (e) {
+      _currentStatus = PRootStatus.error;
+      _statusController.add(PRootProgress(
+        status: PRootStatus.error,
+        progress: 0.0,
+        message: 'Failed to import subsystem archive: $e',
+      ));
+    }
+  }
+
+  /// Reset/Remove the rootfs directory
+  Future<void> uninstallSubsystem() async {
+    if (_rootfsDir != null && await _rootfsDir!.exists()) {
+      await _rootfsDir!.delete(recursive: true);
+    }
+    _currentStatus = PRootStatus.notInstalled;
+    _statusController.add(PRootProgress(
+      status: PRootStatus.notInstalled,
+      progress: 0.0,
+      message: 'Linux Subsystem removed.',
+    ));
   }
 
   Future<void> _setupMinimalMockRootfs() async {

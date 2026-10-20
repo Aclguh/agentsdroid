@@ -694,4 +694,66 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get screenRotationPortraitDesc => '始终保持纵向竖屏显示，避免设备晃动时误旋转';
+
+  @override
+  String get subsystemInstallMethod => '安装方式';
+
+  @override
+  String get subsystemOnlineDownload => '在线下载';
+
+  @override
+  String get subsystemOfflineImport => '离线导入';
+
+  @override
+  String get subsystemMirrorSource => '下载镜像源';
+
+  @override
+  String get subsystemMirrorGhproxy => '国内加速镜像 (ghproxy.net - 推荐)';
+
+  @override
+  String get subsystemMirrorOfficial => '官方源 (GitHub Releases)';
+
+  @override
+  String get subsystemMirrorCustom => '自定义下载 URL';
+
+  @override
+  String get subsystemCustomUrlHint => '请输入 rootfs 压缩包直链下载地址';
+
+  @override
+  String get subsystemDetectedArchives => '已扫描到的本地离线包';
+
+  @override
+  String get subsystemNoArchivesDetected => '在下载目录中未检测到 .tar.xz 离线包';
+
+  @override
+  String get subsystemRescan => '重新扫描';
+
+  @override
+  String get subsystemManualPath => '手动输入文件路径';
+
+  @override
+  String get subsystemManualPathHint =>
+      '例如: /sdcard/Download/debian-arm64.tar.xz';
+
+  @override
+  String get subsystemStartImport => '开始导入解压';
+
+  @override
+  String get subsystemOfflineHelp =>
+      '提示：可通过手机浏览器直接下载 debian-arm64.tar.xz 到手机 Download 目录后在此导入。';
+
+  @override
+  String get subsystemReinstall => '重置子系统';
+
+  @override
+  String get subsystemReinstallConfirm => '确定要清空并重置 Linux 子系统吗？已安装的软件包和配置将被删除。';
+
+  @override
+  String get subsystemResetSuccess => '子系统已重置';
+
+  @override
+  String get subsystemPathEmpty => '请输入有效的文件路径';
+
+  @override
+  String get subsystemFileNotFound => '指定的文件不存在';
 }
