@@ -154,12 +154,12 @@ void main() {
       expect(keyVault.getThemeMode(), equals(ThemeMode.system));
     });
 
-    test('AutoRotate defaults to true and can be updated', () async {
-      expect(keyVault.isAutoRotateEnabled(), isTrue);
-      await keyVault.setAutoRotateEnabled(false);
+    test('AutoRotate defaults to false and can be updated', () async {
       expect(keyVault.isAutoRotateEnabled(), isFalse);
       await keyVault.setAutoRotateEnabled(true);
       expect(keyVault.isAutoRotateEnabled(), isTrue);
+      await keyVault.setAutoRotateEnabled(false);
+      expect(keyVault.isAutoRotateEnabled(), isFalse);
     });
   });
 
@@ -360,6 +360,11 @@ void main() {
       expect(find.byType(ScreenRotationSettingsScreen), findsOneWidget);
       expect(find.text('随重力感应旋转'), findsOneWidget);
       expect(find.text('锁定竖屏'), findsOneWidget);
+
+      await tester.tap(find.text('随重力感应旋转'));
+      await tester.pumpAndSettle();
+
+      expect(keyVault.isAutoRotateEnabled(), isTrue);
 
       await tester.tap(find.text('锁定竖屏'));
       await tester.pumpAndSettle();

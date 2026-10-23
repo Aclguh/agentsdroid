@@ -467,11 +467,11 @@ class KeyVault {
     await _prefs.setString(_prefThemeMode, mode.name);
   }
 
-  // --- Auto-rotate screen (Default: true) ---
+  // --- Auto-rotate screen (Default: false - Lock Portrait) ---
   static const _prefAutoRotate = 'pref_auto_rotate';
 
   bool isAutoRotateEnabled() {
-    return _prefs.getBool(_prefAutoRotate) ?? true;
+    return _prefs.getBool(_prefAutoRotate) ?? false;
   }
 
   Future<void> setAutoRotateEnabled(bool enabled) async {

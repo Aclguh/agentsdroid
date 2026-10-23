@@ -51,21 +51,21 @@ class _ScreenRotationSettingsScreenState extends State<ScreenRotationSettingsScr
           ),
           const SizedBox(height: 16),
 
+          // Lock Portrait (Default)
+          _buildOptionCard(
+            context: context,
+            value: false,
+            title: l10n.screenRotationPortrait,
+            subtitle: l10n.screenRotationPortraitDesc,
+          ),
+          const SizedBox(height: 12),
+
           // Auto-rotate with Gravity
           _buildOptionCard(
             context: context,
             value: true,
             title: l10n.screenRotationAuto,
             subtitle: l10n.screenRotationAutoDesc,
-          ),
-          const SizedBox(height: 12),
-
-          // Lock Portrait
-          _buildOptionCard(
-            context: context,
-            value: false,
-            title: l10n.screenRotationPortrait,
-            subtitle: l10n.screenRotationPortraitDesc,
           ),
         ],
       ),
