@@ -23,11 +23,11 @@ class InstallProgress {
 class RootfsInstaller {
   /// Default minimal Debian-arm64 rootfs mirror (Official GitHub Releases)
   static const String defaultDebianRootfsUrl =
-      'https://github.com/termux/proot-distro/releases/download/v4.7.0/debian-arm64.tar.xz';
+      'https://github.com/termux/proot-distro/releases/download/v4.7.0/debian-bookworm-aarch64-pd-v4.7.0.tar.xz';
 
   /// China accelerated mirror using ghproxy.net
   static const String ghproxyDebianRootfsUrl =
-      'https://ghproxy.net/https://github.com/termux/proot-distro/releases/download/v4.7.0/debian-arm64.tar.xz';
+      'https://ghproxy.net/https://github.com/termux/proot-distro/releases/download/v4.7.0/debian-bookworm-aarch64-pd-v4.7.0.tar.xz';
 
   /// Scans common Android Download directories for candidate rootfs archives
   static Future<List<File>> scanLocalArchives() async {
