@@ -34,6 +34,8 @@ class RootfsInstaller {
     final candidateDirs = <String>[
       '/storage/emulated/0/Download',
       '/sdcard/Download',
+      '/storage/emulated/0/Android/data/com.agentsdroid.agentsdroid/files',
+      '/sdcard/Android/data/com.agentsdroid.agentsdroid/files',
     ];
 
     final foundFiles = <File>[];
