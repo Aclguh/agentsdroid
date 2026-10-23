@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:archive/archive.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -111,23 +112,23 @@ class RootfsInstaller {
     final fileSize = await archiveFile.length();
 
     onProgress(InstallProgress(
-      progress: 0.1,
+      progress: 0.05,
       downloadedBytes: fileSize,
       totalBytes: fileSize,
       stage: 'extracting',
-      message: 'Decompressing archive into ext4 storage...',
+      message: '正在准备解压离线子系统包 (${(fileSize / 1024 / 1024).toStringAsFixed(1)} MB)...',
     ));
 
     await _unpackArchive(
       archiveFile,
       targetDir,
-      (extractP) {
+      (extractP, msg) {
         onProgress(InstallProgress(
-          progress: 0.1 + (extractP * 0.87),
+          progress: extractP,
           downloadedBytes: fileSize,
           totalBytes: fileSize,
           stage: 'extracting',
-          message: 'Extracting system files: ${(extractP * 100).toInt()}%',
+          message: msg,
         ));
       },
       deleteAfter: deleteArchiveAfterInstall,
@@ -138,7 +139,7 @@ class RootfsInstaller {
       downloadedBytes: fileSize,
       totalBytes: fileSize,
       stage: 'configuring',
-      message: 'Configuring DNS and workspace bind mounts...',
+      message: '正在配置网络 DNS 与沙箱环境...',
     ));
 
     await configureEnvironment(targetDir);
@@ -148,7 +149,7 @@ class RootfsInstaller {
       downloadedBytes: fileSize,
       totalBytes: fileSize,
       stage: 'completed',
-      message: 'Linux Subsystem installed and verified!',
+      message: 'Linux 子系统已安装就绪！',
     ));
   }
 
@@ -215,15 +216,20 @@ class RootfsInstaller {
         message: 'Decompressing archive into ext4 storage...',
       ));
 
-      await _unpackArchive(targetArchiveFile, targetDir, (extractP) {
-        onProgress(InstallProgress(
-          progress: 0.72 + (extractP * 0.25), // Extraction is 72% ~ 97%
-          downloadedBytes: downloaded,
-          totalBytes: contentLength,
-          stage: 'extracting',
-          message: 'Extracting system files: ${(extractP * 100).toInt()}%',
-        ));
-      });
+      await _unpackArchive(
+        targetArchiveFile,
+        targetDir,
+        (extractP, msg) {
+          onProgress(InstallProgress(
+            progress: 0.72 + (extractP * 0.25), // Extraction is 72% ~ 97%
+            downloadedBytes: downloaded,
+            totalBytes: contentLength,
+            stage: 'extracting',
+            message: msg,
+          ));
+        },
+        deleteAfter: true,
+      );
 
       // --- Phase 3: Post-install Configuration ---
       onProgress(InstallProgress(
@@ -248,94 +254,51 @@ class RootfsInstaller {
     }
   }
 
-  /// Unpacks tar/tar.gz/tar.xz archives safely with top-level prefix strip and symlink support
+  /// Unpacks tar/tar.gz/tar.xz archives safely in a background Isolate
+  /// with top-level prefix strip and symlink support, without freezing the main UI thread.
   static Future<void> _unpackArchive(
     File archiveFile,
     Directory outputDir,
-    void Function(double) onProgress, {
+    void Function(double progress, String message) onProgress, {
     bool deleteAfter = true,
   }) async {
-    final bytes = await archiveFile.readAsBytes();
+    final receivePort = ReceivePort();
+    final completer = Completer<void>();
 
-    Archive archive;
-    if (archiveFile.path.endsWith('.tar.gz') || archiveFile.path.endsWith('.tgz')) {
-      final decompressed = GZipDecoder().decodeBytes(bytes);
-      archive = TarDecoder().decodeBytes(decompressed);
-    } else if (archiveFile.path.endsWith('.tar.xz')) {
-      final decompressed = XZDecoder().decodeBytes(bytes);
-      archive = TarDecoder().decodeBytes(decompressed);
-    } else if (archiveFile.path.endsWith('.tar')) {
-      archive = TarDecoder().decodeBytes(bytes);
-    } else if (archiveFile.path.endsWith('.zip')) {
-      archive = ZipDecoder().decodeBytes(bytes);
-    } else {
-      // Try tar directly or fall back to tar.xz
-      try {
-        final decompressed = XZDecoder().decodeBytes(bytes);
-        archive = TarDecoder().decodeBytes(decompressed);
-      } catch (_) {
-        archive = TarDecoder().decodeBytes(bytes);
-      }
-    }
+    final isolate = await Isolate.spawn(
+      _isolateUnpackEntry,
+      _UnpackParams(
+        archivePath: archiveFile.path,
+        outputPath: outputDir.path,
+        sendPort: receivePort.sendPort,
+        deleteAfter: deleteAfter,
+      ),
+    );
 
-    // Detect common top-level directory prefix (e.g. "debian-bookworm-aarch64/")
-    String? commonPrefix;
-    if (archive.isNotEmpty) {
-      final firstSlash = archive.first.name.indexOf('/');
-      if (firstSlash != -1) {
-        final candidatePrefix = archive.first.name.substring(0, firstSlash + 1);
-        final allShare = archive.every((f) =>
-            f.name.startsWith(candidatePrefix) ||
-            f.name == candidatePrefix.substring(0, firstSlash));
-        if (allShare) {
-          commonPrefix = candidatePrefix;
+    receivePort.listen((message) {
+      if (message is Map) {
+        if (message.containsKey('progress')) {
+          onProgress(
+            (message['progress'] as num).toDouble(),
+            message['message'] as String? ?? 'Extracting...',
+          );
+        } else if (message.containsKey('error')) {
+          receivePort.close();
+          isolate.kill(priority: Isolate.immediate);
+          if (!completer.isCompleted) {
+            completer.completeError(Exception(message['error']));
+          }
+        } else if (message['done'] == true) {
+          receivePort.close();
+          isolate.kill(priority: Isolate.immediate);
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
         }
       }
-    }
+    });
 
-    final totalFiles = archive.length;
-    int processed = 0;
-
-    for (final file in archive) {
-      var filename = file.name;
-      if (commonPrefix != null && filename.startsWith(commonPrefix)) {
-        filename = filename.substring(commonPrefix.length);
-      }
-      if (filename.isEmpty) continue;
-
-      final outPath = p.join(outputDir.path, filename);
-
-      if (file.isSymbolicLink && file.symbolicLink != null) {
-        final link = Link(outPath);
-        if (!await link.parent.exists()) {
-          await link.parent.create(recursive: true);
-        }
-        try {
-          if (await link.exists()) await link.delete();
-          await link.create(file.symbolicLink!);
-        } catch (_) {}
-      } else if (file.isFile) {
-        final outFile = File(outPath);
-        if (!await outFile.parent.exists()) {
-          await outFile.parent.create(recursive: true);
-        }
-        await outFile.writeAsBytes(file.content as List<int>);
-      } else {
-        await Directory(outPath).create(recursive: true);
-      }
-
-      processed++;
-      if (processed % 150 == 0 || processed == totalFiles) {
-        onProgress(totalFiles > 0 ? (processed / totalFiles) : 1.0);
-      }
-    }
-
-    // Clean up archive file if requested
-    if (deleteAfter) {
-      try {
-        await archiveFile.delete();
-      } catch (_) {}
-    }
+    await completer.future;
   }
 
   /// Configures network DNS (/etc/resolv.conf), hosts, workspace directory, and shell links
@@ -411,5 +374,129 @@ nameserver 8.8.4.4
         }
       }
     }
+  }
+}
+
+class _UnpackParams {
+  final String archivePath;
+  final String outputPath;
+  final SendPort sendPort;
+  final bool deleteAfter;
+
+  _UnpackParams({
+    required this.archivePath,
+    required this.outputPath,
+    required this.sendPort,
+    required this.deleteAfter,
+  });
+}
+
+void _isolateUnpackEntry(_UnpackParams params) async {
+  try {
+    final archiveFile = File(params.archivePath);
+    if (!archiveFile.existsSync()) {
+      params.sendPort.send({'error': 'Archive file not found: ${params.archivePath}'});
+      return;
+    }
+
+    params.sendPort.send({'progress': 0.05, 'message': '正在读取压缩包文件...'});
+
+    final bytes = archiveFile.readAsBytesSync();
+    params.sendPort.send({'progress': 0.15, 'message': '正在解压 XZ 压缩数据（纯用户态引擎）...'});
+
+    Archive archive;
+    final pathLower = params.archivePath.toLowerCase();
+    if (pathLower.endsWith('.tar.gz') || pathLower.endsWith('.tgz')) {
+      final decompressed = GZipDecoder().decodeBytes(bytes);
+      archive = TarDecoder().decodeBytes(decompressed);
+    } else if (pathLower.endsWith('.tar.xz')) {
+      final decompressed = XZDecoder().decodeBytes(bytes);
+      archive = TarDecoder().decodeBytes(decompressed);
+    } else if (pathLower.endsWith('.tar')) {
+      archive = TarDecoder().decodeBytes(bytes);
+    } else if (pathLower.endsWith('.zip')) {
+      archive = ZipDecoder().decodeBytes(bytes);
+    } else {
+      try {
+        final decompressed = XZDecoder().decodeBytes(bytes);
+        archive = TarDecoder().decodeBytes(decompressed);
+      } catch (_) {
+        archive = TarDecoder().decodeBytes(bytes);
+      }
+    }
+
+    params.sendPort.send({'progress': 0.35, 'message': '正在分析 Linux rootfs 目录结构...'});
+
+    // Detect common top-level directory prefix (e.g. "debian-bookworm-aarch64/")
+    String? commonPrefix;
+    if (archive.isNotEmpty) {
+      final firstSlash = archive.first.name.indexOf('/');
+      if (firstSlash != -1) {
+        final candidatePrefix = archive.first.name.substring(0, firstSlash + 1);
+        final allShare = archive.every((f) =>
+            f.name.startsWith(candidatePrefix) ||
+            f.name == candidatePrefix.substring(0, firstSlash));
+        if (allShare) {
+          commonPrefix = candidatePrefix;
+        }
+      }
+    }
+
+    final totalFiles = archive.length;
+    final outputDir = Directory(params.outputPath);
+    if (!outputDir.existsSync()) {
+      outputDir.createSync(recursive: true);
+    }
+
+    int processed = 0;
+    for (final file in archive) {
+      var filename = file.name;
+      if (commonPrefix != null && filename.startsWith(commonPrefix)) {
+        filename = filename.substring(commonPrefix.length);
+      }
+      if (filename.isEmpty) continue;
+
+      final outPath = p.join(outputDir.path, filename);
+
+      if (file.isSymbolicLink && file.symbolicLink != null) {
+        final link = Link(outPath);
+        if (!link.parent.existsSync()) {
+          link.parent.createSync(recursive: true);
+        }
+        try {
+          if (link.existsSync()) link.deleteSync();
+          link.createSync(file.symbolicLink!);
+        } catch (_) {}
+      } else if (file.isFile) {
+        final outFile = File(outPath);
+        if (!outFile.parent.existsSync()) {
+          outFile.parent.createSync(recursive: true);
+        }
+        outFile.writeAsBytesSync(file.content as List<int>);
+      } else {
+        Directory(outPath).createSync(recursive: true);
+      }
+
+      processed++;
+      if (processed % 100 == 0 || processed == totalFiles) {
+        final ratio = totalFiles > 0 ? (processed / totalFiles) : 1.0;
+        final prog = 0.35 + (ratio * 0.63); // 35% -> 98%
+        final percent = (ratio * 100).toInt();
+        params.sendPort.send({
+          'progress': prog,
+          'message': '正在写入系统文件 ($processed/$totalFiles, $percent%)...',
+        });
+      }
+    }
+
+    if (params.deleteAfter) {
+      try {
+        archiveFile.deleteSync();
+      } catch (_) {}
+    }
+
+    params.sendPort.send({'done': true});
+  } catch (e, st) {
+    params.sendPort.send({'error': '$e\n$st'});
   }
 }

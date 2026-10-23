@@ -32,6 +32,7 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
   File? _selectedArchive;
   String? _displayDataDirPath;
   bool _isScanning = false;
+  bool _isImporting = false;
 
   @override
   void initState() {
@@ -102,16 +103,54 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
     widget.prootManager.installSubsystem(downloadUrl: url);
   }
 
-  void _triggerOfflineImport() {
+  void _triggerOfflineImport() async {
     final l10n = AppLocalizations.of(context)!;
-    if (_selectedArchive == null || !_selectedArchive!.existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.subsystemNoPackageToImport)),
-      );
+    if (_isImporting ||
+        _prootProgress?.status == PRootStatus.extracting ||
+        _prootProgress?.status == PRootStatus.downloading) {
       return;
     }
 
-    widget.prootManager.installSubsystemFromArchive(_selectedArchive!);
+    if (_selectedArchive == null || !_selectedArchive!.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.subsystemNoPackageToImport),
+          action: SnackBarAction(
+            label: l10n.subsystemRescan,
+            onPressed: _scanArchives,
+          ),
+        ),
+      );
+      _scanArchives();
+      return;
+    }
+
+    setState(() {
+      _isImporting = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('开始解压并安装 Linux 子系统，请稍候...'),
+        duration: Duration(seconds: 4),
+      ),
+    );
+
+    try {
+      await widget.prootManager.installSubsystemFromArchive(_selectedArchive!);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('安装遇到错误: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isImporting = false;
+        });
+      }
+    }
   }
 
   void _copyDataDirPath() {
@@ -256,8 +295,8 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
             ),
           ),
 
-          // Installation Options Card (When not ready and not currently installing)
-          if (!isReady && !isWorking) ...[
+          // Installation Options Card (When not ready)
+          if (!isReady) ...[
             const SizedBox(height: 16),
             Card(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -292,6 +331,9 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
                           setState(() {
                             _installMethodIndex = newSelection.first;
                           });
+                          if (newSelection.first == 1) {
+                            _scanArchives();
+                          }
                         },
                       ),
                     ),
@@ -360,9 +402,19 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: _triggerOnlineInstall,
-                          icon: const Icon(Icons.download, size: 18),
-                          label: Text(l10n.installSubsystem),
+                          onPressed: (isWorking || _isImporting) ? null : _triggerOnlineInstall,
+                          icon: (isWorking || _isImporting)
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.download, size: 18),
+                          label: Text(
+                            (isWorking || _isImporting)
+                                ? '正在安装子系统...'
+                                : l10n.installSubsystem,
+                          ),
                         ),
                       ),
                     ],
@@ -468,7 +520,11 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
                           itemBuilder: (context, index) {
                             final file = _scannedArchives[index];
                             final name = file.path.split(Platform.pathSeparator).last;
-                            final sizeMb = (file.lengthSync() / 1024 / 1024).toStringAsFixed(1);
+                            int sizeBytes = 0;
+                            try {
+                              sizeBytes = file.lengthSync();
+                            } catch (_) {}
+                            final sizeMb = (sizeBytes / 1024 / 1024).toStringAsFixed(1);
                             final isSelected = _selectedArchive?.path == file.path;
 
                             return Card(
@@ -530,12 +586,31 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
                       ],
 
                       const SizedBox(height: 20),
+                      if (isWorking || _isImporting) ...[
+                        LinearProgressIndicator(value: _prootProgress?.progress),
+                        const SizedBox(height: 8),
+                        Text(
+                          _prootProgress?.message ?? '正在解压并配置子系统...',
+                          style: TextStyle(fontSize: 12, color: theme.colorScheme.primary),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: _selectedArchive != null ? _triggerOfflineImport : null,
-                          icon: const Icon(Icons.file_upload_outlined, size: 18),
-                          label: Text(l10n.subsystemStartImport),
+                          onPressed: (isWorking || _isImporting) ? null : _triggerOfflineImport,
+                          icon: (isWorking || _isImporting)
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.file_upload_outlined, size: 18),
+                          label: Text(
+                            (isWorking || _isImporting)
+                                ? '正在解压导入中...'
+                                : l10n.subsystemStartImport,
+                          ),
                         ),
                       ),
                     ],
