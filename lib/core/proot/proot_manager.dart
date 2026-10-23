@@ -70,6 +70,7 @@ class PRootProcess {
 
 class PRootManager {
   Directory? _rootfsDir;
+  Directory? _effectiveRootfsDir;
   Directory? _binDir;
   File? _prootBin;
   String? _workspacePath;
@@ -108,18 +109,54 @@ class PRootManager {
     if (_rootfsDir == null) {
       throw StateError('PRootManager not initialized. Call init() first.');
     }
-    return _rootfsDir!;
+    return _effectiveRootfsDir ?? _rootfsDir!;
   }
 
   void setWorkspacePath(String path) {
     _workspacePath = path;
   }
 
+  /// Locates the real rootfs directory (handles direct or nested unpacking)
+  Future<Directory?> findEffectiveRootfsDir() async {
+    if (_rootfsDir == null) return null;
+
+    if (await _hasBinaries(_rootfsDir!)) {
+      return _rootfsDir;
+    }
+
+    if (await _rootfsDir!.exists()) {
+      try {
+        await for (final entity in _rootfsDir!.list(followLinks: false)) {
+          if (entity is Directory && await _hasBinaries(entity)) {
+            return entity;
+          }
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  Future<bool> _hasBinaries(Directory dir) async {
+    final candidates = [
+      p.join(dir.path, 'bin', 'bash'),
+      p.join(dir.path, 'bin', 'sh'),
+      p.join(dir.path, 'usr', 'bin', 'bash'),
+      p.join(dir.path, 'usr', 'bin', 'sh'),
+    ];
+    for (final c in candidates) {
+      if (await File(c).exists()) return true;
+    }
+    return false;
+  }
+
   Future<bool> isInstalled() async {
-    if (_rootfsDir == null) return false;
-    final bash = File(p.join(_rootfsDir!.path, 'bin', 'bash'));
-    final sh = File(p.join(_rootfsDir!.path, 'bin', 'sh'));
-    return (await bash.exists()) || (await sh.exists());
+    final effectiveDir = await findEffectiveRootfsDir();
+    if (effectiveDir != null) {
+      _effectiveRootfsDir = effectiveDir;
+      return true;
+    }
+    return false;
   }
 
   /// Downloads and extracts the Linux rootfs into the app private storage
@@ -157,6 +194,12 @@ class PRootManager {
             ));
           },
         );
+      }
+
+      final eff = await findEffectiveRootfsDir();
+      if (eff != null) {
+        _effectiveRootfsDir = eff;
+        await RootfsInstaller.configureEnvironment(eff);
       }
 
       _currentStatus = PRootStatus.ready;
@@ -213,6 +256,12 @@ class PRootManager {
         },
       );
 
+      final eff = await findEffectiveRootfsDir();
+      if (eff != null) {
+        _effectiveRootfsDir = eff;
+        await RootfsInstaller.configureEnvironment(eff);
+      }
+
       _currentStatus = PRootStatus.ready;
       _statusController.add(PRootProgress(
         status: PRootStatus.ready,
@@ -234,6 +283,7 @@ class PRootManager {
     if (_rootfsDir != null && await _rootfsDir!.exists()) {
       await _rootfsDir!.delete(recursive: true);
     }
+    _effectiveRootfsDir = null;
     _currentStatus = PRootStatus.notInstalled;
     _statusController.add(PRootProgress(
       status: PRootStatus.notInstalled,
@@ -274,6 +324,7 @@ class PRootManager {
     }
 
     final fullEnv = _buildEnvironment(environment);
+    final root = rootfsDir;
 
     // If proot binary exists on Android device:
     if (_prootBin != null && await _prootBin!.exists()) {
@@ -282,14 +333,14 @@ class PRootManager {
         _prootBin!.path,
         args,
         environment: fullEnv,
-        workingDirectory: _rootfsDir!.path,
+        workingDirectory: root.path,
       );
     } else {
       // Fallback for native platform execution
       final effectiveWd = workingDir != null
           ? (_workspacePath != null && workingDir.startsWith('/workspace')
               ? _workspacePath!
-              : p.join(_rootfsDir!.path, workingDir.replaceFirst('/', '')))
+              : p.join(root.path, workingDir.replaceFirst('/', '')))
           : _workspacePath;
 
       return await Process.run(
@@ -313,6 +364,7 @@ class PRootManager {
     }
 
     final fullEnv = _buildEnvironment(environment);
+    final root = rootfsDir;
 
     Process process;
     if (_prootBin != null && await _prootBin!.exists()) {
@@ -321,13 +373,13 @@ class PRootManager {
         _prootBin!.path,
         args,
         environment: fullEnv,
-        workingDirectory: _rootfsDir!.path,
+        workingDirectory: root.path,
       );
     } else {
       final effectiveWd = workingDir != null
           ? (_workspacePath != null && workingDir.startsWith('/workspace')
               ? _workspacePath!
-              : p.join(_rootfsDir!.path, workingDir.replaceFirst('/', '')))
+              : p.join(root.path, workingDir.replaceFirst('/', '')))
           : _workspacePath;
 
       process = await Process.start(
@@ -355,6 +407,7 @@ class PRootManager {
     }
 
     final fullEnv = _buildEnvironment(environment);
+    final root = rootfsDir;
 
     Process process;
     if (_prootBin != null && await _prootBin!.exists()) {
@@ -363,13 +416,13 @@ class PRootManager {
         _prootBin!.path,
         args,
         environment: fullEnv,
-        workingDirectory: _rootfsDir!.path,
+        workingDirectory: root.path,
       );
     } else {
       final effectiveWd = workingDir != null
           ? (_workspacePath != null && workingDir.startsWith('/workspace')
               ? _workspacePath!
-              : p.join(_rootfsDir!.path, workingDir.replaceFirst('/', '')))
+              : p.join(root.path, workingDir.replaceFirst('/', '')))
           : _workspacePath;
 
       process = await Process.start(
@@ -437,8 +490,9 @@ class PRootManager {
   }
 
   List<String> _buildPRootArgs(String command, {String? workingDir}) {
+    final root = rootfsDir;
     final args = <String>[
-      '-r', _rootfsDir!.path,
+      '-r', root.path,
       '-0',
       '-b', '/dev',
       '-b', '/proc',
@@ -450,7 +504,10 @@ class PRootManager {
     }
 
     final wd = workingDir ?? '/workspace';
-    args.addAll(['-w', wd, '/bin/bash', '-c', command]);
+    final hasBash = File(p.join(root.path, 'bin', 'bash')).existsSync() ||
+                    File(p.join(root.path, 'usr', 'bin', 'bash')).existsSync();
+    final shell = hasBash ? '/bin/bash' : '/bin/sh';
+    args.addAll(['-w', wd, shell, '-c', command]);
     return args;
   }
 

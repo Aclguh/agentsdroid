@@ -215,7 +215,7 @@ class RootfsInstaller {
     }
   }
 
-  /// Unpacks tar/tar.gz/tar.xz archives safely
+  /// Unpacks tar/tar.gz/tar.xz archives safely with top-level prefix strip and symlink support
   static Future<void> _unpackArchive(
     File archiveFile,
     Directory outputDir,
@@ -245,14 +245,43 @@ class RootfsInstaller {
       }
     }
 
+    // Detect common top-level directory prefix (e.g. "debian-bookworm-aarch64/")
+    String? commonPrefix;
+    if (archive.isNotEmpty) {
+      final firstSlash = archive.first.name.indexOf('/');
+      if (firstSlash != -1) {
+        final candidatePrefix = archive.first.name.substring(0, firstSlash + 1);
+        final allShare = archive.every((f) =>
+            f.name.startsWith(candidatePrefix) ||
+            f.name == candidatePrefix.substring(0, firstSlash));
+        if (allShare) {
+          commonPrefix = candidatePrefix;
+        }
+      }
+    }
+
     final totalFiles = archive.length;
     int processed = 0;
 
     for (final file in archive) {
-      final filename = file.name;
+      var filename = file.name;
+      if (commonPrefix != null && filename.startsWith(commonPrefix)) {
+        filename = filename.substring(commonPrefix.length);
+      }
+      if (filename.isEmpty) continue;
+
       final outPath = p.join(outputDir.path, filename);
 
-      if (file.isFile) {
+      if (file.isSymbolicLink && file.symbolicLink != null) {
+        final link = Link(outPath);
+        if (!await link.parent.exists()) {
+          await link.parent.create(recursive: true);
+        }
+        try {
+          if (await link.exists()) await link.delete();
+          await link.create(file.symbolicLink!);
+        } catch (_) {}
+      } else if (file.isFile) {
         final outFile = File(outPath);
         if (!await outFile.parent.exists()) {
           await outFile.parent.create(recursive: true);
@@ -276,7 +305,7 @@ class RootfsInstaller {
     }
   }
 
-  /// Configures network DNS (/etc/resolv.conf), hosts, and workspace directory
+  /// Configures network DNS (/etc/resolv.conf), hosts, workspace directory, and shell links
   static Future<void> configureEnvironment(Directory rootfsDir) async {
     // 1. Setup DNS in /etc/resolv.conf
     final etcDir = Directory(p.join(rootfsDir.path, 'etc'));
@@ -307,6 +336,46 @@ nameserver 8.8.4.4
       final dir = Directory(p.join(rootfsDir.path, d));
       if (!await dir.exists()) {
         await dir.create(recursive: true);
+      }
+    }
+
+    // 5. Ensure essential binaries exist in /bin for compatibility
+    // Debian 12 (Bookworm) uses merged-/usr where /bin is a symlink to /usr/bin.
+    final usrBinDir = Directory(p.join(rootfsDir.path, 'usr', 'bin'));
+    final binDir = Directory(p.join(rootfsDir.path, 'bin'));
+    final binLink = Link(p.join(rootfsDir.path, 'bin'));
+
+    if (await usrBinDir.exists()) {
+      if (!await binDir.exists() && !await binLink.exists()) {
+        try {
+          await binLink.create('usr/bin');
+        } catch (_) {
+          await binDir.create(recursive: true);
+        }
+      }
+
+      final binBash = File(p.join(rootfsDir.path, 'bin', 'bash'));
+      final usrBash = File(p.join(rootfsDir.path, 'usr', 'bin', 'bash'));
+      if (!await binBash.exists() && await usrBash.exists()) {
+        try {
+          await Link(binBash.path).create('../usr/bin/bash');
+        } catch (_) {
+          try {
+            await usrBash.copy(binBash.path);
+          } catch (_) {}
+        }
+      }
+
+      final binSh = File(p.join(rootfsDir.path, 'bin', 'sh'));
+      final usrSh = File(p.join(rootfsDir.path, 'usr', 'bin', 'sh'));
+      if (!await binSh.exists() && await usrSh.exists()) {
+        try {
+          await Link(binSh.path).create('../usr/bin/sh');
+        } catch (_) {
+          try {
+            await usrSh.copy(binSh.path);
+          } catch (_) {}
+        }
       }
     }
   }
