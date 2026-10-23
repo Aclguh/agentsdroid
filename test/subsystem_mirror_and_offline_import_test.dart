@@ -126,7 +126,7 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('Switching to Offline Import tab shows scanner and manual path input', (tester) async {
+    testWidgets('Switching to Offline Import tab shows app data directory guide and direct import button', (tester) async {
       await tester.pumpWidget(createTestApp(const Locale('zh')));
       await tester.pumpAndSettle();
 
@@ -135,10 +135,10 @@ void main() {
       await tester.tap(offlineTab);
       await tester.pumpAndSettle();
 
-      expect(find.text('已扫描到的本地离线包'), findsOneWidget);
+      expect(find.text('应用专属数据目录'), findsOneWidget);
       expect(find.text('重新扫描'), findsOneWidget);
-      expect(find.text('手动输入文件路径'), findsOneWidget);
       expect(find.text('开始导入解压'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
     });
 
     testWidgets('Renders properly in English locale', (tester) async {

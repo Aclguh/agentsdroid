@@ -756,4 +756,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subsystemFileNotFound => '指定的文件不存在';
+
+  @override
+  String get subsystemDataDir => '应用专属数据目录';
+
+  @override
+  String get subsystemDataDirDesc =>
+      '请将下载好的 rootfs 压缩包（如 debian-arm64.tar.xz）放入此应用数据目录中，放入后直接点击开始导入即可。';
+
+  @override
+  String get subsystemCopyPath => '复制路径';
+
+  @override
+  String get subsystemPathCopied => '数据目录路径已复制到剪贴板';
+
+  @override
+  String get subsystemDetectedPackage => '检测到已放入的子系统包';
+
+  @override
+  String get subsystemWaitingForPackage => '等待放入子系统压缩包';
+
+  @override
+  String get subsystemWaitingDesc =>
+      '请通过手机文件管理器或电脑 USB 连接将 debian-arm64.tar.xz 放入上方目录，然后点击重新检测。';
+
+  @override
+  String get subsystemNoPackageToImport => '未在应用数据目录中发现可导入的 rootfs 压缩包';
 }

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/proot/proot_installer.dart';
 import '../../core/proot/proot_manager.dart';
 import '../../core/storage/key_vault.dart';
@@ -26,16 +27,16 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
   String _selectedMirror = 'ghproxy'; // 'ghproxy', 'official', 'custom'
 
   late final TextEditingController _customUrlController;
-  late final TextEditingController _filePathController;
 
   List<File> _scannedArchives = [];
+  File? _selectedArchive;
+  String? _displayDataDirPath;
   bool _isScanning = false;
 
   @override
   void initState() {
     super.initState();
     _customUrlController = TextEditingController(text: RootfsInstaller.ghproxyDebianRootfsUrl);
-    _filePathController = TextEditingController(text: '/sdcard/Download/debian-arm64.tar.xz');
 
     widget.prootManager.statusStream.listen((progress) {
       if (mounted) {
@@ -51,7 +52,6 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
   @override
   void dispose() {
     _customUrlController.dispose();
-    _filePathController.dispose();
     super.dispose();
   }
 
@@ -61,12 +61,18 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
     });
 
     try {
+      final dirs = await RootfsInstaller.getAppDataDirectories();
       final archives = await RootfsInstaller.scanLocalArchives();
       if (mounted) {
         setState(() {
+          if (dirs.isNotEmpty) {
+            _displayDataDirPath = dirs.first.path;
+          }
           _scannedArchives = archives;
           if (archives.isNotEmpty) {
-            _filePathController.text = archives.first.path;
+            _selectedArchive = archives.first;
+          } else {
+            _selectedArchive = null;
           }
           _isScanning = false;
         });
@@ -98,23 +104,22 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
 
   void _triggerOfflineImport() {
     final l10n = AppLocalizations.of(context)!;
-    final path = _filePathController.text.trim();
-    if (path.isEmpty) {
+    if (_selectedArchive == null || !_selectedArchive!.existsSync()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.subsystemPathEmpty)),
+        SnackBar(content: Text(l10n.subsystemNoPackageToImport)),
       );
       return;
     }
 
-    final file = File(path);
-    if (!file.existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${l10n.subsystemFileNotFound}: $path')),
-      );
-      return;
-    }
+    widget.prootManager.installSubsystemFromArchive(_selectedArchive!);
+  }
 
-    widget.prootManager.installSubsystemFromArchive(file);
+  void _copyDataDirPath() {
+    if (_displayDataDirPath == null) return;
+    Clipboard.setData(ClipboardData(text: _displayDataDirPath!));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.subsystemPathCopied)),
+    );
   }
 
   Future<void> _confirmResetSubsystem() async {
@@ -362,34 +367,89 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
                       ),
                     ],
 
-                    // Method 2: Offline Import
+                    // Method 2: Offline Import from App Data Directory
                     if (_installMethodIndex == 1) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          l10n.subsystemOfflineHelp,
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.4,
-                            color: theme.colorScheme.onSurfaceVariant,
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
                           ),
                         ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.folder_shared_outlined, size: 18, color: theme.colorScheme.primary),
+                                const SizedBox(width: 8),
+                                Text(
+                                  l10n.subsystemDataDir,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              l10n.subsystemDataDirDesc,
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1.4,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            if (_displayDataDirPath != null) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: SelectableText(
+                                        _displayDataDirPath!,
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 11,
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.copy, size: 16),
+                                      tooltip: l10n.subsystemCopyPath,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: _copyDataDirPath,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
 
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            l10n.subsystemDetectedArchives,
+                            _scannedArchives.isNotEmpty
+                                ? l10n.subsystemDetectedPackage
+                                : l10n.subsystemWaitingForPackage,
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurfaceVariant,
+                              color: _scannedArchives.isNotEmpty
+                                  ? Colors.greenAccent
+                                  : theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                           TextButton.icon(
@@ -409,68 +469,71 @@ class _SubsystemSettingsScreenState extends State<SubsystemSettingsScreen> {
                             final file = _scannedArchives[index];
                             final name = file.path.split(Platform.pathSeparator).last;
                             final sizeMb = (file.lengthSync() / 1024 / 1024).toStringAsFixed(1);
-                            final isCurrent = _filePathController.text == file.path;
+                            final isSelected = _selectedArchive?.path == file.path;
 
-                            return ListTile(
-                              dense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                              leading: Icon(
-                                Icons.archive_outlined,
-                                color: isCurrent ? theme.colorScheme.primary : null,
-                                size: 20,
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(top: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.outlineVariant,
+                                  width: isSelected ? 1.5 : 1.0,
+                                ),
                               ),
-                              title: Text(name, style: const TextStyle(fontSize: 13)),
-                              subtitle: Text('$sizeMb MB • ${file.path}', style: const TextStyle(fontSize: 11)),
-                              trailing: isCurrent
-                                  ? Icon(Icons.check, size: 18, color: theme.colorScheme.primary)
-                                  : null,
-                              onTap: () {
-                                setState(() {
-                                  _filePathController.text = file.path;
-                                });
-                              },
+                              child: ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                leading: Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: isSelected ? theme.colorScheme.primary : null,
+                                  size: 22,
+                                ),
+                                title: Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                subtitle: Text('$sizeMb MB • ${file.path}', style: const TextStyle(fontSize: 11)),
+                                trailing: isSelected
+                                    ? Icon(Icons.check_circle, size: 20, color: theme.colorScheme.primary)
+                                    : null,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedArchive = file;
+                                  });
+                                },
+                              ),
                             );
                           },
                         ),
                       ] else ...[
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            l10n.subsystemNoArchivesDetected,
-                            style: TextStyle(fontSize: 12, color: theme.colorScheme.outline),
+                        Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, size: 18, color: Colors.amberAccent),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  l10n.subsystemWaitingDesc,
+                                  style: const TextStyle(fontSize: 12, height: 1.4, color: Colors.white70),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
 
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.subsystemManualPath,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: _filePathController,
-                        style: const TextStyle(fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: l10n.subsystemManualPathHint,
-                          border: const OutlineInputBorder(),
-                          isDense: true,
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.clear, size: 16),
-                            onPressed: () => _filePathController.clear(),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: _triggerOfflineImport,
+                          onPressed: _selectedArchive != null ? _triggerOfflineImport : null,
                           icon: const Icon(Icons.file_upload_outlined, size: 18),
                           label: Text(l10n.subsystemStartImport),
                         ),

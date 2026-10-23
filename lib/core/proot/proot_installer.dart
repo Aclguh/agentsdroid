@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 class InstallProgress {
   final double progress; // 0.0 to 1.0
@@ -29,20 +30,52 @@ class RootfsInstaller {
   static const String ghproxyDebianRootfsUrl =
       'https://ghproxy.net/https://github.com/termux/proot-distro/releases/download/v4.7.0/debian-bookworm-aarch64-pd-v4.7.0.tar.xz';
 
-  /// Scans common Android Download directories for candidate rootfs archives
-  static Future<List<File>> scanLocalArchives() async {
-    final candidateDirs = <String>[
-      '/storage/emulated/0/Download',
-      '/sdcard/Download',
+  /// Returns standard app data directories where rootfs archives can be placed
+  static Future<List<Directory>> getAppDataDirectories() async {
+    final dirs = <Directory>[];
+
+    // External files directory (e.g. /sdcard/Android/data/com.agentsdroid.agentsdroid/files)
+    try {
+      final ext = await getExternalStorageDirectory();
+      if (ext != null) {
+        dirs.add(ext);
+      }
+    } catch (_) {}
+
+    // Internal app support directory (e.g. /data/user/0/.../files)
+    try {
+      final appSupport = await getApplicationSupportDirectory();
+      if (!dirs.any((d) => d.path == appSupport.path)) {
+        dirs.add(appSupport);
+      }
+    } catch (_) {}
+
+    // Standard Android external fallback paths
+    final fallbackPaths = [
       '/storage/emulated/0/Android/data/com.agentsdroid.agentsdroid/files',
       '/sdcard/Android/data/com.agentsdroid.agentsdroid/files',
+      '/storage/emulated/0/Download',
+      '/sdcard/Download',
     ];
+
+    for (final pth in fallbackPaths) {
+      final d = Directory(pth);
+      if (!dirs.any((element) => element.path == d.path)) {
+        dirs.add(d);
+      }
+    }
+
+    return dirs;
+  }
+
+  /// Scans application data directories for candidate rootfs archives
+  static Future<List<File>> scanLocalArchives() async {
+    final candidateDirs = await getAppDataDirectories();
 
     final foundFiles = <File>[];
     final seenPaths = <String>{};
 
-    for (final dirPath in candidateDirs) {
-      final dir = Directory(dirPath);
+    for (final dir in candidateDirs) {
       if (await dir.exists()) {
         try {
           await for (final entity in dir.list(followLinks: false)) {

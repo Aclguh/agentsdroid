@@ -272,5 +272,13 @@
   "subsystemReinstallConfirm": "确定要清空并重置 Linux 子系统吗？已安装的软件包和配置将被删除。",
   "subsystemResetSuccess": "子系统已重置",
   "subsystemPathEmpty": "请输入有效的文件路径",
-  "subsystemFileNotFound": "指定的文件不存在"
+  "subsystemFileNotFound": "指定的文件不存在",
+  "subsystemDataDir": "应用专属数据目录",
+  "subsystemDataDirDesc": "请将下载好的 rootfs 压缩包（如 debian-arm64.tar.xz）放入此应用数据目录中，放入后直接点击开始导入即可。",
+  "subsystemCopyPath": "复制路径",
+  "subsystemPathCopied": "数据目录路径已复制到剪贴板",
+  "subsystemDetectedPackage": "检测到已放入的子系统包",
+  "subsystemWaitingForPackage": "等待放入子系统压缩包",
+  "subsystemWaitingDesc": "请通过手机文件管理器或电脑 USB 连接将 debian-arm64.tar.xz 放入上方目录，然后点击重新检测。",
+  "subsystemNoPackageToImport": "未在应用数据目录中发现可导入的 rootfs 压缩包"
 }

@@ -788,4 +788,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subsystemFileNotFound => 'Specified file does not exist';
+
+  @override
+  String get subsystemDataDir => 'App Data Directory';
+
+  @override
+  String get subsystemDataDirDesc =>
+      'Place the downloaded rootfs archive (e.g. debian-arm64.tar.xz) into this directory, then click import directly.';
+
+  @override
+  String get subsystemCopyPath => 'Copy Path';
+
+  @override
+  String get subsystemPathCopied => 'Data directory path copied to clipboard';
+
+  @override
+  String get subsystemDetectedPackage => 'Subsystem Archive Detected';
+
+  @override
+  String get subsystemWaitingForPackage => 'Waiting for Subsystem Archive';
+
+  @override
+  String get subsystemWaitingDesc =>
+      'Please copy debian-arm64.tar.xz into the directory above via file manager or USB, then tap rescan.';
+
+  @override
+  String get subsystemNoPackageToImport =>
+      'No importable rootfs archive found in app data directory';
 }

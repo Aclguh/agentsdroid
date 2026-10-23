@@ -1567,6 +1567,54 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'指定的文件不存在'**
   String get subsystemFileNotFound;
+
+  /// No description provided for @subsystemDataDir.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用专属数据目录'**
+  String get subsystemDataDir;
+
+  /// No description provided for @subsystemDataDirDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'请将下载好的 rootfs 压缩包（如 debian-arm64.tar.xz）放入此应用数据目录中，放入后直接点击开始导入即可。'**
+  String get subsystemDataDirDesc;
+
+  /// No description provided for @subsystemCopyPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制路径'**
+  String get subsystemCopyPath;
+
+  /// No description provided for @subsystemPathCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据目录路径已复制到剪贴板'**
+  String get subsystemPathCopied;
+
+  /// No description provided for @subsystemDetectedPackage.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测到已放入的子系统包'**
+  String get subsystemDetectedPackage;
+
+  /// No description provided for @subsystemWaitingForPackage.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待放入子系统压缩包'**
+  String get subsystemWaitingForPackage;
+
+  /// No description provided for @subsystemWaitingDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'请通过手机文件管理器或电脑 USB 连接将 debian-arm64.tar.xz 放入上方目录，然后点击重新检测。'**
+  String get subsystemWaitingDesc;
+
+  /// No description provided for @subsystemNoPackageToImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'未在应用数据目录中发现可导入的 rootfs 压缩包'**
+  String get subsystemNoPackageToImport;
 }
 
 class _AppLocalizationsDelegate

@@ -272,5 +272,13 @@
   "subsystemReinstallConfirm": "Are you sure you want to reset the Linux subsystem? Installed packages and configurations will be deleted.",
   "subsystemResetSuccess": "Subsystem has been reset",
   "subsystemPathEmpty": "Please enter a valid file path",
-  "subsystemFileNotFound": "Specified file does not exist"
+  "subsystemFileNotFound": "Specified file does not exist",
+  "subsystemDataDir": "App Data Directory",
+  "subsystemDataDirDesc": "Place the downloaded rootfs archive (e.g. debian-arm64.tar.xz) into this directory, then click import directly.",
+  "subsystemCopyPath": "Copy Path",
+  "subsystemPathCopied": "Data directory path copied to clipboard",
+  "subsystemDetectedPackage": "Subsystem Archive Detected",
+  "subsystemWaitingForPackage": "Waiting for Subsystem Archive",
+  "subsystemWaitingDesc": "Please copy debian-arm64.tar.xz into the directory above via file manager or USB, then tap rescan.",
+  "subsystemNoPackageToImport": "No importable rootfs archive found in app data directory"
 }
