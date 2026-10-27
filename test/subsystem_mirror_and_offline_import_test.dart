@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:archive/archive.dart';
+import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -74,6 +77,29 @@ void main() {
     test('uninstallSubsystem resets status to notInstalled', () async {
       await prootManager.uninstallSubsystem();
       expect(prootManager.currentStatus, equals(PRootStatus.notInstalled));
+    });
+
+    test('installFromArchive blocks Tar Slip path traversal attacks', () async {
+      final targetDir = Directory(p.join(tempAppDir.path, 'rootfs_target'));
+      await targetDir.create(recursive: true);
+
+      final archive = Archive();
+      archive.addFile(ArchiveFile('bin/sh', 10, utf8.encode('#!/bin/sh\n')));
+      archive.addFile(ArchiveFile('../../escaped_pwned.txt', 12, utf8.encode('pwned content')));
+
+      final tarBytes = TarEncoder().encode(archive);
+      final tarFile = File(p.join(tempAppDir.path, 'malicious.tar'));
+      await tarFile.writeAsBytes(tarBytes);
+
+      await RootfsInstaller.installFromArchive(
+        archiveFile: tarFile,
+        targetDir: targetDir,
+        onProgress: (_) {},
+      );
+
+      final escapedFile = File(p.join(tempAppDir.path, 'escaped_pwned.txt'));
+      expect(await escapedFile.exists(), isFalse);
+      expect(await File(p.join(targetDir.path, 'bin', 'sh')).exists(), isTrue);
     });
   });
 

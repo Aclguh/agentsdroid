@@ -373,6 +373,16 @@ nameserver 8.8.4.4
           } catch (_) {}
         }
       }
+
+      if (Platform.isLinux || Platform.isAndroid) {
+        for (final b in [binBash.path, usrBash.path, binSh.path, usrSh.path]) {
+          try {
+            if (File(b).existsSync()) {
+              Process.runSync('chmod', ['755', b]);
+            }
+          } catch (_) {}
+        }
+      }
     }
   }
 }
@@ -401,21 +411,27 @@ void _isolateUnpackEntry(_UnpackParams params) async {
 
     params.sendPort.send({'progress': 0.05, 'message': '正在读取压缩包文件...'});
 
-    final bytes = archiveFile.readAsBytesSync();
+    List<int>? bytes = archiveFile.readAsBytesSync();
     params.sendPort.send({'progress': 0.15, 'message': '正在解压 XZ 压缩数据（纯用户态引擎）...'});
 
     Archive archive;
     final pathLower = params.archivePath.toLowerCase();
     if (pathLower.endsWith('.tar.gz') || pathLower.endsWith('.tgz')) {
       final decompressed = GZipDecoder().decodeBytes(bytes);
+      bytes = null;
       archive = TarDecoder().decodeBytes(decompressed);
     } else if (pathLower.endsWith('.tar.xz')) {
       final decompressed = XZDecoder().decodeBytes(bytes);
+      bytes = null;
       archive = TarDecoder().decodeBytes(decompressed);
     } else if (pathLower.endsWith('.tar')) {
-      archive = TarDecoder().decodeBytes(bytes);
+      final decompressed = bytes;
+      bytes = null;
+      archive = TarDecoder().decodeBytes(decompressed);
     } else if (pathLower.endsWith('.zip')) {
-      archive = ZipDecoder().decodeBytes(bytes);
+      final decompressed = bytes;
+      bytes = null;
+      archive = ZipDecoder().decodeBytes(decompressed);
     } else {
       try {
         final decompressed = XZDecoder().decodeBytes(bytes);
@@ -423,6 +439,7 @@ void _isolateUnpackEntry(_UnpackParams params) async {
       } catch (_) {
         archive = TarDecoder().decodeBytes(bytes);
       }
+      bytes = null;
     }
 
     params.sendPort.send({'progress': 0.35, 'message': '正在分析 Linux rootfs 目录结构...'});
@@ -448,6 +465,9 @@ void _isolateUnpackEntry(_UnpackParams params) async {
       outputDir.createSync(recursive: true);
     }
 
+    final canonicalRoot = p.canonicalize(outputDir.path);
+    final isPosix = Platform.isLinux || Platform.isAndroid;
+
     int processed = 0;
     for (final file in archive) {
       var filename = file.name;
@@ -457,6 +477,12 @@ void _isolateUnpackEntry(_UnpackParams params) async {
       if (filename.isEmpty) continue;
 
       final outPath = p.join(outputDir.path, filename);
+      final canonicalOut = p.canonicalize(outPath);
+
+      // Security check: protect against Tar Slip directory traversal
+      if (!p.equals(canonicalOut, canonicalRoot) && !p.isWithin(canonicalRoot, canonicalOut)) {
+        continue;
+      }
 
       if (file.isSymbolicLink && file.symbolicLink != null) {
         final link = Link(outPath);
@@ -473,6 +499,19 @@ void _isolateUnpackEntry(_UnpackParams params) async {
           outFile.parent.createSync(recursive: true);
         }
         outFile.writeAsBytesSync(file.content as List<int>);
+
+        // Restore POSIX executable permissions for binaries
+        if (isPosix) {
+          final isBinPath = filename.startsWith('bin/') ||
+              filename.startsWith('usr/bin/') ||
+              filename.startsWith('sbin/') ||
+              filename.startsWith('usr/sbin/');
+          if ((file.mode & 0x49) != 0 || isBinPath) {
+            try {
+              Process.runSync('chmod', ['755', outPath]);
+            } catch (_) {}
+          }
+        }
       } else {
         Directory(outPath).createSync(recursive: true);
       }
