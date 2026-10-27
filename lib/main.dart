@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/providers/app_providers.dart';
 import 'core/proot/proot_manager.dart';
 import 'core/storage/key_vault.dart';
 import 'core/storage/session_service.dart';
@@ -29,6 +30,12 @@ void main() async {
 
     runApp(
       ProviderScope(
+        overrides: [
+          keyVaultProvider.overrideWithValue(keyVault),
+          workspaceServiceProvider.overrideWithValue(workspaceService),
+          sessionServiceProvider.overrideWithValue(sessionService),
+          prootManagerProvider.overrideWithValue(prootManager),
+        ],
         child: AgentsDroidApp(
           keyVault: keyVault,
           workspaceService: workspaceService,
@@ -78,7 +85,7 @@ void main() async {
   }
 }
 
-class AgentsDroidApp extends StatefulWidget {
+class AgentsDroidApp extends ConsumerStatefulWidget {
   final KeyVault keyVault;
   final WorkspaceService workspaceService;
   final SessionService sessionService;
@@ -93,18 +100,37 @@ class AgentsDroidApp extends StatefulWidget {
   });
 
   static void setLocale(BuildContext context, Locale newLocale) {
-    final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
-    state?.setLocale(newLocale);
+    try {
+      ProviderScope.containerOf(context, listen: false)
+          .read(appLocaleProvider.notifier)
+          .setLocale(newLocale);
+    } catch (_) {
+      final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
+      state?.setLocale(newLocale);
+    }
   }
 
   static void setThemeMode(BuildContext context, ThemeMode newThemeMode) {
-    final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
-    state?.setThemeMode(newThemeMode);
+    try {
+      ProviderScope.containerOf(context, listen: false)
+          .read(appThemeModeProvider.notifier)
+          .setThemeMode(newThemeMode);
+    } catch (_) {
+      final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
+      state?.setThemeMode(newThemeMode);
+    }
   }
 
   static void setScreenOrientation(BuildContext context, bool autoRotate) {
-    final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
-    state?.setScreenOrientation(autoRotate);
+    try {
+      ProviderScope.containerOf(context, listen: false)
+          .read(appAutoRotateProvider.notifier)
+          .setScreenOrientation(autoRotate);
+      applyScreenOrientation(autoRotate);
+    } catch (_) {
+      final _AgentsDroidAppState? state = context.findAncestorStateOfType<_AgentsDroidAppState>();
+      state?.setScreenOrientation(autoRotate);
+    }
   }
 
   static void applyScreenOrientation(bool autoRotate) {
@@ -123,47 +149,39 @@ class AgentsDroidApp extends StatefulWidget {
   }
 
   @override
-  State<AgentsDroidApp> createState() => _AgentsDroidAppState();
+  ConsumerState<AgentsDroidApp> createState() => _AgentsDroidAppState();
 }
 
-class _AgentsDroidAppState extends State<AgentsDroidApp> {
-  late Locale _locale;
-  late ThemeMode _themeMode;
-
+class _AgentsDroidAppState extends ConsumerState<AgentsDroidApp> {
   @override
   void initState() {
     super.initState();
-    _locale = Locale(widget.keyVault.getLanguage());
-    _themeMode = widget.keyVault.getThemeMode();
     AgentsDroidApp.applyScreenOrientation(widget.keyVault.isAutoRotateEnabled());
   }
 
   void setLocale(Locale newLocale) {
-    setState(() {
-      _locale = newLocale;
-    });
-    widget.keyVault.setLanguage(newLocale.languageCode);
+    ref.read(appLocaleProvider.notifier).setLocale(newLocale);
   }
 
   void setThemeMode(ThemeMode newThemeMode) {
-    setState(() {
-      _themeMode = newThemeMode;
-    });
-    widget.keyVault.setThemeMode(newThemeMode);
+    ref.read(appThemeModeProvider.notifier).setThemeMode(newThemeMode);
   }
 
   void setScreenOrientation(bool autoRotate) {
+    ref.read(appAutoRotateProvider.notifier).setScreenOrientation(autoRotate);
     AgentsDroidApp.applyScreenOrientation(autoRotate);
-    widget.keyVault.setAutoRotateEnabled(autoRotate);
   }
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(appLocaleProvider);
+    final themeMode = ref.watch(appThemeModeProvider);
+
     return MaterialApp(
       title: 'AgentsDroid',
       debugShowCheckedModeBanner: false,
-      themeMode: _themeMode,
-      locale: _locale,
+      themeMode: themeMode,
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
