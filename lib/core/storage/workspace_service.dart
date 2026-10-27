@@ -91,11 +91,21 @@ class WorkspaceService {
 
   // Resolves a relative or absolute path safely within the workspace
   String resolvePath(String relativeOrAbsolutePath) {
-    if (p.isAbsolute(relativeOrAbsolutePath) && relativeOrAbsolutePath.startsWith(workspacePath)) {
-      return relativeOrAbsolutePath;
+    final String fullPath;
+    if (p.isAbsolute(relativeOrAbsolutePath)) {
+      fullPath = p.normalize(relativeOrAbsolutePath);
+    } else {
+      fullPath = p.normalize(p.join(workspacePath, relativeOrAbsolutePath));
     }
-    final normalized = p.normalize(relativeOrAbsolutePath);
-    return p.join(workspacePath, normalized);
+
+    final normalizedWs = p.normalize(workspacePath);
+    if (!p.equals(fullPath, normalizedWs) && !p.isWithin(normalizedWs, fullPath)) {
+      throw FileSystemException(
+        'Path traversal detected: path escapes workspace sandbox',
+        relativeOrAbsolutePath,
+      );
+    }
+    return fullPath;
   }
 
   Future<List<FileSystemEntity>> listFiles({String relativePath = ''}) async {

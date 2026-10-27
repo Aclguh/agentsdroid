@@ -50,6 +50,21 @@ void main() {
       expect(await dir.exists(), isTrue);
     });
 
+    test('blocks path traversal attempts outside workspace', () async {
+      final service = WorkspaceService();
+      await service.init(baseDir: docDir);
+
+      // Traversal using parent paths
+      expect(() => service.resolvePath('../../secret.txt'), throwsA(isA<FileSystemException>()));
+      expect(() => service.resolvePath('foo/../../../../outside'), throwsA(isA<FileSystemException>()));
+
+      // Traversal using absolute external paths
+      expect(() => service.resolvePath('/data/data/com.agentsdroid/shared_prefs/keys.xml'), throwsA(isA<FileSystemException>()));
+
+      // Valid paths within workspace should resolve without error
+      expect(service.resolvePath('sub/file.dart'), equals(service.resolvePath('./sub/file.dart')));
+    });
+
     test('supports multi-project creation, listing, and switching', () async {
       final service = WorkspaceService();
       await service.init(baseDir: docDir);
