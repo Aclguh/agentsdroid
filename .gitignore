@@ -50,3 +50,7 @@ app.*.map.json
 
 # Local Agent instructions
 AGENTS.md
+
+
+# Temporary improvement tracking
+IMPROVEMENTS.md
