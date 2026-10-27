@@ -274,9 +274,12 @@ class WorkspaceService {
     if (!await prootManager.isInstalled()) {
       throw StateError('Linux Subsystem is required for git commit.');
     }
-    final sanitizedMsg = message.replaceAll('"', '\\"');
-    return await prootManager.runCommand(
-      'git add . && git commit -m "$sanitizedMsg"',
+    final addRes = await prootManager.runCommandArgs(['git', 'add', '.'], workingDir: '/workspace');
+    if (addRes.exitCode != 0) {
+      return addRes;
+    }
+    return await prootManager.runCommandArgs(
+      ['git', 'commit', '-m', message],
       workingDir: '/workspace',
     );
   }

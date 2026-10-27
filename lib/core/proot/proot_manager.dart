@@ -352,6 +352,43 @@ class PRootManager {
     }
   }
 
+  /// Run command with explicit arguments list without invoking shell interpolation
+  Future<ProcessResult> runCommandArgs(
+    List<String> commandArgs, {
+    Map<String, String>? environment,
+    String? workingDir,
+  }) async {
+    if (!await isInstalled()) {
+      throw StateError('Linux subsystem is not installed yet.');
+    }
+
+    final fullEnv = _buildEnvironment(environment);
+    final root = rootfsDir;
+
+    if (_prootBin != null && await _prootBin!.exists()) {
+      final args = _buildPRootArgsList(commandArgs, workingDir: workingDir);
+      return await Process.run(
+        _prootBin!.path,
+        args,
+        environment: fullEnv,
+        workingDirectory: root.path,
+      );
+    } else {
+      final effectiveWd = workingDir != null
+          ? (_workspacePath != null && workingDir.startsWith('/workspace')
+              ? _workspacePath!
+              : p.join(root.path, workingDir.replaceFirst('/', '')))
+          : _workspacePath;
+
+      return await Process.run(
+        commandArgs.first,
+        commandArgs.sublist(1),
+        workingDirectory: effectiveWd,
+        environment: fullEnv,
+      );
+    }
+  }
+
   /// Stream command stdout and stderr in real-time
   Future<int> runStreamingCommand(
     String command, {
@@ -443,6 +480,53 @@ class PRootManager {
     );
   }
 
+  /// Start an interactive process with argument list without shell interpolation
+  Future<PRootProcess> startProcessArgs(
+    List<String> commandArgs, {
+    Map<String, String>? environment,
+    String? workingDir,
+  }) async {
+    if (!await isInstalled()) {
+      throw StateError('Linux subsystem is not installed yet.');
+    }
+
+    final fullEnv = _buildEnvironment(environment);
+    final root = rootfsDir;
+
+    Process process;
+    if (_prootBin != null && await _prootBin!.exists()) {
+      final args = _buildPRootArgsList(commandArgs, workingDir: workingDir);
+      process = await Process.start(
+        _prootBin!.path,
+        args,
+        environment: fullEnv,
+        workingDirectory: root.path,
+      );
+    } else {
+      final effectiveWd = workingDir != null
+          ? (_workspacePath != null && workingDir.startsWith('/workspace')
+              ? _workspacePath!
+              : p.join(root.path, workingDir.replaceFirst('/', '')))
+          : _workspacePath;
+
+      process = await Process.start(
+        commandArgs.first,
+        commandArgs.sublist(1),
+        workingDirectory: effectiveWd,
+        environment: fullEnv,
+      );
+    }
+
+    final stdoutStream = process.stdout.transform(utf8.decoder).asBroadcastStream();
+    final stderrStream = process.stderr.transform(utf8.decoder).asBroadcastStream();
+
+    return PRootProcess(
+      process: process,
+      stdout: stdoutStream,
+      stderr: stderrStream,
+    );
+  }
+
   /// Inspect installed developer toolchains inside the subsystem
   Future<ToolchainStatus> checkToolchains() async {
     if (!await isInstalled()) {
@@ -508,6 +592,25 @@ class PRootManager {
                     File(p.join(root.path, 'usr', 'bin', 'bash')).existsSync();
     final shell = hasBash ? '/bin/bash' : '/bin/sh';
     args.addAll(['-w', wd, shell, '-c', command]);
+    return args;
+  }
+
+  List<String> _buildPRootArgsList(List<String> commandArgs, {String? workingDir}) {
+    final root = rootfsDir;
+    final args = <String>[
+      '-r', root.path,
+      '-0',
+      '-b', '/dev',
+      '-b', '/proc',
+      '-b', '/sys',
+    ];
+
+    if (_workspacePath != null && Directory(_workspacePath!).existsSync()) {
+      args.addAll(['-b', '$_workspacePath:/workspace']);
+    }
+
+    final wd = workingDir ?? '/workspace';
+    args.addAll(['-w', wd, ...commandArgs]);
     return args;
   }
 

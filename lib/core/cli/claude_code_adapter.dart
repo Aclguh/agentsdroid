@@ -77,13 +77,15 @@ class ClaudeCodeAdapter implements AgentEngine {
     try {
       _updateState(AgentState.thinking, message: 'Starting Claude Code CLI session...');
 
-      // Escape quotes for bash argument
-      final sanitizedPrompt = prompt.replaceAll('"', '\\"');
-      // Try running global claude CLI or npx fallback
-      final command = 'claude -p "$sanitizedPrompt" || npx @anthropic-ai/claude-code -p "$sanitizedPrompt"';
-
-      _activeProcess = await prootManager.startProcess(
-        command,
+      // Execute safely passing prompt as positional argument without shell interpolation
+      _activeProcess = await prootManager.startProcessArgs(
+        [
+          'sh',
+          '-c',
+          'command -v claude >/dev/null 2>&1 && exec claude -p "\$1" || exec npx @anthropic-ai/claude-code -p "\$1"',
+          'sh',
+          prompt,
+        ],
         environment: env,
         workingDir: '/workspace',
       );
