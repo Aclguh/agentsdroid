@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../../models/agent_event.dart';
 
 enum ForegroundTaskLevel {
@@ -130,6 +132,8 @@ class ForegroundServiceManager {
     });
   }
 
+  static const MethodChannel _channel = MethodChannel('com.agentsdroid/foreground_service');
+
   void _updateState({
     required ForegroundTaskLevel level,
     required String title,
@@ -143,6 +147,22 @@ class ForegroundServiceManager {
     );
     _stateController.add(_currentState);
     debugPrint('[ForegroundService] ${level.name.toUpperCase()}: $title - $body (WakeLock: $_isWakeLockActive)');
+
+    if (!kIsWeb) {
+      try {
+        if (Platform.isAndroid) {
+          if (level == ForegroundTaskLevel.running || level == ForegroundTaskLevel.urgentApproval) {
+            _channel.invokeMethod('startOrUpdate', {
+              'title': title,
+              'body': body,
+              'urgent': level == ForegroundTaskLevel.urgentApproval,
+            });
+          } else if (level == ForegroundTaskLevel.completed || level == ForegroundTaskLevel.idle || level == ForegroundTaskLevel.error) {
+            _channel.invokeMethod('stopService');
+          }
+        }
+      } catch (_) {}
+    }
   }
 
   void dispose() {
