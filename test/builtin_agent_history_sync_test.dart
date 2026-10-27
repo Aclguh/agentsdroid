@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:agentsdroid/core/builtin/builtin_agent_engine.dart';
 import 'package:agentsdroid/core/storage/key_vault.dart';
 import 'package:agentsdroid/core/storage/workspace_service.dart';
@@ -191,6 +194,54 @@ void main() {
       engine.resetSession();
       expect(engine.openaiHistory.isEmpty, isTrue);
       expect(engine.anthropicHistory.isEmpty, isTrue);
+    });
+
+    test('streams thinking and message tokens via SSE in startTask', () async {
+      await keyVault.addOrUpdateProvider(const ModelProviderConfig(
+        id: 'test_provider',
+        name: 'Test Provider',
+        baseUrl: 'https://api.test.com/v1',
+        models: [ModelConfig(id: 'test-model', name: 'Test Model')],
+      ));
+      await keyVault.setActiveProviderId('test_provider');
+      await keyVault.setActiveModel('test-model');
+      await keyVault.setApiKeyForProvider('test_provider', 'sk-test');
+
+      final sseLines = [
+        'data: {"choices":[{"delta":{"reasoning_content":"Thinking deeply..."}}]}',
+        'data: {"choices":[{"delta":{"content":"Hello "}}]}',
+        'data: {"choices":[{"delta":{"content":"World!"}}]}',
+        'data: [DONE]',
+      ].join('\n');
+
+      final mockClient = MockClient.streaming((request, bodyStream) async {
+        final stream = Stream.value(utf8.encode(sseLines));
+        return http.StreamedResponse(stream, 200);
+      });
+
+      final streamingEngine = BuiltinAgentEngine(
+        keyVault,
+        workspace,
+        httpClient: mockClient,
+      );
+
+      final events = <AgentEvent>[];
+      final sub = streamingEngine.eventStream.listen((e) => events.add(e));
+
+      await streamingEngine.startTask('Hi');
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      final thoughts = events.whereType<ThoughtEvent>().toList();
+      final messages = events.whereType<MessageEvent>().toList();
+
+      expect(thoughts.isNotEmpty, isTrue);
+      expect(thoughts.last.thought, equals('Thinking deeply...'));
+
+      expect(messages.isNotEmpty, isTrue);
+      expect(messages.last.text, equals('Hello World!'));
+
+      await sub.cancel();
+      await streamingEngine.dispose();
     });
   });
 }

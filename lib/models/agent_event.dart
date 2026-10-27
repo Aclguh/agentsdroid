@@ -45,10 +45,12 @@ class ThoughtEvent extends AgentEvent {
 class MessageEvent extends AgentEvent {
   final String text;
   final bool isComplete;
+  final bool isDelta;
 
   MessageEvent({
     required this.text,
     this.isComplete = false,
+    this.isDelta = false,
     super.timestamp,
   });
 }

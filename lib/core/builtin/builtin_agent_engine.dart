@@ -15,6 +15,7 @@ class BuiltinAgentEngine implements AgentEngine {
   final KeyVault _keyVault;
   final WorkspaceService _workspace;
   final PRootManager? prootManager;
+  final http.Client? httpClient;
 
   final _eventController = StreamController<AgentEvent>.broadcast();
   @override
@@ -38,7 +39,7 @@ class BuiltinAgentEngine implements AgentEngine {
   @visibleForTesting
   List<Map<String, dynamic>> get anthropicHistory => List.unmodifiable(_anthropicHistory);
 
-  BuiltinAgentEngine(this._keyVault, this._workspace, {this.prootManager});
+  BuiltinAgentEngine(this._keyVault, this._workspace, {this.prootManager, this.httpClient});
 
   void _setState(AgentState state, [String? message]) {
     _currentState = state;
@@ -294,43 +295,149 @@ class BuiltinAgentEngine implements AgentEngine {
         }
       }
 
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
-        },
-        body: jsonEncode(requestBody),
-      );
+      requestBody['stream'] = true;
 
-      if (response.statusCode != 200) {
-        throw Exception('API returned status ${response.statusCode}: ${response.body}');
+      final request = http.Request('POST', url);
+      request.headers.addAll({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $apiKey',
+        'Accept': 'text/event-stream',
+      });
+      request.body = jsonEncode(requestBody);
+
+      final client = httpClient ?? http.Client();
+      final http.StreamedResponse streamedResponse;
+      try {
+        streamedResponse = await client.send(request);
+      } catch (e) {
+        if (httpClient == null) client.close();
+        rethrow;
       }
 
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      final choice = data['choices'][0];
-      final message = choice['message'];
-      final content = message['content'];
-      final toolCalls = message['tool_calls'];
-
-      final reasoningContent = message['reasoning_content'];
-      if (reasoningContent != null && reasoningContent.toString().isNotEmpty) {
-        _eventController.add(ThoughtEvent(thought: reasoningContent.toString()));
+      if (streamedResponse.statusCode != 200) {
+        final errBytes = await streamedResponse.stream.toBytes();
+        final errBody = utf8.decode(errBytes);
+        if (httpClient == null) client.close();
+        throw Exception('API returned status ${streamedResponse.statusCode}: $errBody');
       }
 
-      if (content != null && content.toString().isNotEmpty) {
-        _eventController.add(MessageEvent(text: content.toString(), isComplete: toolCalls == null));
+      final accumulatedContent = StringBuffer();
+      final accumulatedReasoning = StringBuffer();
+      final accumulatedToolCalls = <int, Map<String, dynamic>>{};
+
+      final linesStream = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      await for (final line in linesStream) {
+        if (_isInterrupted) break;
+        final trimmed = line.trim();
+        if (trimmed.isEmpty || trimmed.startsWith(':')) continue;
+        if (trimmed == 'data: [DONE]') break;
+        if (!trimmed.startsWith('data: ')) continue;
+
+        final jsonStr = trimmed.substring(6).trim();
+        if (jsonStr.isEmpty) continue;
+
+        try {
+          final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+          final choices = data['choices'] as List?;
+          if (choices == null || choices.isEmpty) continue;
+          final choice = choices[0] as Map<String, dynamic>;
+          final delta = choice['delta'] as Map<String, dynamic>?;
+          if (delta == null) continue;
+
+          // 1. Thinking / Reasoning delta (e.g. DeepSeek R1)
+          final reasoningChunk = delta['reasoning_content'] as String?;
+          if (reasoningChunk != null && reasoningChunk.isNotEmpty) {
+            accumulatedReasoning.write(reasoningChunk);
+            _eventController.add(ThoughtEvent(thought: accumulatedReasoning.toString()));
+          }
+
+          // 2. Main content delta
+          final textChunk = delta['content'] as String?;
+          if (textChunk != null && textChunk.isNotEmpty) {
+            accumulatedContent.write(textChunk);
+            _eventController.add(MessageEvent(
+              text: accumulatedContent.toString(),
+              isComplete: false,
+            ));
+          }
+
+          // 3. Tool call streaming delta
+          final deltaTools = delta['tool_calls'] as List?;
+          if (deltaTools != null) {
+            for (final dt in deltaTools) {
+              final idx = (dt['index'] as num?)?.toInt() ?? 0;
+              final toolEntry = accumulatedToolCalls.putIfAbsent(idx, () => {
+                'id': '',
+                'type': 'function',
+                'name': '',
+                'arguments': StringBuffer(),
+              });
+              if (dt['id'] != null) {
+                toolEntry['id'] = dt['id'];
+              }
+              final fn = dt['function'] as Map<String, dynamic>?;
+              if (fn != null) {
+                if (fn['name'] != null) {
+                  toolEntry['name'] = (toolEntry['name'] as String) + (fn['name'] as String);
+                }
+                if (fn['arguments'] != null) {
+                  (toolEntry['arguments'] as StringBuffer).write(fn['arguments']);
+                }
+              }
+            }
+          }
+        } catch (_) {}
       }
 
-      _openaiHistory.add(message);
+      if (httpClient == null) {
+        client.close();
+      }
 
-      if (toolCalls == null || (toolCalls as List).isEmpty) {
-        // No more tool calls, agent is done
+      final toolCallsList = <Map<String, dynamic>>[];
+      if (accumulatedToolCalls.isNotEmpty) {
+        final sortedKeys = accumulatedToolCalls.keys.toList()..sort();
+        for (final k in sortedKeys) {
+          final tc = accumulatedToolCalls[k]!;
+          toolCallsList.add({
+            'id': tc['id'],
+            'type': 'function',
+            'function': {
+              'name': tc['name'],
+              'arguments': (tc['arguments'] as StringBuffer).toString(),
+            },
+          });
+        }
+      }
+
+      final assistantMessage = <String, dynamic>{
+        'role': 'assistant',
+        'content': accumulatedContent.isNotEmpty ? accumulatedContent.toString() : null,
+      };
+      if (toolCallsList.isNotEmpty) {
+        assistantMessage['tool_calls'] = toolCallsList;
+      }
+      if (accumulatedReasoning.isNotEmpty) {
+        assistantMessage['reasoning_content'] = accumulatedReasoning.toString();
+      }
+
+      if (accumulatedContent.isNotEmpty) {
+        _eventController.add(MessageEvent(
+          text: accumulatedContent.toString(),
+          isComplete: toolCallsList.isEmpty,
+        ));
+      }
+
+      _openaiHistory.add(assistantMessage);
+
+      if (toolCallsList.isEmpty) {
         break;
       }
 
       // Process tool calls
-      for (final tc in toolCalls) {
+      for (final tc in toolCallsList) {
         if (_isInterrupted) break;
 
         final callId = tc['id'] as String;
@@ -432,49 +539,139 @@ class BuiltinAgentEngine implements AgentEngine {
         requestBody['max_tokens'] = 4096;
       }
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: jsonEncode(requestBody),
-      );
+      requestBody['stream'] = true;
 
-      if (response.statusCode != 200) {
-        throw Exception('Anthropic API error (${response.statusCode}): ${response.body}');
+      final request = http.Request('POST', Uri.parse(url));
+      request.headers.addAll({
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Accept': 'text/event-stream',
+      });
+      request.body = jsonEncode(requestBody);
+
+      final client = httpClient ?? http.Client();
+      final http.StreamedResponse streamedResponse;
+      try {
+        streamedResponse = await client.send(request);
+      } catch (e) {
+        if (httpClient == null) client.close();
+        rethrow;
       }
 
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      final contentList = data['content'] as List;
+      if (streamedResponse.statusCode != 200) {
+        final errBytes = await streamedResponse.stream.toBytes();
+        final errBody = utf8.decode(errBytes);
+        if (httpClient == null) client.close();
+        throw Exception('Anthropic API error (${streamedResponse.statusCode}): $errBody');
+      }
+
+      final contentBlocks = <int, Map<String, dynamic>>{};
+      final accumulatedThought = StringBuffer();
+      final accumulatedText = StringBuffer();
+
+      final linesStream = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      await for (final line in linesStream) {
+        if (_isInterrupted) break;
+        final trimmed = line.trim();
+        if (!trimmed.startsWith('data: ')) continue;
+        final jsonStr = trimmed.substring(6).trim();
+        if (jsonStr.isEmpty) continue;
+
+        try {
+          final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+          final type = data['type'] as String?;
+
+          if (type == 'content_block_start') {
+            final idx = (data['index'] as num).toInt();
+            final cb = data['content_block'] as Map<String, dynamic>;
+            final blockType = cb['type'] as String;
+            contentBlocks[idx] = {
+              'type': blockType,
+              if (blockType == 'tool_use') ...{
+                'id': cb['id'],
+                'name': cb['name'],
+                'partial_json': StringBuffer(),
+              },
+            };
+          } else if (type == 'content_block_delta') {
+            final idx = (data['index'] as num).toInt();
+            final delta = data['delta'] as Map<String, dynamic>;
+            final deltaType = delta['type'] as String?;
+
+            if (deltaType == 'thinking_delta') {
+              final chunk = delta['thinking'] as String? ?? '';
+              accumulatedThought.write(chunk);
+              _eventController.add(ThoughtEvent(thought: accumulatedThought.toString()));
+            } else if (deltaType == 'text_delta') {
+              final chunk = delta['text'] as String? ?? '';
+              accumulatedText.write(chunk);
+              _eventController.add(MessageEvent(
+                text: accumulatedText.toString(),
+                isComplete: false,
+              ));
+            } else if (deltaType == 'input_json_delta') {
+              final chunk = delta['partial_json'] as String? ?? '';
+              if (contentBlocks[idx] != null && contentBlocks[idx]!['partial_json'] != null) {
+                (contentBlocks[idx]!['partial_json'] as StringBuffer).write(chunk);
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (httpClient == null) {
+        client.close();
+      }
 
       final toolUses = <Map<String, dynamic>>[];
-      final textBlocks = <String>[];
+      final finalContentList = <Map<String, dynamic>>[];
 
-      for (final block in contentList) {
-        if (block['type'] == 'text') {
-          textBlocks.add(block['text']);
-        } else if (block['type'] == 'tool_use') {
-          toolUses.add(block);
-        } else if (block['type'] == 'thinking') {
-          final thoughtText = block['thinking'] as String? ?? '';
-          if (thoughtText.isNotEmpty) {
-            _eventController.add(ThoughtEvent(thought: thoughtText));
-          }
+      if (accumulatedThought.isNotEmpty) {
+        finalContentList.add({
+          'type': 'thinking',
+          'thinking': accumulatedThought.toString(),
+        });
+      }
+      if (accumulatedText.isNotEmpty) {
+        finalContentList.add({
+          'type': 'text',
+          'text': accumulatedText.toString(),
+        });
+      }
+
+      final sortedIndices = contentBlocks.keys.toList()..sort();
+      for (final idx in sortedIndices) {
+        final b = contentBlocks[idx]!;
+        if (b['type'] == 'tool_use') {
+          Map<String, dynamic> parsedInput = {};
+          try {
+            parsedInput = jsonDecode((b['partial_json'] as StringBuffer).toString()) as Map<String, dynamic>;
+          } catch (_) {}
+          final tu = {
+            'type': 'tool_use',
+            'id': b['id'],
+            'name': b['name'],
+            'input': parsedInput,
+          };
+          toolUses.add(tu);
+          finalContentList.add(tu);
         }
       }
 
-      if (textBlocks.isNotEmpty) {
+      if (accumulatedText.isNotEmpty) {
         _eventController.add(MessageEvent(
-          text: textBlocks.join('\n\n'),
+          text: accumulatedText.toString(),
           isComplete: toolUses.isEmpty,
         ));
       }
 
       _anthropicHistory.add({
         'role': 'assistant',
-        'content': contentList,
+        'content': finalContentList,
       });
 
       if (toolUses.isEmpty) {

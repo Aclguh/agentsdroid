@@ -301,14 +301,23 @@ class _ChatScreenState extends State<ChatScreen> {
             _currentAssistantMessage = ChatMessage(
               id: _uuid.v4(),
               role: MessageRole.assistant,
+              isStreaming: !event.isComplete,
             );
             _messages.add(_currentAssistantMessage!);
+          } else if (!event.isComplete) {
+            _currentAssistantMessage!.isStreaming = true;
           }
 
           if (_currentAssistantMessage!.blocks.isNotEmpty &&
               _currentAssistantMessage!.blocks.last is TextBlock) {
             final lastBlock = _currentAssistantMessage!.blocks.last as TextBlock;
-            lastBlock.text += (event.text.isNotEmpty ? '\n\n${event.text}' : '');
+            if (event.isDelta) {
+              lastBlock.text += event.text;
+            } else if (_currentAssistantMessage!.isStreaming) {
+              lastBlock.text = event.text;
+            } else {
+              lastBlock.text += (event.text.isNotEmpty ? '\n\n${event.text}' : '');
+            }
           } else if (event.text.isNotEmpty) {
             _currentAssistantMessage!.blocks.add(TextBlock(event.text));
           }
