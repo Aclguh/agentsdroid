@@ -7,6 +7,7 @@ import 'core/proot/proot_manager.dart';
 import 'core/storage/key_vault.dart';
 import 'core/storage/session_service.dart';
 import 'core/storage/workspace_service.dart';
+import 'core/utils/app_logger.dart';
 import 'l10n/app_localizations.dart';
 import 'ui/chat/chat_screen.dart';
 
@@ -45,7 +46,7 @@ void main() async {
       ),
     );
   } catch (e, stackTrace) {
-    debugPrint('Initialization error: $e\n$stackTrace');
+    AppLogger.error('Initialization error: $e', tag: 'Main', error: e, stackTrace: stackTrace);
     runApp(
       MaterialApp(
         debugShowCheckedModeBanner: false,

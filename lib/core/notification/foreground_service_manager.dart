@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../../models/agent_event.dart';
+import '../utils/app_logger.dart';
 
 enum ForegroundTaskLevel {
   idle,
@@ -146,7 +147,10 @@ class ForegroundServiceManager {
       isWakeLockHeld: _isWakeLockActive,
     );
     _stateController.add(_currentState);
-    debugPrint('[ForegroundService] ${level.name.toUpperCase()}: $title - $body (WakeLock: $_isWakeLockActive)');
+    AppLogger.info(
+      '${level.name.toUpperCase()}: $title - $body (WakeLock: $_isWakeLockActive)',
+      tag: 'ForegroundService',
+    );
 
     if (!kIsWeb) {
       try {
