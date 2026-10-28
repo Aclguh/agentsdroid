@@ -464,9 +464,48 @@ class KeyVault {
   bool isConversationsSectionExpanded() => preferences.isConversationsSectionExpanded();
   Future<void> setConversationsSectionExpanded(bool expanded) => preferences.setConversationsSectionExpanded(expanded);
 
-  // Export environment variables map for PRoot Linux environment injection
-  Future<Map<String, String>> exportEnvironmentVariables() async {
+  /// Export environment variables map for PRoot Linux environment injection.
+  /// Follows the principle of least privilege (SEC-04): by default only exports
+  /// the key for the active provider or explicitly requested provider(s).
+  Future<Map<String, String>> exportEnvironmentVariables({
+    String? providerId,
+    bool onlyActiveProvider = true,
+  }) async {
     final env = <String, String>{};
+    final targetProviderId = providerId ?? getActiveProviderId();
+    final activeProvider = getProvider(targetProviderId);
+
+    if (onlyActiveProvider) {
+      if (activeProvider != null) {
+        if (activeProvider.isCustom) {
+          final customKey = await getApiKeyForProvider(activeProvider.id);
+          if (customKey != null && customKey.isNotEmpty) {
+            env['OPENAI_API_KEY'] = customKey;
+            env['OPENAI_BASE_URL'] = activeProvider.baseUrl;
+          }
+        } else {
+          if (activeProvider.id == LLMProvider.anthropic.name) {
+            final key = await getApiKey(LLMProvider.anthropic);
+            if (key != null && key.isNotEmpty) env['ANTHROPIC_API_KEY'] = key;
+          } else if (activeProvider.id == LLMProvider.openai.name) {
+            final key = await getApiKey(LLMProvider.openai);
+            if (key != null && key.isNotEmpty) env['OPENAI_API_KEY'] = key;
+          } else if (activeProvider.id == LLMProvider.deepseek.name) {
+            final key = await getApiKey(LLMProvider.deepseek);
+            if (key != null && key.isNotEmpty) {
+              env['DEEPSEEK_API_KEY'] = key;
+              env['OPENAI_API_KEY'] = key;
+              env['OPENAI_BASE_URL'] = activeProvider.baseUrl;
+            }
+          } else if (activeProvider.id == LLMProvider.gemini.name) {
+            final key = await getApiKey(LLMProvider.gemini);
+            if (key != null && key.isNotEmpty) env['GEMINI_API_KEY'] = key;
+          }
+        }
+      }
+      return env;
+    }
+
     final anthropicKey = await getApiKey(LLMProvider.anthropic);
     if (anthropicKey != null && anthropicKey.isNotEmpty) {
       env['ANTHROPIC_API_KEY'] = anthropicKey;
@@ -484,7 +523,6 @@ class KeyVault {
       env['GEMINI_API_KEY'] = geminiKey;
     }
 
-    final activeProvider = getProvider(getActiveProviderId());
     if (activeProvider != null && activeProvider.isCustom) {
       final customKey = await getApiKeyForProvider(activeProvider.id);
       if (customKey != null && customKey.isNotEmpty) {

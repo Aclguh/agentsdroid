@@ -70,7 +70,6 @@ void main() {
       final diff = service.computeDiff('myers.txt', orig, current);
 
       final types = diff.diffLines.map((e) => e.type).toList();
-      final texts = diff.diffLines.map((e) => e.text).toList();
 
       expect(types, contains(DiffLineType.removed));
       expect(types, contains(DiffLineType.added));
