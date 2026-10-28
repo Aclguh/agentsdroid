@@ -3,12 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../proot/proot_manager.dart';
 import '../storage/key_vault.dart';
+import '../storage/preferences_service.dart';
 import '../storage/session_service.dart';
 import '../storage/workspace_service.dart';
 
 /// Core Service Providers (overridden in ProviderScope at app start)
 final keyVaultProvider = Provider<KeyVault>((ref) {
   throw UnimplementedError('keyVaultProvider must be overridden');
+});
+
+final preferencesServiceProvider = Provider<PreferencesService>((ref) {
+  final keyVault = ref.watch(keyVaultProvider);
+  return keyVault.preferences;
 });
 
 final workspaceServiceProvider = Provider<WorkspaceService>((ref) {

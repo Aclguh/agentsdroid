@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'preferences_service.dart';
 
 class ModelConfig {
   final String id;
@@ -127,21 +128,23 @@ class KeyVault {
   static const _prefYoloMode = 'pref_yolo_mode';
   static const _prefApprovalMode = 'pref_approval_mode';
   static const _prefThinkingIntensity = 'pref_thinking_intensity';
-  static const _prefLanguage = 'pref_language';
   static const _prefSelectedEngine = 'pref_selected_engine';
   static const _prefProvidersConfigJson = 'pref_providers_config_json';
 
   final FlutterSecureStorage _secureStorage;
   final SharedPreferences _prefs;
+  final PreferencesService preferences;
 
-  KeyVault(this._secureStorage, this._prefs);
+  KeyVault(this._secureStorage, this._prefs, [PreferencesService? preferences])
+      : preferences = preferences ?? PreferencesService(_prefs);
 
   static Future<KeyVault> create() async {
     const secureStorage = FlutterSecureStorage(
       aOptions: AndroidOptions(),
     );
     final prefs = await SharedPreferences.getInstance();
-    return KeyVault(secureStorage, prefs);
+    final preferences = PreferencesService(prefs);
+    return KeyVault(secureStorage, prefs, preferences);
   }
 
   // --- Predefined Default Providers ---
@@ -438,80 +441,28 @@ class KeyVault {
     await _prefs.setString(_prefThinkingIntensity, intensity.name);
   }
 
-  // --- Localization Language (Default: 'zh') ---
-  String getLanguage() {
-    return _prefs.getString(_prefLanguage) ?? 'zh';
-  }
+  // --- Localization Language (delegated to PreferencesService) ---
+  String getLanguage() => preferences.getLanguage();
+  Future<void> setLanguage(String langCode) => preferences.setLanguage(langCode);
 
-  Future<void> setLanguage(String langCode) async {
-    await _prefs.setString(_prefLanguage, langCode);
-  }
+  // --- Theme Mode (delegated to PreferencesService) ---
+  ThemeMode getThemeMode() => preferences.getThemeMode();
+  Future<void> setThemeMode(ThemeMode mode) => preferences.setThemeMode(mode);
 
-  // --- Theme Mode (Default: 'dark') ---
-  static const _prefThemeMode = 'pref_theme_mode';
+  // --- Auto-rotate screen (delegated to PreferencesService) ---
+  bool isAutoRotateEnabled() => preferences.isAutoRotateEnabled();
+  Future<void> setAutoRotateEnabled(bool enabled) => preferences.setAutoRotateEnabled(enabled);
 
-  ThemeMode getThemeMode() {
-    final mode = _prefs.getString(_prefThemeMode);
-    switch (mode) {
-      case 'system':
-        return ThemeMode.system;
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-      default:
-        return ThemeMode.dark;
-    }
-  }
+  // --- Expanded Projects Persistence (delegated to PreferencesService) ---
+  Set<String> getExpandedProjects() => preferences.getExpandedProjects();
+  Future<void> setExpandedProjects(Set<String> projects) => preferences.setExpandedProjects(projects);
 
-  Future<void> setThemeMode(ThemeMode mode) async {
-    await _prefs.setString(_prefThemeMode, mode.name);
-  }
+  // --- Section Expansion Persistence in Drawer (delegated to PreferencesService) ---
+  bool isProjectsSectionExpanded() => preferences.isProjectsSectionExpanded();
+  Future<void> setProjectsSectionExpanded(bool expanded) => preferences.setProjectsSectionExpanded(expanded);
 
-  // --- Auto-rotate screen (Default: false - Lock Portrait) ---
-  static const _prefAutoRotate = 'pref_auto_rotate';
-
-  bool isAutoRotateEnabled() {
-    return _prefs.getBool(_prefAutoRotate) ?? false;
-  }
-
-  Future<void> setAutoRotateEnabled(bool enabled) async {
-    await _prefs.setBool(_prefAutoRotate, enabled);
-  }
-
-  // --- Expanded Projects Persistence ---
-  static const _prefExpandedProjects = 'pref_expanded_projects';
-
-  Set<String> getExpandedProjects() {
-    final list = _prefs.getStringList(_prefExpandedProjects);
-    if (list != null) {
-      return list.toSet();
-    }
-    return {'agentsdroid'};
-  }
-
-  Future<void> setExpandedProjects(Set<String> projects) async {
-    await _prefs.setStringList(_prefExpandedProjects, projects.toList());
-  }
-
-  // --- Section Expansion Persistence in Drawer ---
-  static const _prefProjectsSectionExpanded = 'pref_projects_section_expanded';
-  static const _prefConversationsSectionExpanded = 'pref_conversations_section_expanded';
-
-  bool isProjectsSectionExpanded() {
-    return _prefs.getBool(_prefProjectsSectionExpanded) ?? true;
-  }
-
-  Future<void> setProjectsSectionExpanded(bool expanded) async {
-    await _prefs.setBool(_prefProjectsSectionExpanded, expanded);
-  }
-
-  bool isConversationsSectionExpanded() {
-    return _prefs.getBool(_prefConversationsSectionExpanded) ?? true;
-  }
-
-  Future<void> setConversationsSectionExpanded(bool expanded) async {
-    await _prefs.setBool(_prefConversationsSectionExpanded, expanded);
-  }
+  bool isConversationsSectionExpanded() => preferences.isConversationsSectionExpanded();
+  Future<void> setConversationsSectionExpanded(bool expanded) => preferences.setConversationsSectionExpanded(expanded);
 
   // Export environment variables map for PRoot Linux environment injection
   Future<Map<String, String>> exportEnvironmentVariables() async {
