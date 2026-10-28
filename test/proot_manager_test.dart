@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:agentsdroid/core/proot/proot_manager.dart';
@@ -158,6 +161,85 @@ void main() {
       expect(toolchain.hasGit, isTrue);
       expect(toolchain.hasClaudeCode, isTrue);
       expect(toolchain.npmVersion, equals('10.2.3'));
+    });
+  });
+
+  group('PRoot Binary Detection and Deployment Tests', () {
+    test('detectAndroidAbi returns valid ABI identifier', () async {
+      final abi = await PRootManager.detectAndroidAbi();
+      expect(abi, isNotEmpty);
+      expect(PRootManager.defaultProotUrls.containsKey('arm64-v8a'), isTrue);
+    });
+
+    test('hasProotBinary is false when binary does not exist', () async {
+      await manager.init(appSupportDir: tempDir);
+      expect(manager.hasProotBinary, isFalse);
+      expect(manager.binDirectory, isNotNull);
+    });
+
+    test('ensureProotBinary copies binary from local native library candidate', () async {
+      await manager.init(appSupportDir: tempDir);
+
+      // Create a mock native library candidate
+      final mockLibDir = Directory(p.join(tempDir.path, 'mock_lib'));
+      await mockLibDir.create(recursive: true);
+      final mockLibProot = File(p.join(mockLibDir.path, 'libproot.so'));
+      await mockLibProot.writeAsString('MOCK_ELF_PROOT_BINARY_CONTENT');
+
+      final deployed = await manager.ensureProotBinary(
+        nativeLibCandidates: [mockLibProot.path],
+      );
+
+      expect(deployed, isNotNull);
+      expect(deployed!.existsSync(), isTrue);
+      expect(manager.hasProotBinary, isTrue);
+      expect(await deployed.readAsString(), equals('MOCK_ELF_PROOT_BINARY_CONTENT'));
+    });
+
+    test('ensureProotBinary downloads binary via http when candidate absent', () async {
+      await manager.init(appSupportDir: tempDir);
+
+      final mockClient = MockClient((request) async {
+        if (request.url.toString().contains('mock-proot')) {
+          return http.Response.bytes(utf8.encode('DOWNLOADED_PROOT_BINARY_BYTES'), 200);
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final deployed = await manager.ensureProotBinary(
+        customDownloadUrl: 'https://example.com/mock-proot',
+        httpClient: mockClient,
+        nativeLibCandidates: [], // No candidates
+      );
+
+      expect(deployed, isNotNull);
+      expect(deployed!.existsSync(), isTrue);
+      expect(manager.hasProotBinary, isTrue);
+      expect(await deployed.readAsString(), equals('DOWNLOADED_PROOT_BINARY_BYTES'));
+    });
+
+    test('ensureProotBinary returns existing binary without redownloading', () async {
+      await manager.init(appSupportDir: tempDir);
+
+      // Pre-populate proot in binDir
+      final binDir = manager.binDirectory!;
+      final prootFile = File(p.join(binDir.path, 'proot'));
+      await prootFile.writeAsString('EXISTING_PROOT_BINARY');
+
+      int requestCount = 0;
+      final mockClient = MockClient((request) async {
+        requestCount++;
+        return http.Response('should not be called', 500);
+      });
+
+      final result = await manager.ensureProotBinary(
+        customDownloadUrl: 'https://example.com/mock-proot',
+        httpClient: mockClient,
+      );
+
+      expect(result, isNotNull);
+      expect(requestCount, equals(0));
+      expect(await result!.readAsString(), equals('EXISTING_PROOT_BINARY'));
     });
   });
 }
