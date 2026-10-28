@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -240,6 +241,31 @@ void main() {
       expect(result, isNotNull);
       expect(requestCount, equals(0));
       expect(await result!.readAsString(), equals('EXISTING_PROOT_BINARY'));
+    });
+
+    test('installSubsystemFromArchive unpacks archive, verifies rootfs, and sets status to ready', () async {
+      await manager.init(appSupportDir: tempDir);
+
+      final archive = Archive();
+      final bashBytes = [35, 33, 47, 98, 105, 110, 47, 115, 104, 10]; // #!/bin/sh\n
+      archive.addFile(ArchiveFile('bin/bash', bashBytes.length, bashBytes)..mode = 0755);
+      archive.addFile(ArchiveFile('bin/sh', bashBytes.length, bashBytes)..mode = 0755);
+      archive.addFile(ArchiveFile('etc/os-release', 12, [78, 65, 77, 69, 61, 68, 101, 98, 105, 97, 110, 10]));
+
+      final tarData = TarEncoder().encode(archive);
+      final tarFile = File(p.join(tempDir.path, 'valid_rootfs.tar'));
+      await tarFile.writeAsBytes(tarData, flush: true);
+
+      final statuses = <PRootStatus>[];
+      final sub = manager.statusStream.listen((p) => statuses.add(p.status));
+
+      await manager.installSubsystemFromArchive(tarFile);
+
+      expect(manager.currentStatus, equals(PRootStatus.ready));
+      expect(await manager.isInstalled(), isTrue);
+      expect(statuses, contains(PRootStatus.ready));
+
+      await sub.cancel();
     });
   });
 }

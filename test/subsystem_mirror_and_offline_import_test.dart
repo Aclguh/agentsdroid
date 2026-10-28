@@ -178,5 +178,33 @@ void main() {
       expect(find.text('China Accelerator (ghproxy.net - Recommended)'), findsOneWidget);
       expect(find.text('Official Source (GitHub Releases)'), findsOneWidget);
     });
+
+    testWidgets('SubsystemSettingsScreen shows ready state, open terminal button, and resets subsystem', (tester) async {
+      await tester.runAsync(() async {
+        await prootManager.installSubsystem(mockForDev: true);
+      });
+
+      await tester.pumpWidget(createTestApp(const Locale('zh')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('已安装并就绪'), findsOneWidget);
+      expect(find.text('打开 Linux 终端'), findsOneWidget);
+      expect(find.text('重置子系统'), findsOneWidget);
+
+      // Tap reinstall/reset button
+      await tester.tap(find.text('重置子系统'));
+      await tester.pumpAndSettle();
+
+      // Dialog appears with title and content
+      expect(find.text('重置子系统'), findsWidgets);
+      expect(find.text('确定'), findsOneWidget);
+      expect(find.text('取消'), findsOneWidget);
+
+      // Tap cancel
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('已安装并就绪'), findsOneWidget);
+    });
   });
 }

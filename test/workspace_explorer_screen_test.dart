@@ -132,4 +132,116 @@ void main() {
     // Folder should now appear in the list
     expect(find.text('subfolder'), findsOneWidget);
   });
+
+  testWidgets('WorkspaceExplorerScreen opens file viewer modal and copies content', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestableWidget());
+    await tester.runAsync(() async {
+      await Future.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // Tap on test.txt inside runAsync because readFile does disk I/O
+    await tester.runAsync(() async {
+      await tester.tap(find.text('test.txt'));
+      await Future.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+
+    // File viewer modal should open
+    expect(find.text('Hello World'), findsOneWidget);
+    expect(find.byIcon(Icons.copy), findsOneWidget);
+
+    // Tap copy
+    await tester.tap(find.byIcon(Icons.copy));
+    await tester.pumpAndSettle();
+    expect(find.text('已复制文件内容到剪贴板'), findsOneWidget);
+
+    // Tap close
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.text('Hello World'), findsNothing);
+  });
+
+  testWidgets('WorkspaceExplorerScreen deletes a file with confirmation', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestableWidget());
+    await tester.runAsync(() async {
+      await Future.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // Target the delete button inside the ListTile for test.txt
+    final fileTile = find.ancestor(of: find.text('test.txt'), matching: find.byType(ListTile));
+    final deleteButton = find.descendant(of: fileTile, matching: find.byIcon(Icons.delete_outline));
+    expect(deleteButton, findsOneWidget);
+    await tester.tap(deleteButton);
+    await tester.pumpAndSettle();
+
+    // Confirm dialog appears
+    expect(find.text('确认删除'), findsOneWidget);
+
+    // Tap delete inside runAsync
+    await tester.runAsync(() async {
+      await tester.tap(find.text('删除'));
+      await Future.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+
+    // File should be deleted
+    expect(find.text('test.txt'), findsNothing);
+  });
+
+  testWidgets('WorkspaceExplorerScreen shows not-installed warning when prootManager is null', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestableWidget());
+    await tester.runAsync(() async {
+      await Future.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // Tap clone git icon
+    await tester.runAsync(() async {
+      await tester.tap(find.byIcon(Icons.download_for_offline_outlined));
+      await Future.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('Linux 子系统尚未安装，请前往「设置」进行安装'), findsOneWidget);
+  });
+
+  testWidgets('WorkspaceExplorerScreen renders extension-specific icons and empty state', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.runAsync(() async {
+      await workspace.writeFile('main.dart', 'void main() {}');
+      await workspace.writeFile('run.py', 'print(1)');
+      await workspace.writeFile('index.js', 'console.log(1)');
+      await workspace.writeFile('README.md', '# Readme');
+      await workspace.writeFile('config.json', '{}');
+    });
+
+    await tester.pumpWidget(buildTestableWidget());
+    await tester.runAsync(() async {
+      await Future.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.flutter_dash), findsOneWidget);
+    expect(find.byIcon(Icons.code), findsOneWidget);
+    expect(find.byIcon(Icons.javascript), findsOneWidget);
+    expect(find.byIcon(Icons.article_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.data_object), findsOneWidget);
+  });
 }

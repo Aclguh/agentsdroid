@@ -33,6 +33,7 @@ class ChatScreen extends StatelessWidget {
   final WorkspaceService? workspace;
   final PRootManager? prootManager;
   final SessionService? sessionService;
+  final String? initialSessionId;
 
   const ChatScreen({
     super.key,
@@ -40,6 +41,7 @@ class ChatScreen extends StatelessWidget {
     this.workspace,
     this.prootManager,
     this.sessionService,
+    this.initialSessionId,
   });
 
   static MarkdownStyleSheet buildMarkdownStyleSheet(ThemeData theme) {
@@ -152,6 +154,7 @@ class ChatScreen extends StatelessWidget {
       workspace: workspace,
       prootManager: prootManager,
       sessionService: sessionService,
+      initialSessionId: initialSessionId,
     );
 
     if (_hasProviderScope(context)) {
@@ -175,12 +178,14 @@ class _ChatScreenView extends ConsumerStatefulWidget {
   final WorkspaceService? workspace;
   final PRootManager? prootManager;
   final SessionService? sessionService;
+  final String? initialSessionId;
 
   const _ChatScreenView({
     this.keyVault,
     this.workspace,
     this.prootManager,
     this.sessionService,
+    this.initialSessionId,
   });
 
   @override
@@ -279,6 +284,26 @@ class _ChatScreenViewState extends ConsumerState<_ChatScreenView> {
   Future<void> _initSessionService() async {
     if (widget.sessionService == null) {
       await _sessionService.init();
+    }
+    if (widget.initialSessionId != null) {
+      final session = await _sessionService.getSession(widget.initialSessionId!);
+      if (session != null) {
+        _currentSession = session;
+        final actualProject = (session.projectName != null &&
+                session.projectName!.isNotEmpty &&
+                session.projectName != WorkspaceService.defaultProjectName)
+            ? session.projectName
+            : null;
+        await _effectiveWorkspace.switchProject(actualProject);
+        if (mounted) {
+          setState(() {
+            _messages.clear();
+            _messages.addAll(session.messages);
+            _currentAssistantMessage = null;
+          });
+        }
+        return;
+      }
     }
     // Requirement: Software opens with a standalone session not belonging to any project
     _currentSession = await _sessionService.createSession(

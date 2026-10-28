@@ -185,5 +185,51 @@ void main() {
       expect(list.first.id, equals(s.id));
       expect(list.first.title, equals('索引测试会话'));
     });
+
+    test('corrupted sessions_index.json recovers by directory scan and purges empty files', () async {
+      final s = await sessionService.createSession(title: '正常会话');
+      s.messages.add(ChatMessage(id: 'm1', role: MessageRole.user, content: '正常内容'));
+      await sessionService.saveSession(s);
+
+      // Create an empty session json on disk that should be purged during rebuild
+      final emptyFile = File('${tempDir.path}/sessions/empty_session.json');
+      await emptyFile.writeAsString('{"id":"empty_session","title":"空","messages":[]}');
+
+      // Corrupt the sessions_index.json
+      final indexFile = File('${tempDir.path}/sessions/sessions_index.json');
+      await indexFile.writeAsString('MALFORMED_JSON_CONTENT{{{');
+
+      // Re-initialize SessionService
+      final service2 = SessionService();
+      await service2.init(baseDir: tempDir);
+
+      final list = await service2.listSessions();
+      expect(list.length, equals(1));
+      expect(list.first.id, equals(s.id));
+      expect(list.first.title, equals('正常会话'));
+      expect(await emptyFile.exists(), isFalse);
+    });
+
+    test('renameSession, archiveSession, and unarchiveSession throw FileSystemException when session does not exist', () async {
+      expect(
+        () => sessionService.renameSession('non_existent', 'New Title'),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(
+        () => sessionService.archiveSession('non_existent'),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(
+        () => sessionService.unarchiveSession('non_existent'),
+        throwsA(isA<FileSystemException>()),
+      );
+    });
+
+    test('getSession on empty cached session purges file and returns null', () async {
+      final s = await sessionService.createSession(title: '空缓存会话');
+      // Session has empty messages
+      final loaded = await sessionService.getSession(s.id);
+      expect(loaded, isNull);
+    });
   });
 }

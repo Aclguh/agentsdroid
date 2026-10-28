@@ -160,15 +160,56 @@ class ChatMessage {
     List<MessageBlock>? blocks,
     bool? isStreaming,
   }) {
+    List<MessageBlock> updatedBlocks;
+    if (blocks != null) {
+      updatedBlocks = List.from(blocks);
+    } else {
+      updatedBlocks = this.blocks.map((b) {
+        if (b is TextBlock) return TextBlock(b.text);
+        if (b is ThoughtBlock) return ThoughtBlock(b.thought, durationSeconds: b.durationSeconds);
+        if (b is ToolCallBlock) return ToolCallBlock(b.toolCall);
+        if (b is DiffBlock) return DiffBlock(b.diff);
+        return b;
+      }).toList();
+
+      if (content != null) {
+        final textIdx = updatedBlocks.indexWhere((b) => b is TextBlock);
+        if (textIdx >= 0) {
+          (updatedBlocks[textIdx] as TextBlock).text = content;
+        } else if (content.isNotEmpty) {
+          updatedBlocks.add(TextBlock(content));
+        }
+      }
+
+      if (thought != null) {
+        final thoughtIdx = updatedBlocks.indexWhere((b) => b is ThoughtBlock);
+        if (thoughtIdx >= 0) {
+          (updatedBlocks[thoughtIdx] as ThoughtBlock).thought = thought;
+        } else if (thought.isNotEmpty) {
+          updatedBlocks.insert(0, ThoughtBlock(thought));
+        }
+      }
+
+      if (toolCalls != null) {
+        updatedBlocks.removeWhere((b) => b is ToolCallBlock);
+        for (final tc in toolCalls) {
+          updatedBlocks.add(ToolCallBlock(tc));
+        }
+      }
+
+      if (diffs != null) {
+        updatedBlocks.removeWhere((b) => b is DiffBlock);
+        for (final d in diffs) {
+          updatedBlocks.add(DiffBlock(d));
+        }
+      }
+    }
+
     return ChatMessage(
       id: id,
       role: role,
-      content: content ?? this.content,
-      thought: thought ?? this.thought,
       timestamp: timestamp,
-      toolCalls: toolCalls ?? List.from(this.toolCalls),
-      diffs: diffs ?? List.from(this.diffs),
-      blocks: blocks ?? List.from(this.blocks),
+      blocks: updatedBlocks,
       isStreaming: isStreaming ?? this.isStreaming,
     );
   }

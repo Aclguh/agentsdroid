@@ -93,4 +93,36 @@ void main() {
     expect(find.text('Linux Subsystem Console'), findsOneWidget);
     expect(find.textContaining('Linux Subsystem is not installed'), findsOneWidget);
   });
+
+  testWidgets('SubsystemTerminalScreen quick command chip and input execution', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestableWidget());
+    await tester.pumpAndSettle();
+
+    // Tap quick command chip
+    await tester.tap(find.text('uname -a'));
+    await tester.pumpAndSettle();
+
+    // It should add '$ uname -a' to the logs
+    expect(find.text('\$ uname -a'), findsOneWidget);
+
+    // Enter custom command
+    await tester.enterText(find.byType(TextField), 'echo "hello terminal"');
+    await tester.pumpAndSettle();
+
+    // Tap send button
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+
+    expect(find.text('\$ echo "hello terminal"'), findsOneWidget);
+
+    // Tap refresh button in AppBar
+    await tester.tap(find.byIcon(Icons.refresh));
+    await tester.pumpAndSettle();
+
+    expect(find.text('[Refreshed toolchain status]'), findsOneWidget);
+  });
 }
