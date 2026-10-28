@@ -81,4 +81,43 @@ void main() {
       expect(env, isEmpty);
     });
   });
+
+  group('KeyVault Base URL Security Validation (OPT-09)', () {
+    test('validateBaseUrl accepts valid HTTPS and HTTP URLs with host', () {
+      expect(KeyVault.validateBaseUrl('https://api.openai.com/v1'), equals('https://api.openai.com/v1'));
+      expect(KeyVault.validateBaseUrl('http://localhost:11434'), equals('http://localhost:11434'));
+      expect(KeyVault.validateBaseUrl('  https://api.deepseek.com  '), equals('https://api.deepseek.com'));
+    });
+
+    test('validateBaseUrl rejects invalid, empty, or malicious schemes', () {
+      expect(() => KeyVault.validateBaseUrl(''), throwsA(isA<FormatException>()));
+      expect(() => KeyVault.validateBaseUrl('   '), throwsA(isA<FormatException>()));
+      expect(() => KeyVault.validateBaseUrl('ftp://evil.com'), throwsA(isA<FormatException>()));
+      expect(() => KeyVault.validateBaseUrl('file:///etc/passwd'), throwsA(isA<FormatException>()));
+      expect(() => KeyVault.validateBaseUrl('javascript:alert(1)'), throwsA(isA<FormatException>()));
+      expect(() => KeyVault.validateBaseUrl('not-a-valid-url'), throwsA(isA<FormatException>()));
+      expect(() => KeyVault.validateBaseUrl('https://'), throwsA(isA<FormatException>()));
+    });
+
+    test('addOrUpdateProvider rejects invalid Base URL', () async {
+      final badProvider = ModelProviderConfig(
+        id: 'bad-provider',
+        name: 'Bad Provider',
+        baseUrl: 'not-a-valid-url',
+        models: [],
+      );
+
+      expect(() => keyVault.addOrUpdateProvider(badProvider), throwsA(isA<FormatException>()));
+    });
+
+    test('setCustomBaseUrl and setDeepseekBaseUrl validate URLs', () async {
+      await keyVault.setCustomBaseUrl('https://my-custom-proxy.com/v1');
+      expect(keyVault.getCustomBaseUrl(), equals('https://my-custom-proxy.com/v1'));
+      expect(() => keyVault.setCustomBaseUrl('invalid-url'), throwsA(isA<FormatException>()));
+
+      await keyVault.setDeepseekBaseUrl('https://api.deepseek.com');
+      expect(keyVault.getDeepseekBaseUrl(), equals('https://api.deepseek.com'));
+      expect(() => keyVault.setDeepseekBaseUrl('file:///bad'), throwsA(isA<FormatException>()));
+    });
+  });
 }

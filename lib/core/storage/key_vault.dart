@@ -140,11 +140,29 @@ class KeyVault {
 
   static Future<KeyVault> create() async {
     const secureStorage = FlutterSecureStorage(
-      aOptions: AndroidOptions(),
+      aOptions: AndroidOptions(
+        resetOnError: true,
+        keyCipherAlgorithm: KeyCipherAlgorithm.RSA_ECB_OAEPwithSHA_256andMGF1Padding,
+        storageCipherAlgorithm: StorageCipherAlgorithm.AES_GCM_NoPadding,
+      ),
     );
     final prefs = await SharedPreferences.getInstance();
     final preferences = PreferencesService(prefs);
     return KeyVault(secureStorage, prefs, preferences);
+  }
+
+  /// Validates that a Base URL has a valid HTTP/HTTPS scheme and a non-empty host.
+  /// Throws [FormatException] if the URL is invalid.
+  static String validateBaseUrl(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) {
+      throw const FormatException('Base URL cannot be empty.');
+    }
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || (!uri.isScheme('http') && !uri.isScheme('https')) || uri.host.isEmpty) {
+      throw FormatException('Invalid Base URL "$trimmed": Must be a valid HTTP or HTTPS address with a host.');
+    }
+    return trimmed;
   }
 
   // --- Predefined Default Providers ---
@@ -183,6 +201,9 @@ class KeyVault {
   }
 
   Future<void> addOrUpdateProvider(ModelProviderConfig provider) async {
+    if (provider.baseUrl.isNotEmpty) {
+      validateBaseUrl(provider.baseUrl);
+    }
     final providers = getProviders();
     final index = providers.indexWhere((p) => p.id == provider.id);
     if (index >= 0) {
@@ -381,7 +402,11 @@ class KeyVault {
   }
 
   Future<void> setCustomBaseUrl(String url) async {
-    await _prefs.setString(_prefCustomBaseUrl, url.trim());
+    final trimmed = url.trim();
+    if (trimmed.isNotEmpty) {
+      validateBaseUrl(trimmed);
+    }
+    await _prefs.setString(_prefCustomBaseUrl, trimmed);
   }
 
   String getDeepseekBaseUrl() {
@@ -391,10 +416,14 @@ class KeyVault {
   }
 
   Future<void> setDeepseekBaseUrl(String url) async {
-    await _prefs.setString(_prefDeepseekBaseUrl, url.trim());
+    final trimmed = url.trim();
+    if (trimmed.isNotEmpty) {
+      validateBaseUrl(trimmed);
+    }
+    await _prefs.setString(_prefDeepseekBaseUrl, trimmed);
     final p = getProvider('deepseek');
     if (p != null) {
-      await addOrUpdateProvider(p.copyWith(baseUrl: url.trim()));
+      await addOrUpdateProvider(p.copyWith(baseUrl: trimmed));
     }
   }
 
