@@ -69,9 +69,9 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
   @override
   void initState() {
     super.initState();
-    _expandedProjects.addAll(widget.keyVault.getExpandedProjects());
-    _isProjectsSectionExpanded = widget.keyVault.isProjectsSectionExpanded();
-    _isConversationsSectionExpanded = widget.keyVault.isConversationsSectionExpanded();
+    _expandedProjects.addAll(widget.keyVault.preferences.getExpandedProjects());
+    _isProjectsSectionExpanded = widget.keyVault.preferences.isProjectsSectionExpanded();
+    _isConversationsSectionExpanded = widget.keyVault.preferences.isConversationsSectionExpanded();
   }
 
   String _formatRelativeTime(DateTime dateTime) {
@@ -499,7 +499,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                       setState(() {
                         _isProjectsSectionExpanded = !_isProjectsSectionExpanded;
                       });
-                      widget.keyVault.setProjectsSectionExpanded(_isProjectsSectionExpanded);
+                      widget.keyVault.preferences.setProjectsSectionExpanded(_isProjectsSectionExpanded);
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -560,7 +560,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                       setState(() {
                         _isConversationsSectionExpanded = !_isConversationsSectionExpanded;
                       });
-                      widget.keyVault.setConversationsSectionExpanded(_isConversationsSectionExpanded);
+                      widget.keyVault.preferences.setConversationsSectionExpanded(_isConversationsSectionExpanded);
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -645,7 +645,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                     _expandedProjects.add(projectName);
                   }
                 });
-                widget.keyVault.setExpandedProjects(_expandedProjects);
+                widget.keyVault.preferences.setExpandedProjects(_expandedProjects);
               },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),

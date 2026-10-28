@@ -33,13 +33,13 @@ final prootManagerProvider = Provider<PRootManager>((ref) {
 class LocaleNotifier extends Notifier<Locale> {
   @override
   Locale build() {
-    final keyVault = ref.watch(keyVaultProvider);
-    return Locale(keyVault.getLanguage());
+    final prefs = ref.watch(preferencesServiceProvider);
+    return Locale(prefs.getLanguage());
   }
 
   void setLocale(Locale newLocale) {
     state = newLocale;
-    ref.read(keyVaultProvider).setLanguage(newLocale.languageCode);
+    ref.read(preferencesServiceProvider).setLanguage(newLocale.languageCode);
   }
 }
 
@@ -49,13 +49,13 @@ final appLocaleProvider = NotifierProvider<LocaleNotifier, Locale>(LocaleNotifie
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
-    final keyVault = ref.watch(keyVaultProvider);
-    return keyVault.getThemeMode();
+    final prefs = ref.watch(preferencesServiceProvider);
+    return prefs.getThemeMode();
   }
 
   void setThemeMode(ThemeMode newThemeMode) {
     state = newThemeMode;
-    ref.read(keyVaultProvider).setThemeMode(newThemeMode);
+    ref.read(preferencesServiceProvider).setThemeMode(newThemeMode);
   }
 }
 
@@ -65,13 +65,13 @@ final appThemeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(Them
 class ScreenOrientationNotifier extends Notifier<bool> {
   @override
   bool build() {
-    final keyVault = ref.watch(keyVaultProvider);
-    return keyVault.isAutoRotateEnabled();
+    final prefs = ref.watch(preferencesServiceProvider);
+    return prefs.isAutoRotateEnabled();
   }
 
   void setScreenOrientation(bool autoRotate) {
     state = autoRotate;
-    ref.read(keyVaultProvider).setAutoRotateEnabled(autoRotate);
+    ref.read(preferencesServiceProvider).setAutoRotateEnabled(autoRotate);
   }
 }
 

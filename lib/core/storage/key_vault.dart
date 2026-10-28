@@ -441,27 +441,41 @@ class KeyVault {
     await _prefs.setString(_prefThinkingIntensity, intensity.name);
   }
 
-  // --- Localization Language (delegated to PreferencesService) ---
+  // --- UI Preferences Delegations (Deprecated: access via `preferences` directly) ---
+  @Deprecated('Access via preferences.getLanguage() directly')
   String getLanguage() => preferences.getLanguage();
+
+  @Deprecated('Access via preferences.setLanguage() directly')
   Future<void> setLanguage(String langCode) => preferences.setLanguage(langCode);
 
-  // --- Theme Mode (delegated to PreferencesService) ---
+  @Deprecated('Access via preferences.getThemeMode() directly')
   ThemeMode getThemeMode() => preferences.getThemeMode();
+
+  @Deprecated('Access via preferences.setThemeMode() directly')
   Future<void> setThemeMode(ThemeMode mode) => preferences.setThemeMode(mode);
 
-  // --- Auto-rotate screen (delegated to PreferencesService) ---
+  @Deprecated('Access via preferences.isAutoRotateEnabled() directly')
   bool isAutoRotateEnabled() => preferences.isAutoRotateEnabled();
+
+  @Deprecated('Access via preferences.setAutoRotateEnabled() directly')
   Future<void> setAutoRotateEnabled(bool enabled) => preferences.setAutoRotateEnabled(enabled);
 
-  // --- Expanded Projects Persistence (delegated to PreferencesService) ---
+  @Deprecated('Access via preferences.getExpandedProjects() directly')
   Set<String> getExpandedProjects() => preferences.getExpandedProjects();
+
+  @Deprecated('Access via preferences.setExpandedProjects() directly')
   Future<void> setExpandedProjects(Set<String> projects) => preferences.setExpandedProjects(projects);
 
-  // --- Section Expansion Persistence in Drawer (delegated to PreferencesService) ---
+  @Deprecated('Access via preferences.isProjectsSectionExpanded() directly')
   bool isProjectsSectionExpanded() => preferences.isProjectsSectionExpanded();
+
+  @Deprecated('Access via preferences.setProjectsSectionExpanded() directly')
   Future<void> setProjectsSectionExpanded(bool expanded) => preferences.setProjectsSectionExpanded(expanded);
 
+  @Deprecated('Access via preferences.isConversationsSectionExpanded() directly')
   bool isConversationsSectionExpanded() => preferences.isConversationsSectionExpanded();
+
+  @Deprecated('Access via preferences.setConversationsSectionExpanded() directly')
   Future<void> setConversationsSectionExpanded(bool expanded) => preferences.setConversationsSectionExpanded(expanded);
 
   /// Export environment variables map for PRoot Linux environment injection.

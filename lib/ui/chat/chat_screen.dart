@@ -270,7 +270,7 @@ class _ChatScreenViewState extends ConsumerState<_ChatScreenView> {
     _foregroundManager = ForegroundServiceManager();
     _foregroundSubscription = _foregroundManager.bindAgentEvents(_coordinator.eventStream);
     _sessionService = _effectiveSessionService;
-    _expandedProjects.addAll(kv.getExpandedProjects());
+    _expandedProjects.addAll(kv.preferences.getExpandedProjects());
     _refreshTreeData();
     _initSessionService();
     _listenToEngineEvents();
@@ -481,7 +481,7 @@ class _ChatScreenViewState extends ConsumerState<_ChatScreenView> {
 
     if (actualProject != null) {
       _expandedProjects.add(actualProject);
-      _effectiveKeyVault.setExpandedProjects(_expandedProjects);
+      _effectiveKeyVault.preferences.setExpandedProjects(_expandedProjects);
     }
 
     final defaultTitle = l10n.sessionUntitled;
@@ -676,7 +676,7 @@ class _ChatScreenViewState extends ConsumerState<_ChatScreenView> {
       setState(() {
         _expandedProjects.add(projectName);
       });
-      await _effectiveKeyVault.setExpandedProjects(_expandedProjects);
+      await _effectiveKeyVault.preferences.setExpandedProjects(_expandedProjects);
       await _handleNewSession(l10n, projectName: projectName);
     }
   }
@@ -789,7 +789,7 @@ class _ChatScreenViewState extends ConsumerState<_ChatScreenView> {
                             _currentSession!.projectName = proj;
                             await _sessionService.saveSession(_currentSession!);
                             _expandedProjects.add(proj);
-                            _effectiveKeyVault.setExpandedProjects(_expandedProjects);
+                            _effectiveKeyVault.preferences.setExpandedProjects(_expandedProjects);
                           }
                           _refreshTreeData();
                           if (mounted) setState(() {});
