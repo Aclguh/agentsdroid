@@ -166,5 +166,24 @@ void main() {
       final loaded = await sessionService.getSession(s.id);
       expect(loaded?.projectName, equals('agentsdroid'));
     });
+
+    test('persists sessions_index.json and reloads directly from index cache', () async {
+      final s = await sessionService.createSession(title: '索引测试会话');
+      s.messages.add(ChatMessage(id: 'm1', role: MessageRole.user, content: 'index content'));
+      await sessionService.saveSession(s);
+
+      // Verify sessions_index.json exists on disk
+      final indexFile = File('${tempDir.path}/sessions/sessions_index.json');
+      expect(await indexFile.exists(), isTrue);
+
+      // Re-initialize a brand new SessionService instance on the same directory
+      final service2 = SessionService();
+      await service2.init(baseDir: tempDir);
+
+      final list = await service2.listSessions();
+      expect(list.length, equals(1));
+      expect(list.first.id, equals(s.id));
+      expect(list.first.title, equals('索引测试会话'));
+    });
   });
 }
