@@ -3,12 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:uuid/uuid.dart';
 
 import '../../core/agent/engine_coordinator.dart';
 import '../../core/notification/foreground_service_manager.dart';
 import '../../core/proot/proot_manager.dart';
+import '../../core/providers/app_providers.dart';
 import '../../core/storage/key_vault.dart';
 import '../../core/storage/session_service.dart';
 import '../../core/storage/workspace_service.dart';
@@ -26,17 +28,17 @@ import 'widgets/chat_message_bubble.dart';
 import 'widgets/conversation_history_modal.dart';
 import 'widgets/chat_history_drawer.dart';
 
-class ChatScreen extends StatefulWidget {
-  final KeyVault keyVault;
-  final WorkspaceService workspace;
-  final PRootManager prootManager;
+class ChatScreen extends StatelessWidget {
+  final KeyVault? keyVault;
+  final WorkspaceService? workspace;
+  final PRootManager? prootManager;
   final SessionService? sessionService;
 
   const ChatScreen({
     super.key,
-    required this.keyVault,
-    required this.workspace,
-    required this.prootManager,
+    this.keyVault,
+    this.workspace,
+    this.prootManager,
     this.sessionService,
   });
 
@@ -134,14 +136,94 @@ class ChatScreen extends StatefulWidget {
     );
   }
 
+  bool _hasProviderScope(BuildContext context) {
+    try {
+      ProviderScope.containerOf(context, listen: false);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  Widget build(BuildContext context) {
+    final view = _ChatScreenView(
+      keyVault: keyVault,
+      workspace: workspace,
+      prootManager: prootManager,
+      sessionService: sessionService,
+    );
+
+    if (_hasProviderScope(context)) {
+      return view;
+    }
+
+    return ProviderScope(
+      overrides: [
+        if (keyVault != null) keyVaultProvider.overrideWithValue(keyVault!),
+        if (workspace != null) workspaceServiceProvider.overrideWithValue(workspace!),
+        if (sessionService != null) sessionServiceProvider.overrideWithValue(sessionService!),
+        if (prootManager != null) prootManagerProvider.overrideWithValue(prootManager!),
+      ],
+      child: view,
+    );
+  }
 }
 
-enum ConversationSortOrder { recent, name }
-enum ProjectSortOrder { name, recent }
+class _ChatScreenView extends ConsumerStatefulWidget {
+  final KeyVault? keyVault;
+  final WorkspaceService? workspace;
+  final PRootManager? prootManager;
+  final SessionService? sessionService;
 
-class _ChatScreenState extends State<ChatScreen> {
+  const _ChatScreenView({
+    this.keyVault,
+    this.workspace,
+    this.prootManager,
+    this.sessionService,
+  });
+
+  @override
+  ConsumerState<_ChatScreenView> createState() => _ChatScreenViewState();
+}
+
+class _ChatScreenViewState extends ConsumerState<_ChatScreenView> {
+  KeyVault get _effectiveKeyVault {
+    if (widget.keyVault != null) return widget.keyVault!;
+    try {
+      return ref.read(keyVaultProvider);
+    } catch (_) {
+      throw StateError('KeyVault must be provided via constructor or ProviderScope');
+    }
+  }
+
+  WorkspaceService get _effectiveWorkspace {
+    if (widget.workspace != null) return widget.workspace!;
+    try {
+      return ref.read(workspaceServiceProvider);
+    } catch (_) {
+      throw StateError('WorkspaceService must be provided via constructor or ProviderScope');
+    }
+  }
+
+  SessionService get _effectiveSessionService {
+    if (widget.sessionService != null) return widget.sessionService!;
+    try {
+      return ref.read(sessionServiceProvider);
+    } catch (_) {
+      return SessionService();
+    }
+  }
+
+  PRootManager get _effectivePRootManager {
+    if (widget.prootManager != null) return widget.prootManager!;
+    try {
+      return ref.read(prootManagerProvider);
+    } catch (_) {
+      return PRootManager();
+    }
+  }
+
   late final EngineCoordinator _coordinator;
   late final ForegroundServiceManager _foregroundManager;
   late final SessionService _sessionService;
@@ -168,7 +250,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _refreshTreeData() {
     _treeDataFuture = Future.wait([
-      widget.workspace.listProjects(),
+      _effectiveWorkspace.listProjects(),
       _sessionService.listSessions(isArchived: false),
     ]);
   }
@@ -176,15 +258,19 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    final kv = _effectiveKeyVault;
+    final ws = _effectiveWorkspace;
+    final pm = _effectivePRootManager;
+
     _coordinator = EngineCoordinator(
-      keyVault: widget.keyVault,
-      workspace: widget.workspace,
-      prootManager: widget.prootManager,
+      keyVault: kv,
+      workspace: ws,
+      prootManager: pm,
     );
     _foregroundManager = ForegroundServiceManager();
     _foregroundSubscription = _foregroundManager.bindAgentEvents(_coordinator.eventStream);
-    _sessionService = widget.sessionService ?? SessionService();
-    _expandedProjects.addAll(widget.keyVault.getExpandedProjects());
+    _sessionService = _effectiveSessionService;
+    _expandedProjects.addAll(kv.getExpandedProjects());
     _refreshTreeData();
     _initSessionService();
     _listenToEngineEvents();
@@ -199,7 +285,7 @@ class _ChatScreenState extends State<ChatScreen> {
       title: '新会话',
       projectName: null,
     );
-    await widget.workspace.switchProject(null);
+    await _effectiveWorkspace.switchProject(null);
     if (mounted) {
       setState(() {
         _messages.clear();
@@ -391,11 +477,11 @@ class _ChatScreenState extends State<ChatScreen> {
             projectName != WorkspaceService.defaultProjectName)
         ? projectName
         : null;
-    await widget.workspace.switchProject(actualProject);
+    await _effectiveWorkspace.switchProject(actualProject);
 
     if (actualProject != null) {
       _expandedProjects.add(actualProject);
-      widget.keyVault.setExpandedProjects(_expandedProjects);
+      _effectiveKeyVault.setExpandedProjects(_expandedProjects);
     }
 
     final defaultTitle = l10n.sessionUntitled;
@@ -443,7 +529,7 @@ class _ChatScreenState extends State<ChatScreen> {
               session.projectName != WorkspaceService.defaultProjectName)
           ? session.projectName
           : null;
-      await widget.workspace.switchProject(actualProject);
+      await _effectiveWorkspace.switchProject(actualProject);
       if (!mounted) return;
 
       _refreshTreeData();
@@ -586,17 +672,17 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     if (projectName != null && projectName.isNotEmpty && mounted) {
-      await widget.workspace.createProject(projectName);
+      await _effectiveWorkspace.createProject(projectName);
       setState(() {
         _expandedProjects.add(projectName);
       });
-      await widget.keyVault.setExpandedProjects(_expandedProjects);
+      await _effectiveKeyVault.setExpandedProjects(_expandedProjects);
       await _handleNewSession(l10n, projectName: projectName);
     }
   }
 
   Future<void> _showChangeProjectDialog(AppLocalizations l10n) async {
-    final rawProjects = await widget.workspace.listProjects();
+    final rawProjects = await _effectiveWorkspace.listProjects();
     final projects = List<String>.from(rawProjects)
       ..removeWhere((p) => p == WorkspaceService.defaultProjectName);
 
@@ -665,7 +751,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   trailing: currentProject == null ? const Icon(Icons.check, color: Colors.blueAccent, size: 18) : null,
                   onTap: () async {
                     Navigator.pop(ctx);
-                    await widget.workspace.switchProject(null);
+                    await _effectiveWorkspace.switchProject(null);
                     if (_currentSession != null) {
                       _currentSession!.projectName = null;
                       await _sessionService.saveSession(_currentSession!);
@@ -698,12 +784,12 @@ class _ChatScreenState extends State<ChatScreen> {
                         trailing: isSelected ? const Icon(Icons.check, color: Colors.blueAccent, size: 18) : null,
                         onTap: () async {
                           Navigator.pop(ctx);
-                          await widget.workspace.switchProject(proj);
+                          await _effectiveWorkspace.switchProject(proj);
                           if (_currentSession != null) {
                             _currentSession!.projectName = proj;
                             await _sessionService.saveSession(_currentSession!);
                             _expandedProjects.add(proj);
-                            widget.keyVault.setExpandedProjects(_expandedProjects);
+                            _effectiveKeyVault.setExpandedProjects(_expandedProjects);
                           }
                           _refreshTreeData();
                           if (mounted) setState(() {});
@@ -953,8 +1039,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => SubsystemTerminalScreen(
-                    prootManager: widget.prootManager,
-                    keyVault: widget.keyVault,
+                    prootManager: _effectivePRootManager,
+                    keyVault: _effectiveKeyVault,
                   ),
                 ),
               );
@@ -1043,10 +1129,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildHistoryDrawer(BuildContext context, AppLocalizations l10n, ThemeData theme) {
     return ChatHistoryDrawer(
-      workspace: widget.workspace,
+      workspace: _effectiveWorkspace,
       sessionService: _sessionService,
-      keyVault: widget.keyVault,
-      prootManager: widget.prootManager,
+      keyVault: _effectiveKeyVault,
+      prootManager: _effectivePRootManager,
       currentSessionId: _currentSession?.id,
       currentSession: _currentSession,
       treeDataFuture: _treeDataFuture,
@@ -1064,8 +1150,8 @@ class _ChatScreenState extends State<ChatScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => WorkspaceExplorerScreen(
-              workspace: widget.workspace,
-              prootManager: widget.prootManager,
+              workspace: _effectiveWorkspace,
+              prootManager: _effectivePRootManager,
             ),
           ),
         );
@@ -1075,8 +1161,8 @@ class _ChatScreenState extends State<ChatScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => SettingsScreen(
-              keyVault: widget.keyVault,
-              prootManager: widget.prootManager,
+              keyVault: _effectiveKeyVault,
+              prootManager: _effectivePRootManager,
             ),
           ),
         );
@@ -1210,7 +1296,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String _getDisplayModelName(String model, AppLocalizations l10n) {
     if (model.isEmpty) return l10n.noModelsConfigured;
-    final config = widget.keyVault.getModel(model);
+    final config = _effectiveKeyVault.getModel(model);
     if (config != null) return config.name;
     if (model.contains('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
     if (model.contains('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
@@ -1230,7 +1316,12 @@ class _ChatScreenState extends State<ChatScreen> {
     FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
     FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
 
-    final currentMode = widget.keyVault.getApprovalMode();
+    ApprovalMode currentMode;
+    try {
+      currentMode = ref.read(approvalModeProvider);
+    } catch (_) {
+      currentMode = _effectiveKeyVault.getApprovalMode();
+    }
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -1289,7 +1380,11 @@ class _ChatScreenState extends State<ChatScreen> {
                         borderRadius: BorderRadius.circular(12),
                         onTap: () async {
                           Navigator.pop(ctx);
-                          await widget.keyVault.setApprovalMode(mode);
+                          try {
+                            ref.read(approvalModeProvider.notifier).setApprovalMode(mode);
+                          } catch (_) {
+                            await _effectiveKeyVault.setApprovalMode(mode);
+                          }
                           if (mounted) setState(() {});
                         },
                         child: Container(
@@ -1367,8 +1462,18 @@ class _ChatScreenState extends State<ChatScreen> {
     FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
     FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
 
-    var intensity = widget.keyVault.getThinkingIntensity();
-    final activeModel = widget.keyVault.getActiveModel();
+    ThinkingIntensity intensity;
+    try {
+      intensity = ref.read(thinkingIntensityProvider);
+    } catch (_) {
+      intensity = _effectiveKeyVault.getThinkingIntensity();
+    }
+    String activeModel;
+    try {
+      activeModel = ref.read(activeModelProvider);
+    } catch (_) {
+      activeModel = _effectiveKeyVault.getActiveModel();
+    }
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -1461,7 +1566,11 @@ class _ChatScreenState extends State<ChatScreen> {
                             setModalState(() {
                               intensity = ThinkingIntensity.high;
                             });
-                            widget.keyVault.setThinkingIntensity(ThinkingIntensity.high);
+                            try {
+                              ref.read(thinkingIntensityProvider.notifier).setThinkingIntensity(ThinkingIntensity.high);
+                            } catch (_) {
+                              _effectiveKeyVault.setThinkingIntensity(ThinkingIntensity.high);
+                            }
                             if (mounted) setState(() {});
                           },
                         ),
@@ -1490,7 +1599,11 @@ class _ChatScreenState extends State<ChatScreen> {
                           setModalState(() {
                             intensity = newIntensity;
                           });
-                          widget.keyVault.setThinkingIntensity(newIntensity);
+                          try {
+                            ref.read(thinkingIntensityProvider.notifier).setThinkingIntensity(newIntensity);
+                          } catch (_) {
+                            _effectiveKeyVault.setThinkingIntensity(newIntensity);
+                          }
                           if (mounted) setState(() {});
                         },
                       ),
@@ -1558,8 +1671,13 @@ class _ChatScreenState extends State<ChatScreen> {
     FocusScope.of(context).unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
     FocusManager.instance.primaryFocus?.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
 
-    final currentModel = widget.keyVault.getActiveModel();
-    final providers = widget.keyVault.getProviders();
+    String currentModel;
+    try {
+      currentModel = ref.read(activeModelProvider);
+    } catch (_) {
+      currentModel = _effectiveKeyVault.getActiveModel();
+    }
+    final providers = _effectiveKeyVault.getProviders();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -1617,7 +1735,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => ModelSettingsScreen(
-                                keyVault: widget.keyVault,
+                                keyVault: _effectiveKeyVault,
                               ),
                             ),
                           ).then((_) {
@@ -1718,8 +1836,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                   trailing: isSelected ? Icon(Icons.check, color: theme.colorScheme.primary, size: 18) : null,
                                   onTap: () async {
                                     Navigator.pop(ctx);
-                                    await widget.keyVault.setActiveProviderId(p.id);
-                                    await widget.keyVault.setActiveModel(m.id);
+                                    await _effectiveKeyVault.setActiveProviderId(p.id);
+                                    try {
+                                      ref.read(activeModelProvider.notifier).setActiveModel(m.id);
+                                    } catch (_) {
+                                      await _effectiveKeyVault.setActiveModel(m.id);
+                                    }
                                     if (mounted) setState(() {});
                                   },
                                 );
@@ -1738,8 +1860,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => SettingsScreen(
-                            keyVault: widget.keyVault,
-                            prootManager: widget.prootManager,
+                            keyVault: _effectiveKeyVault,
+                            prootManager: _effectivePRootManager,
                           ),
                         ),
                       ).then((_) {
@@ -1870,7 +1992,7 @@ class _ChatScreenState extends State<ChatScreen> {
             _currentSession!.projectName != WorkspaceService.defaultProjectName)
         ? 'projects/${_currentSession!.projectName}'
         : 'projects/${WorkspaceService.defaultProjectName}';
-    final files = await widget.workspace.listFiles(relativePath: proj);
+    final files = await _effectiveWorkspace.listFiles(relativePath: proj);
 
     if (!mounted) return;
 
@@ -2055,9 +2177,26 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildInputBar(ThemeData theme, AppLocalizations l10n) {
     final isWorking = _agentState != AgentState.idle;
-    final approvalMode = widget.keyVault.getApprovalMode();
-    final thinkingIntensity = widget.keyVault.getThinkingIntensity();
-    final activeModel = widget.keyVault.getActiveModel();
+    ApprovalMode approvalMode;
+    try {
+      approvalMode = ref.watch(approvalModeProvider);
+    } catch (_) {
+      approvalMode = _effectiveKeyVault.getApprovalMode();
+    }
+
+    ThinkingIntensity thinkingIntensity;
+    try {
+      thinkingIntensity = ref.watch(thinkingIntensityProvider);
+    } catch (_) {
+      thinkingIntensity = _effectiveKeyVault.getThinkingIntensity();
+    }
+
+    String activeModel;
+    try {
+      activeModel = ref.watch(activeModelProvider);
+    } catch (_) {
+      activeModel = _effectiveKeyVault.getActiveModel();
+    }
 
     return ChatBottomInputBar(
       textController: _textController,
