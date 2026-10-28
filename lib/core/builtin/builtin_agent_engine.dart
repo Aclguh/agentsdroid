@@ -30,6 +30,10 @@ class BuiltinAgentEngine implements AgentEngine {
   final Map<String, Completer<bool>> _pendingApprovals = {};
   bool _isInterrupted = false;
 
+  // Active executing command processes for timeout and cancellation
+  PRootProcess? _activePRootProcess;
+  Process? _activeProcess;
+
   // Conversation history in memory
   final List<Map<String, dynamic>> _openaiHistory = [];
   final List<Map<String, dynamic>> _anthropicHistory = [];
@@ -888,34 +892,88 @@ class BuiltinAgentEngine implements AgentEngine {
         }
         return matches;
       case 'run_command':
-        // Execute in PRoot Linux sandbox if installed, otherwise local process
+        // Execute in PRoot Linux sandbox if installed, otherwise local process with timeout
         final cmd = args['command'] as String;
+        final timeoutSec = args['timeout'] is num
+            ? (args['timeout'] as num).toInt()
+            : (args['timeout_ms'] is num ? ((args['timeout_ms'] as num) / 1000).ceil() : 60);
+        final timeoutDuration = args['timeout_ms'] is num
+            ? Duration(milliseconds: (args['timeout_ms'] as num).toInt())
+            : Duration(seconds: timeoutSec);
         final pm = prootManager;
+
         if (pm != null && await pm.isInstalled()) {
           final env = await _keyVault.exportEnvironmentVariables();
-          final res = await pm.runCommand(
+          final prootProc = await pm.startProcess(
             cmd,
             workingDir: '/workspace',
             environment: env,
           );
-          return {
-            'exitCode': res.exitCode,
-            'stdout': res.stdout.toString(),
-            'stderr': res.stderr.toString(),
-            'sandbox': 'proot-debian',
-          };
+          _activePRootProcess = prootProc;
+
+          final stdoutBuf = StringBuffer();
+          final stderrBuf = StringBuffer();
+          final stdoutSub = prootProc.stdout.listen((s) => stdoutBuf.write(s));
+          final stderrSub = prootProc.stderr.listen((s) => stderrBuf.write(s));
+
+          try {
+            final exitCode = await prootProc.exitCode.timeout(
+              timeoutDuration,
+              onTimeout: () {
+                try {
+                  prootProc.kill();
+                } catch (_) {}
+                throw TimeoutException('Command timed out after $timeoutSec seconds');
+              },
+            );
+            await stdoutSub.cancel();
+            await stderrSub.cancel();
+            return {
+              'exitCode': exitCode,
+              'stdout': stdoutBuf.toString(),
+              'stderr': stderrBuf.toString(),
+              'sandbox': 'proot-debian',
+            };
+          } finally {
+            _activePRootProcess = null;
+          }
         } else {
-          final res = await Process.run(
-            'sh',
-            ['-c', cmd],
+          final executable = Platform.isWindows ? 'cmd' : 'sh';
+          final execArgs = Platform.isWindows ? ['/c', cmd] : ['-c', cmd];
+          final proc = await Process.start(
+            executable,
+            execArgs,
             workingDirectory: _workspace.workspacePath,
           );
-          return {
-            'exitCode': res.exitCode,
-            'stdout': res.stdout.toString(),
-            'stderr': res.stderr.toString(),
-            'sandbox': 'host',
-          };
+          _activeProcess = proc;
+
+          final stdoutBuf = StringBuffer();
+          final stderrBuf = StringBuffer();
+          const decoder = Utf8Decoder(allowMalformed: true);
+          final stdoutSub = proc.stdout.transform(decoder).listen((s) => stdoutBuf.write(s));
+          final stderrSub = proc.stderr.transform(decoder).listen((s) => stderrBuf.write(s));
+
+          try {
+            final exitCode = await proc.exitCode.timeout(
+              timeoutDuration,
+              onTimeout: () {
+                try {
+                  proc.kill();
+                } catch (_) {}
+                throw TimeoutException('Command timed out after $timeoutSec seconds');
+              },
+            );
+            await stdoutSub.cancel();
+            await stderrSub.cancel();
+            return {
+              'exitCode': exitCode,
+              'stdout': stdoutBuf.toString(),
+              'stderr': stderrBuf.toString(),
+              'sandbox': 'host',
+            };
+          } finally {
+            _activeProcess = null;
+          }
         }
       default:
         throw UnimplementedError('Unknown tool: $toolName');
@@ -937,6 +995,25 @@ class BuiltinAgentEngine implements AgentEngine {
       if (!completer.isCompleted) completer.complete(false);
     }
     _pendingApprovals.clear();
+
+    if (_activePRootProcess != null) {
+      try {
+        _activePRootProcess!.kill(ProcessSignal.sigint);
+      } catch (_) {
+        _activePRootProcess!.kill(ProcessSignal.sigkill);
+      }
+      _activePRootProcess = null;
+    }
+
+    if (_activeProcess != null) {
+      try {
+        _activeProcess!.kill(ProcessSignal.sigint);
+      } catch (_) {
+        _activeProcess!.kill(ProcessSignal.sigkill);
+      }
+      _activeProcess = null;
+    }
+
     _setState(AgentState.idle, 'Task interrupted.');
   }
 
@@ -949,6 +1026,25 @@ class BuiltinAgentEngine implements AgentEngine {
       if (!completer.isCompleted) completer.complete(false);
     }
     _pendingApprovals.clear();
+
+    if (_activePRootProcess != null) {
+      try {
+        _activePRootProcess!.kill(ProcessSignal.sigint);
+      } catch (_) {
+        _activePRootProcess!.kill(ProcessSignal.sigkill);
+      }
+      _activePRootProcess = null;
+    }
+
+    if (_activeProcess != null) {
+      try {
+        _activeProcess!.kill(ProcessSignal.sigint);
+      } catch (_) {
+        _activeProcess!.kill(ProcessSignal.sigkill);
+      }
+      _activeProcess = null;
+    }
+
     _setState(AgentState.idle);
   }
 

@@ -34,7 +34,14 @@ void main() {
 
     tearDown(() async {
       if (await docDir.exists()) {
-        await docDir.delete(recursive: true);
+        try {
+          await docDir.delete(recursive: true);
+        } catch (_) {
+          await Future.delayed(const Duration(milliseconds: 300));
+          try {
+            await docDir.delete(recursive: true);
+          } catch (_) {}
+        }
       }
     });
 
@@ -242,6 +249,45 @@ void main() {
 
       await sub.cancel();
       await streamingEngine.dispose();
+    });
+
+    test('run_command handles execution timeout safely', () async {
+      await keyVault.setApprovalMode(ApprovalMode.yolo);
+      final events = <AgentEvent>[];
+      final sub = engine.eventStream.listen((e) => events.add(e));
+
+      // Create a small sleeper script
+      final sleepScript = File('${docDir.path}/sleeper.dart');
+      await sleepScript.writeAsString("import 'dart:io'; void main() { sleep(const Duration(seconds: 4)); }");
+
+      String? resultStr;
+      await engine.handleToolExecutionForTesting(
+        callId: 'call_timeout_1',
+        toolName: 'run_command',
+        arguments: {
+          'command': 'dart run "${sleepScript.path}"',
+          'timeout_ms': 300,
+        },
+        onResult: (res) => resultStr = res,
+      );
+
+      expect(resultStr, isNotNull);
+      final json = jsonDecode(resultStr!) as Map<String, dynamic>;
+      expect(json['status'], equals('error'));
+      expect(json['error'].toString().contains('timed out'), isTrue);
+
+      await Future.delayed(Duration.zero);
+      final failedEvent = events.whereType<ToolCallEvent>().firstWhere((e) => e.status == ToolCallStatus.failed);
+      expect(failedEvent.errorMessage?.contains('timed out'), isTrue);
+
+      await sub.cancel();
+      await engine.dispose();
+      await Future.delayed(const Duration(milliseconds: 300));
+    });
+
+    test('interrupt cancels active running command and sets idle state', () async {
+      await engine.interrupt();
+      expect(engine.currentState, equals(AgentState.idle));
     });
   });
 }
