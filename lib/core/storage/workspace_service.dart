@@ -366,23 +366,25 @@ class WorkspaceService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final zipFile = File(p.join(targetDirectory.path, 'workspace_export_$timestamp.zip'));
 
-    final archive = Archive();
-    final entities = workspaceDir.listSync(recursive: true);
+    final encoder = ZipFileEncoder();
+    encoder.create(zipFile.path);
 
-    for (final entity in entities) {
-      if (entity is File) {
-        final relPath = p.relative(entity.path, from: workspacePath);
-        if (!includeGit && (relPath.startsWith('.git') || relPath.contains('/.git'))) {
-          continue;
+    try {
+      final entities = workspaceDir.listSync(recursive: true);
+      for (final entity in entities) {
+        if (entity is File) {
+          final relPath = p.relative(entity.path, from: workspacePath);
+          final normalizedRelPath = p.posix.joinAll(p.split(relPath));
+          if (!includeGit && (normalizedRelPath.startsWith('.git') || normalizedRelPath.contains('/.git'))) {
+            continue;
+          }
+          await encoder.addFile(entity, normalizedRelPath);
         }
-        final bytes = await entity.readAsBytes();
-        archive.addFile(ArchiveFile(relPath, bytes.length, bytes));
       }
+    } finally {
+      await encoder.close();
     }
 
-    final encoder = ZipEncoder();
-    final zipBytes = encoder.encode(archive);
-    await zipFile.writeAsBytes(zipBytes);
     return zipFile;
   }
 

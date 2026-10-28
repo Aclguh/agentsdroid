@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 import '../../models/agent_event.dart';
 import '../../models/chat_message.dart';
@@ -877,17 +878,39 @@ class BuiltinAgentEngine implements AgentEngine {
         final list = await _workspace.listFiles(relativePath: (args['path'] as String?) ?? '');
         return list.map((e) => e.path.split(Platform.pathSeparator).last).toList();
       case 'search_files':
-        final list = await _workspace.listFiles();
         final query = (args['query'] as String).toLowerCase();
+        if (query.isEmpty) return <String>[];
         final matches = <String>[];
-        for (final item in list) {
-          if (item is File) {
+        const maxFileSize = 2 * 1024 * 1024; // 2MB limit
+        final dir = _workspace.workspaceDir;
+        if (await dir.exists()) {
+          await for (final entity in dir.list(recursive: true, followLinks: false)) {
+            if (entity is! File) continue;
+            final relPath = p.relative(entity.path, from: _workspace.workspacePath);
+            final segments = p.split(relPath);
+            if (segments.any((s) => s.startsWith('.') || s == 'node_modules' || s == 'build')) {
+              continue;
+            }
             try {
-              final text = await item.readAsString();
-              if (text.toLowerCase().contains(query)) {
-                matches.add(item.path.split(Platform.pathSeparator).last);
+              final stat = await entity.stat();
+              if (stat.size > maxFileSize) continue; // Skip large files > 2MB
+
+              var matched = false;
+              final stream = entity.openRead();
+              await for (final line in stream
+                  .transform(const Utf8Decoder(allowMalformed: false))
+                  .transform(const LineSplitter())) {
+                if (line.toLowerCase().contains(query)) {
+                  matched = true;
+                  break;
+                }
               }
-            } catch (_) {}
+              if (matched) {
+                matches.add(p.posix.joinAll(p.split(relPath)));
+              }
+            } catch (_) {
+              // Ignore binary files or decoding errors
+            }
           }
         }
         return matches;
