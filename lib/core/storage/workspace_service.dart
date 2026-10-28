@@ -156,38 +156,7 @@ class WorkspaceService {
   DiffEvent computeDiff(String relativePath, String originalContent, String newContent) {
     final origLines = originalContent.split('\n');
     final newLines = newContent.split('\n');
-    final diffLines = <DiffLine>[];
-
-    // Simple line-by-line diff generation
-    int i = 0, j = 0;
-    while (i < origLines.length || j < newLines.length) {
-      if (i < origLines.length && j < newLines.length && origLines[i] == newLines[j]) {
-        diffLines.add(DiffLine(
-          type: DiffLineType.unchanged,
-          text: origLines[i],
-          oldLineNumber: i + 1,
-          newLineNumber: j + 1,
-        ));
-        i++;
-        j++;
-      } else {
-        if (i < origLines.length && (j >= newLines.length || !newLines.contains(origLines[i]))) {
-          diffLines.add(DiffLine(
-            type: DiffLineType.removed,
-            text: origLines[i],
-            oldLineNumber: i + 1,
-          ));
-          i++;
-        } else if (j < newLines.length) {
-          diffLines.add(DiffLine(
-            type: DiffLineType.added,
-            text: newLines[j],
-            newLineNumber: j + 1,
-          ));
-          j++;
-        }
-      }
-    }
+    final diffLines = _myersDiff(origLines, newLines);
 
     return DiffEvent(
       filePath: relativePath,
@@ -195,6 +164,186 @@ class WorkspaceService {
       newContent: newContent,
       diffLines: diffLines,
     );
+  }
+
+  /// High-performance Myers difference algorithm with linear common prefix/suffix optimization
+  List<DiffLine> _myersDiff(List<String> origLines, List<String> newLines) {
+    final diffLines = <DiffLine>[];
+
+    // 1. Common prefix optimization
+    int prefix = 0;
+    while (prefix < origLines.length &&
+        prefix < newLines.length &&
+        origLines[prefix] == newLines[prefix]) {
+      diffLines.add(DiffLine(
+        type: DiffLineType.unchanged,
+        text: origLines[prefix],
+        oldLineNumber: prefix + 1,
+        newLineNumber: prefix + 1,
+      ));
+      prefix++;
+    }
+
+    // 2. Common suffix optimization
+    int suffix = 0;
+    while (suffix < (origLines.length - prefix) &&
+        suffix < (newLines.length - prefix) &&
+        origLines[origLines.length - 1 - suffix] ==
+            newLines[newLines.length - 1 - suffix]) {
+      suffix++;
+    }
+
+    final a = origLines.sublist(prefix, origLines.length - suffix);
+    final b = newLines.sublist(prefix, newLines.length - suffix);
+
+    final n = a.length;
+    final m = b.length;
+
+    if (n > 0 && m == 0) {
+      for (int i = 0; i < n; i++) {
+        diffLines.add(DiffLine(
+          type: DiffLineType.removed,
+          text: a[i],
+          oldLineNumber: prefix + i + 1,
+        ));
+      }
+    } else if (n == 0 && m > 0) {
+      for (int j = 0; j < m; j++) {
+        diffLines.add(DiffLine(
+          type: DiffLineType.added,
+          text: b[j],
+          newLineNumber: prefix + j + 1,
+        ));
+      }
+    } else if (n > 0 && m > 0) {
+      final max = n + m;
+      final offset = max;
+      final v = List<int>.filled(2 * max + 1, 0);
+      final trace = <List<int>>[];
+
+      int? finalD;
+      for (int d = 0; d <= max; d++) {
+        trace.add(List<int>.from(v));
+        for (int k = -d; k <= d; k += 2) {
+          int x;
+          if (k == -d || (k != d && v[k - 1 + offset] < v[k + 1 + offset])) {
+            x = v[k + 1 + offset];
+          } else {
+            x = v[k - 1 + offset] + 1;
+          }
+          int y = x - k;
+          while (x < n && y < m && a[x] == b[y]) {
+            x++;
+            y++;
+          }
+          v[k + offset] = x;
+          if (x >= n && y >= m) {
+            finalD = d;
+            break;
+          }
+        }
+        if (finalD != null) break;
+        if (d >= 1000) {
+          // Fallback guard for massive unaligned edits
+          break;
+        }
+      }
+
+      if (finalD != null) {
+        int x = n;
+        int y = m;
+        final edits = <_DiffOp>[];
+        for (int d = finalD; d > 0; d--) {
+          final vPrev = trace[d];
+          final k = x - y;
+          int prevK;
+          if (k == -d || (k != d && vPrev[k - 1 + offset] < vPrev[k + 1 + offset])) {
+            prevK = k + 1;
+          } else {
+            prevK = k - 1;
+          }
+          final prevX = vPrev[prevK + offset];
+          final prevY = prevX - prevK;
+
+          while (x > prevX && y > prevY) {
+            x--;
+            y--;
+            edits.add(_DiffOp(DiffLineType.unchanged, x, y));
+          }
+
+          if (x == prevX) {
+            y--;
+            edits.add(_DiffOp(DiffLineType.added, null, y));
+          } else {
+            x--;
+            edits.add(_DiffOp(DiffLineType.removed, x, null));
+          }
+        }
+        while (x > 0 && y > 0) {
+          x--;
+          y--;
+          edits.add(_DiffOp(DiffLineType.unchanged, x, y));
+        }
+
+        final ops = edits.reversed.toList();
+        for (final op in ops) {
+          switch (op.type) {
+            case DiffLineType.unchanged:
+              diffLines.add(DiffLine(
+                type: DiffLineType.unchanged,
+                text: a[op.aIndex!],
+                oldLineNumber: prefix + op.aIndex! + 1,
+                newLineNumber: prefix + op.bIndex! + 1,
+              ));
+              break;
+            case DiffLineType.removed:
+              diffLines.add(DiffLine(
+                type: DiffLineType.removed,
+                text: a[op.aIndex!],
+                oldLineNumber: prefix + op.aIndex! + 1,
+              ));
+              break;
+            case DiffLineType.added:
+              diffLines.add(DiffLine(
+                type: DiffLineType.added,
+                text: b[op.bIndex!],
+                newLineNumber: prefix + op.bIndex! + 1,
+              ));
+              break;
+          }
+        }
+      } else {
+        // Fallback for extreme distances
+        for (int i = 0; i < n; i++) {
+          diffLines.add(DiffLine(
+            type: DiffLineType.removed,
+            text: a[i],
+            oldLineNumber: prefix + i + 1,
+          ));
+        }
+        for (int j = 0; j < m; j++) {
+          diffLines.add(DiffLine(
+            type: DiffLineType.added,
+            text: b[j],
+            newLineNumber: prefix + j + 1,
+          ));
+        }
+      }
+    }
+
+    // 3. Common suffix
+    final origSuffixStart = origLines.length - suffix;
+    final newSuffixStart = newLines.length - suffix;
+    for (int k = 0; k < suffix; k++) {
+      diffLines.add(DiffLine(
+        type: DiffLineType.unchanged,
+        text: origLines[origSuffixStart + k],
+        oldLineNumber: origSuffixStart + k + 1,
+        newLineNumber: newSuffixStart + k + 1,
+      ));
+    }
+
+    return diffLines;
   }
 
   Future<void> createDirectory(String relativePath) async {
@@ -283,4 +432,12 @@ class WorkspaceService {
       workingDir: '/workspace',
     );
   }
+}
+
+class _DiffOp {
+  final DiffLineType type;
+  final int? aIndex;
+  final int? bIndex;
+
+  _DiffOp(this.type, this.aIndex, this.bIndex);
 }
