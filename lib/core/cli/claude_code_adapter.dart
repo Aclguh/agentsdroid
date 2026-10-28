@@ -27,6 +27,7 @@ class ClaudeCodeAdapter implements AgentEngine {
   PRootProcess? _activeProcess;
   AnsiStreamParser? _parser;
   StreamSubscription<AgentEvent>? _parserSubscription;
+  bool _isInterrupted = false;
 
   ClaudeCodeAdapter({
     required this.prootManager,
@@ -79,6 +80,7 @@ class ClaudeCodeAdapter implements AgentEngine {
     });
 
     try {
+      _isInterrupted = false;
       _updateState(AgentState.thinking, message: 'Starting Claude Code CLI session...');
 
       // Execute safely passing prompt as positional argument without shell interpolation
@@ -111,6 +113,7 @@ class ClaudeCodeAdapter implements AgentEngine {
 
       // Wait for process exit in background
       _activeProcess!.exitCode.then((exitCode) {
+        if (_isInterrupted) return;
         _parser?.flush();
         if (exitCode == 0) {
           _updateState(AgentState.completed, message: 'Claude Code completed successfully.');
@@ -121,6 +124,7 @@ class ClaudeCodeAdapter implements AgentEngine {
         }
         _cleanupActiveSession();
       }).catchError((err) {
+        if (_isInterrupted) return;
         _updateState(AgentState.error, message: 'Process error: $err');
         _cleanupActiveSession();
       });
@@ -164,6 +168,7 @@ class ClaudeCodeAdapter implements AgentEngine {
 
   @override
   Future<void> interrupt() async {
+    _isInterrupted = true;
     if (_activeProcess != null) {
       try {
         _activeProcess!.kill(ProcessSignal.sigint);
@@ -191,6 +196,7 @@ class ClaudeCodeAdapter implements AgentEngine {
 
   @override
   void resetSession() {
+    _isInterrupted = true;
     if (_activeProcess != null) {
       try {
         _activeProcess!.kill(ProcessSignal.sigint);

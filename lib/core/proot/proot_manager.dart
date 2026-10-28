@@ -121,6 +121,7 @@ class PRootManager {
     if (_rootfsDir == null) return null;
 
     if (await _hasBinaries(_rootfsDir!)) {
+      _effectiveRootfsDir = _rootfsDir;
       return _rootfsDir;
     }
 
@@ -128,6 +129,7 @@ class PRootManager {
       try {
         await for (final entity in _rootfsDir!.list(followLinks: false)) {
           if (entity is Directory && await _hasBinaries(entity)) {
+            _effectiveRootfsDir = entity;
             return entity;
           }
         }
