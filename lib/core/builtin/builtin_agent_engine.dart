@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../../models/agent_event.dart';
 import '../../models/chat_message.dart';
 import '../agent/agent_engine.dart';
+import '../errors/app_exceptions.dart';
 import '../proot/proot_manager.dart';
 import '../storage/key_vault.dart';
 import '../storage/workspace_service.dart';
@@ -212,9 +213,15 @@ class BuiltinAgentEngine implements AgentEngine {
     final providerDisplayName = providerConfig.name;
 
     if (apiKey == null || apiKey.isEmpty) {
-      _setState(AgentState.error, 'Please configure the API Key for $providerDisplayName in Settings first.');
+      final authEx = AgentAuthException(
+        'API Key missing for $providerDisplayName',
+        providerName: providerDisplayName,
+      );
+      final lang = _keyVault.getLanguage();
+      final msg = authEx.toLocalizedMessage(languageCode: lang);
+      _setState(AgentState.error, msg);
       _eventController.add(MessageEvent(
-        text: '⚠️ **API Key missing**: Please open Settings (gear icon in the top right) and enter your API Key for **$providerDisplayName** to start coding.',
+        text: msg,
         isComplete: true,
       ));
       _setState(AgentState.idle);
@@ -234,10 +241,13 @@ class BuiltinAgentEngine implements AgentEngine {
                 : _keyVault.getCustomBaseUrl());
         await _runOpenAiCompatibleLoop(prompt, apiKey, baseUrl);
       }
-    } catch (e) {
-      _setState(AgentState.error, e.toString());
+    } catch (e, st) {
+      final appEx = AppException.from(e, stackTrace: st, providerName: providerDisplayName);
+      final lang = _keyVault.getLanguage();
+      final errorMsg = appEx.toLocalizedMessage(languageCode: lang);
+      _setState(AgentState.error, errorMsg);
       _eventController.add(MessageEvent(
-        text: '❌ **Error executing task**: $e',
+        text: errorMsg,
         isComplete: true,
       ));
     } finally {
@@ -318,7 +328,13 @@ class BuiltinAgentEngine implements AgentEngine {
         final errBytes = await streamedResponse.stream.toBytes();
         final errBody = utf8.decode(errBytes);
         if (httpClient == null) client.close();
-        throw Exception('API returned status ${streamedResponse.statusCode}: $errBody');
+        final provider = _keyVault.getProvider(_keyVault.getActiveProviderId());
+        throw AppException.fromHttpError(
+          streamedResponse.statusCode,
+          errBody,
+          providerName: provider?.name,
+          model: model,
+        );
       }
 
       final accumulatedContent = StringBuffer();
@@ -563,7 +579,13 @@ class BuiltinAgentEngine implements AgentEngine {
         final errBytes = await streamedResponse.stream.toBytes();
         final errBody = utf8.decode(errBytes);
         if (httpClient == null) client.close();
-        throw Exception('Anthropic API error (${streamedResponse.statusCode}): $errBody');
+        final provider = _keyVault.getProvider(_keyVault.getActiveProviderId());
+        throw AppException.fromHttpError(
+          streamedResponse.statusCode,
+          errBody,
+          providerName: provider?.name ?? 'Anthropic',
+          model: model,
+        );
       }
 
       final contentBlocks = <int, Map<String, dynamic>>{};

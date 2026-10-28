@@ -782,4 +782,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subsystemNoPackageToImport => '未在应用数据目录中发现可导入的 rootfs 压缩包';
+
+  @override
+  String errorApiKeyMissing(String provider) {
+    return '未配置 API 密钥：请在右上角「设置」中输入 $provider 的有效 API Key。';
+  }
+
+  @override
+  String errorAuthFailed(String provider) {
+    return 'API 身份认证失败 (401)：请检查设置中 $provider 的 API Key 是否有效。';
+  }
+
+  @override
+  String get errorRateLimit => '请求频率超限 (429)：模型服务当前受限，请稍后再试。';
+
+  @override
+  String get errorQuotaExceeded => '账户额度不足或已耗尽：请前往服务商控制台充值或检查账单配额。';
+
+  @override
+  String get errorNetworkConnection => '网络连接失败：无法访问 AI 服务，请检查移动网络连接或代理设置。';
+
+  @override
+  String get errorModelNotFound => '指定模型未找到：请在设置中检查模型名称是否正确。';
+
+  @override
+  String get errorSubsystemNotInstalled => 'Linux 子系统尚未安装：请前往「设置」完成安装。';
+
+  @override
+  String errorSubsystemExecution(int exitCode) {
+    return '子系统指令执行失败 (退出码 $exitCode)';
+  }
+
+  @override
+  String get errorWorkspaceSecurity => '工作区安全拦截：禁止越界访问工作区外部路径。';
 }

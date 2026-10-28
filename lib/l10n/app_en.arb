@@ -280,5 +280,29 @@
   "subsystemDetectedPackage": "Subsystem Archive Detected",
   "subsystemWaitingForPackage": "Waiting for Subsystem Archive",
   "subsystemWaitingDesc": "Please copy debian-arm64.tar.xz into the directory above via file manager or USB, then tap rescan.",
-  "subsystemNoPackageToImport": "No importable rootfs archive found in app data directory"
+  "subsystemNoPackageToImport": "No importable rootfs archive found in app data directory",
+  "errorApiKeyMissing": "API Key is missing: Please configure a valid API Key for {provider} in Settings.",
+  "@errorApiKeyMissing": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
+  "errorAuthFailed": "Authentication failed (401): Please check if the API Key for {provider} is valid.",
+  "@errorAuthFailed": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
+  "errorRateLimit": "Rate limit exceeded (429): AI model is currently throttled, please try again shortly.",
+  "errorQuotaExceeded": "Account quota exhausted: Please top up your account or verify billing settings.",
+  "errorNetworkConnection": "Network connection failed: Unable to connect to AI server, check network or proxy.",
+  "errorModelNotFound": "Model not found: Please verify the model name configured in Settings.",
+  "errorSubsystemNotInstalled": "Linux subsystem is not installed: Please navigate to Settings to install it.",
+  "errorSubsystemExecution": "Subsystem command failed (exit code {exitCode})",
+  "@errorSubsystemExecution": {
+    "placeholders": {
+      "exitCode": { "type": "int" }
+    }
+  },
+  "errorWorkspaceSecurity": "Workspace Security Violation: Path traversal outside workspace boundary is blocked."
 }

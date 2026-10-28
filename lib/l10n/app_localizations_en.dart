@@ -815,4 +815,43 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get subsystemNoPackageToImport =>
       'No importable rootfs archive found in app data directory';
+
+  @override
+  String errorApiKeyMissing(String provider) {
+    return 'API Key is missing: Please configure a valid API Key for $provider in Settings.';
+  }
+
+  @override
+  String errorAuthFailed(String provider) {
+    return 'Authentication failed (401): Please check if the API Key for $provider is valid.';
+  }
+
+  @override
+  String get errorRateLimit =>
+      'Rate limit exceeded (429): AI model is currently throttled, please try again shortly.';
+
+  @override
+  String get errorQuotaExceeded =>
+      'Account quota exhausted: Please top up your account or verify billing settings.';
+
+  @override
+  String get errorNetworkConnection =>
+      'Network connection failed: Unable to connect to AI server, check network or proxy.';
+
+  @override
+  String get errorModelNotFound =>
+      'Model not found: Please verify the model name configured in Settings.';
+
+  @override
+  String get errorSubsystemNotInstalled =>
+      'Linux subsystem is not installed: Please navigate to Settings to install it.';
+
+  @override
+  String errorSubsystemExecution(int exitCode) {
+    return 'Subsystem command failed (exit code $exitCode)';
+  }
+
+  @override
+  String get errorWorkspaceSecurity =>
+      'Workspace Security Violation: Path traversal outside workspace boundary is blocked.';
 }

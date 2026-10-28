@@ -1615,6 +1615,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未在应用数据目录中发现可导入的 rootfs 压缩包'**
   String get subsystemNoPackageToImport;
+
+  /// No description provided for @errorApiKeyMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'未配置 API 密钥：请在右上角「设置」中输入 {provider} 的有效 API Key。'**
+  String errorApiKeyMissing(String provider);
+
+  /// No description provided for @errorAuthFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'API 身份认证失败 (401)：请检查设置中 {provider} 的 API Key 是否有效。'**
+  String errorAuthFailed(String provider);
+
+  /// No description provided for @errorRateLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求频率超限 (429)：模型服务当前受限，请稍后再试。'**
+  String get errorRateLimit;
+
+  /// No description provided for @errorQuotaExceeded.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户额度不足或已耗尽：请前往服务商控制台充值或检查账单配额。'**
+  String get errorQuotaExceeded;
+
+  /// No description provided for @errorNetworkConnection.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络连接失败：无法访问 AI 服务，请检查移动网络连接或代理设置。'**
+  String get errorNetworkConnection;
+
+  /// No description provided for @errorModelNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'指定模型未找到：请在设置中检查模型名称是否正确。'**
+  String get errorModelNotFound;
+
+  /// No description provided for @errorSubsystemNotInstalled.
+  ///
+  /// In zh, this message translates to:
+  /// **'Linux 子系统尚未安装：请前往「设置」完成安装。'**
+  String get errorSubsystemNotInstalled;
+
+  /// No description provided for @errorSubsystemExecution.
+  ///
+  /// In zh, this message translates to:
+  /// **'子系统指令执行失败 (退出码 {exitCode})'**
+  String errorSubsystemExecution(int exitCode);
+
+  /// No description provided for @errorWorkspaceSecurity.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作区安全拦截：禁止越界访问工作区外部路径。'**
+  String get errorWorkspaceSecurity;
 }
 
 class _AppLocalizationsDelegate

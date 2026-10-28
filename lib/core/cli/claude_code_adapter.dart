@@ -4,6 +4,7 @@ import 'dart:io';
 import '../../models/agent_event.dart';
 import '../../models/chat_message.dart';
 import '../agent/agent_engine.dart';
+import '../errors/app_exceptions.dart';
 import '../proot/proot_manager.dart';
 import '../storage/key_vault.dart';
 import '../storage/workspace_service.dart';
@@ -44,9 +45,12 @@ class ClaudeCodeAdapter implements AgentEngine {
     // 1. Verify subsystem installation
     final isInstalled = await prootManager.isInstalled();
     if (!isInstalled) {
-      _updateState(AgentState.error, message: 'Debian Linux subsystem is not installed. Please install it in Subsystem Console.');
+      final ex = const SubsystemNotInstalledException();
+      final lang = keyVault.getLanguage();
+      final msg = ex.toLocalizedMessage(languageCode: lang);
+      _updateState(AgentState.error, message: msg);
       _eventController.add(MessageEvent(
-        text: '错误：尚未安装嵌入式 Linux 子系统。请前往「子系统终端」下载并初始化 Debian 环境后再使用官方 Claude Code CLI。',
+        text: msg,
         isComplete: true,
       ));
       return;
@@ -120,10 +124,13 @@ class ClaudeCodeAdapter implements AgentEngine {
         _updateState(AgentState.error, message: 'Process error: $err');
         _cleanupActiveSession();
       });
-    } catch (e) {
+    } catch (e, st) {
+      final appEx = AppException.from(e, stackTrace: st, providerName: 'Anthropic');
+      final lang = keyVault.getLanguage();
+      final errorMsg = appEx.toLocalizedMessage(languageCode: lang);
       _updateState(AgentState.error, message: 'Failed to start Claude Code CLI: $e');
       _eventController.add(MessageEvent(
-        text: '启动 Claude Code 失败: $e\n提示：请确认子系统内已安装 Node.js 及 @anthropic-ai/claude-code。',
+        text: '$errorMsg\n${lang == 'zh' ? '提示：请确认子系统内已安装 Node.js 及 @anthropic-ai/claude-code。' : 'Note: Please ensure Node.js and @anthropic-ai/claude-code are installed in the subsystem.'}',
         isComplete: true,
       ));
       await _cleanupActiveSession();
