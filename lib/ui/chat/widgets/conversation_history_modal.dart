@@ -228,10 +228,13 @@ class _ConversationHistoryModalState extends State<ConversationHistoryModal> {
                                     : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE2E8F0)),
                               ),
                             ),
-                            child: ListTile(
-                              dense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              onTap: () => widget.onSelectSession(s.id),
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              child: ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                onTap: () => widget.onSelectSession(s.id),
                               title: Row(
                                 children: [
                                   Expanded(
@@ -364,7 +367,8 @@ class _ConversationHistoryModalState extends State<ConversationHistoryModal> {
                                 ],
                               ),
                             ),
-                          );
+                          ),
+                        );
                         },
                       ),
           ),
