@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_logger.dart';
 import 'preferences_service.dart';
 
 class ModelConfig {
@@ -179,7 +180,9 @@ class KeyVault {
         return list
             .map((item) => ModelProviderConfig.fromJson(item as Map<String, dynamic>))
             .toList();
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warn('Failed to parse providers config JSON: $e', tag: 'KeyVault');
+      }
     }
 
     return List<ModelProviderConfig>.from(getDefaultProviders());
@@ -300,7 +303,9 @@ class KeyVault {
       } else {
         await _secureStorage.write(key: legacyKey, value: key.trim());
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warn('Failed to write legacy API key to secure storage: $e', tag: 'KeyVault');
+    }
   }
 
   Future<String?> getApiKeyForProvider(String providerId) async {
@@ -321,7 +326,9 @@ class KeyVault {
     try {
       final enumVal = LLMProvider.values.firstWhere((e) => e.name == providerId);
       await _secureStorage.delete(key: _getStorageKey(enumVal));
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('Legacy key deletion skipped: $e', tag: 'KeyVault');
+    }
   }
 
   Future<void> setApiKey(LLMProvider provider, String key) =>

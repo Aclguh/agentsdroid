@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../utils/app_logger.dart';
 import 'proot_installer.dart';
 
 enum PRootStatus {
@@ -133,7 +134,9 @@ class PRootManager {
             return entity;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.debug('Error listing rootfs directory: $e', tag: 'PRootManager');
+      }
     }
 
     return null;
@@ -544,27 +547,37 @@ class PRootManager {
     try {
       final res = await runCommand('node -v');
       if (res.exitCode == 0) node = res.stdout.toString().trim();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('node -v inspection failed: $e', tag: 'PRootManager');
+    }
 
     try {
       final res = await runCommand('npm -v');
       if (res.exitCode == 0) npm = res.stdout.toString().trim();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('npm -v inspection failed: $e', tag: 'PRootManager');
+    }
 
     try {
       final res = await runCommand('python3 --version');
       if (res.exitCode == 0) python = res.stdout.toString().trim();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('python3 --version inspection failed: $e', tag: 'PRootManager');
+    }
 
     try {
       final res = await runCommand('git --version');
       if (res.exitCode == 0) git = res.stdout.toString().trim();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('git --version inspection failed: $e', tag: 'PRootManager');
+    }
 
     try {
       final res = await runCommand('claude --version');
       if (res.exitCode == 0) claude = res.stdout.toString().trim();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('claude --version inspection failed: $e', tag: 'PRootManager');
+    }
 
     return ToolchainStatus(
       nodeVersion: node,

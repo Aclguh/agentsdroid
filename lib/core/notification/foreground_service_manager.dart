@@ -165,7 +165,9 @@ class ForegroundServiceManager {
             _channel.invokeMethod('stopService');
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.debug('Failed to invoke platform method for foreground service: $e', tag: 'ForegroundService');
+      }
     }
   }
 

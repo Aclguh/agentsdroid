@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../utils/app_logger.dart';
 
 class InstallProgress {
   final double progress; // 0.0 to 1.0
@@ -41,7 +42,9 @@ class RootfsInstaller {
       if (ext != null) {
         dirs.add(ext);
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('Failed to get external storage directory: $e', tag: 'PRootInstaller');
+    }
 
     // Internal app support directory (e.g. /data/user/0/.../files)
     try {
@@ -49,7 +52,9 @@ class RootfsInstaller {
       if (!dirs.any((d) => d.path == appSupport.path)) {
         dirs.add(appSupport);
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('Failed to get application support directory: $e', tag: 'PRootInstaller');
+    }
 
     // Standard Android external fallback paths
     final fallbackPaths = [
@@ -92,7 +97,9 @@ class RootfsInstaller {
               }
             }
           }
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.debug('Failed to scan local archives in ${dir.path}: $e', tag: 'PRootInstaller');
+        }
       }
     }
     return foundFiles;
@@ -345,7 +352,8 @@ nameserver 8.8.4.4
       if (!await binDir.exists() && !await binLink.exists()) {
         try {
           await binLink.create('usr/bin');
-        } catch (_) {
+        } catch (e) {
+          AppLogger.debug('Failed to symlink bin to usr/bin, fallback to creating directory: $e', tag: 'PRootInstaller');
           await binDir.create(recursive: true);
         }
       }
@@ -355,10 +363,13 @@ nameserver 8.8.4.4
       if (!await binBash.exists() && await usrBash.exists()) {
         try {
           await Link(binBash.path).create('../usr/bin/bash');
-        } catch (_) {
+        } catch (e) {
+          AppLogger.debug('Failed to symlink bin/bash, fallback to copy: $e', tag: 'PRootInstaller');
           try {
             await usrBash.copy(binBash.path);
-          } catch (_) {}
+          } catch (e2) {
+            AppLogger.warn('Failed to copy usr/bin/bash to bin/bash: $e2', tag: 'PRootInstaller');
+          }
         }
       }
 
@@ -367,10 +378,13 @@ nameserver 8.8.4.4
       if (!await binSh.exists() && await usrSh.exists()) {
         try {
           await Link(binSh.path).create('../usr/bin/sh');
-        } catch (_) {
+        } catch (e) {
+          AppLogger.debug('Failed to symlink bin/sh, fallback to copy: $e', tag: 'PRootInstaller');
           try {
             await usrSh.copy(binSh.path);
-          } catch (_) {}
+          } catch (e2) {
+            AppLogger.warn('Failed to copy usr/bin/sh to bin/sh: $e2', tag: 'PRootInstaller');
+          }
         }
       }
 
@@ -380,7 +394,9 @@ nameserver 8.8.4.4
             if (File(b).existsSync()) {
               Process.runSync('chmod', ['755', b]);
             }
-          } catch (_) {}
+          } catch (e) {
+            AppLogger.debug('Failed to chmod 755 on $b: $e', tag: 'PRootInstaller');
+          }
         }
       }
     }
@@ -492,7 +508,9 @@ void _isolateUnpackEntry(_UnpackParams params) async {
         try {
           if (link.existsSync()) link.deleteSync();
           link.createSync(file.symbolicLink!);
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.debug('Failed to link ${link.path} -> ${file.symbolicLink}: $e', tag: 'PRootInstaller');
+        }
       } else if (file.isFile) {
         final outFile = File(outPath);
         if (!outFile.parent.existsSync()) {
@@ -509,7 +527,9 @@ void _isolateUnpackEntry(_UnpackParams params) async {
           if ((file.mode & 0x49) != 0 || isBinPath) {
             try {
               Process.runSync('chmod', ['755', outPath]);
-            } catch (_) {}
+            } catch (e) {
+              AppLogger.debug('Failed to chmod 755 on $outPath: $e', tag: 'PRootInstaller');
+            }
           }
         }
       } else {
@@ -531,7 +551,9 @@ void _isolateUnpackEntry(_UnpackParams params) async {
     if (params.deleteAfter) {
       try {
         archiveFile.deleteSync();
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warn('Failed to delete archive file after extraction: $e', tag: 'PRootInstaller');
+      }
     }
 
     params.sendPort.send({'done': true});

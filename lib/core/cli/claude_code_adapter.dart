@@ -8,6 +8,7 @@ import '../errors/app_exceptions.dart';
 import '../proot/proot_manager.dart';
 import '../storage/key_vault.dart';
 import '../storage/workspace_service.dart';
+import '../utils/app_logger.dart';
 import 'ansi_stream_parser.dart';
 
 /// Adapter for running official Claude Code CLI (@anthropic-ai/claude-code) inside PRoot Linux subsystem.
@@ -172,7 +173,8 @@ class ClaudeCodeAdapter implements AgentEngine {
     if (_activeProcess != null) {
       try {
         _activeProcess!.kill(ProcessSignal.sigint);
-      } catch (_) {
+      } catch (e) {
+        AppLogger.debug('Failed to sigint process, falling back to sigterm: $e', tag: 'ClaudeCodeAdapter');
         _activeProcess!.kill(ProcessSignal.sigterm);
       }
       _updateState(AgentState.idle, message: 'Claude Code CLI interrupted by user.');
@@ -200,7 +202,9 @@ class ClaudeCodeAdapter implements AgentEngine {
     if (_activeProcess != null) {
       try {
         _activeProcess!.kill(ProcessSignal.sigint);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.debug('Failed to sigint process during reset: $e', tag: 'ClaudeCodeAdapter');
+      }
     }
     _cleanupActiveSession();
     _updateState(AgentState.idle);

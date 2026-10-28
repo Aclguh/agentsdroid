@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/chat_session.dart';
+import '../utils/app_logger.dart';
 
 class SessionService {
   Directory? _sessionsDir;
@@ -43,7 +44,9 @@ class SessionService {
       final indexFile = _getIndexFile();
       final list = _summaryCache.values.map((s) => s.toJson()).toList();
       indexFile.writeAsStringSync(jsonEncode(list));
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.warn('Failed to save session index file: $e', tag: 'SessionService', error: e, stackTrace: st);
+    }
   }
 
   void _loadIndex() {
@@ -62,8 +65,9 @@ class SessionService {
         }
         _cacheLoaded = true;
         return;
-      } catch (_) {
+      } catch (e) {
         // Fallback to directory scan if index corrupted
+        AppLogger.warn('Corrupted sessions_index.json, rebuilding from directory scan: $e', tag: 'SessionService');
         _summaryCache.clear();
       }
     }
@@ -93,11 +97,15 @@ class SessionService {
             } else {
               entity.deleteSync();
             }
-          } catch (_) {}
+          } catch (e) {
+            AppLogger.debug('Failed to parse individual session during rebuild: $e', tag: 'SessionService');
+          }
         }
       }
       _saveIndex();
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.warn('Directory scan failed while loading sessions: $e', tag: 'SessionService', error: e, stackTrace: st);
+    }
 
     _cacheLoaded = true;
   }

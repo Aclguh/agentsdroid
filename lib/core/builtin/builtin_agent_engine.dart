@@ -12,6 +12,7 @@ import '../errors/app_exceptions.dart';
 import '../proot/proot_manager.dart';
 import '../storage/key_vault.dart';
 import '../storage/workspace_service.dart';
+import '../utils/app_logger.dart';
 
 class BuiltinAgentEngine implements AgentEngine {
   final KeyVault _keyVault;
@@ -410,7 +411,9 @@ class BuiltinAgentEngine implements AgentEngine {
               }
             }
           }
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.debug('Failed to parse SSE JSON chunk: $e', tag: 'BuiltinAgentEngine');
+        }
       }
 
       if (httpClient == null) {
@@ -647,7 +650,9 @@ class BuiltinAgentEngine implements AgentEngine {
               }
             }
           }
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.debug('Failed to parse SSE JSON chunk: $e', tag: 'BuiltinAgentEngine');
+        }
       }
 
       if (httpClient == null) {
@@ -677,7 +682,9 @@ class BuiltinAgentEngine implements AgentEngine {
           Map<String, dynamic> parsedInput = {};
           try {
             parsedInput = jsonDecode((b['partial_json'] as StringBuffer).toString()) as Map<String, dynamic>;
-          } catch (_) {}
+          } catch (e) {
+            AppLogger.warn('Failed to parse tool_use JSON input: $e', tag: 'BuiltinAgentEngine');
+          }
           final tu = {
             'type': 'tool_use',
             'id': b['id'],
@@ -782,7 +789,9 @@ class BuiltinAgentEngine implements AgentEngine {
         String orig = '';
         try {
           orig = await _workspace.readFile(path);
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.debug('Original file not found or cannot be read: $e', tag: 'BuiltinAgentEngine');
+        }
 
         String newContent = '';
         if (toolName == 'write_file') {
@@ -795,7 +804,9 @@ class BuiltinAgentEngine implements AgentEngine {
 
         final diffEvent = _workspace.computeDiff(path, orig, newContent);
         _eventController.add(diffEvent);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warn('Failed to compute or dispatch DiffEvent: $e', tag: 'BuiltinAgentEngine');
+      }
     }
 
     if (!autoApprove) {
@@ -908,8 +919,9 @@ class BuiltinAgentEngine implements AgentEngine {
               if (matched) {
                 matches.add(p.posix.joinAll(p.split(relPath)));
               }
-            } catch (_) {
+            } catch (e) {
               // Ignore binary files or decoding errors
+              AppLogger.debug('Skip non-UTF8 or binary file in search: ${entity.path}', tag: 'BuiltinAgentEngine');
             }
           }
         }
@@ -945,7 +957,9 @@ class BuiltinAgentEngine implements AgentEngine {
               onTimeout: () {
                 try {
                   prootProc.kill();
-                } catch (_) {}
+                } catch (e) {
+                  AppLogger.debug('Failed to kill PRoot process on timeout: $e', tag: 'BuiltinAgentEngine');
+                }
                 throw TimeoutException('Command timed out after $timeoutSec seconds');
               },
             );
@@ -982,7 +996,9 @@ class BuiltinAgentEngine implements AgentEngine {
               onTimeout: () {
                 try {
                   proc.kill();
-                } catch (_) {}
+                } catch (e) {
+                  AppLogger.debug('Failed to kill host process on timeout: $e', tag: 'BuiltinAgentEngine');
+                }
                 throw TimeoutException('Command timed out after $timeoutSec seconds');
               },
             );
@@ -1022,7 +1038,8 @@ class BuiltinAgentEngine implements AgentEngine {
     if (_activePRootProcess != null) {
       try {
         _activePRootProcess!.kill(ProcessSignal.sigint);
-      } catch (_) {
+      } catch (e) {
+        AppLogger.debug('Failed to kill PRoot process with sigint: $e', tag: 'BuiltinAgentEngine');
         _activePRootProcess!.kill(ProcessSignal.sigkill);
       }
       _activePRootProcess = null;
@@ -1031,7 +1048,8 @@ class BuiltinAgentEngine implements AgentEngine {
     if (_activeProcess != null) {
       try {
         _activeProcess!.kill(ProcessSignal.sigint);
-      } catch (_) {
+      } catch (e) {
+        AppLogger.debug('Failed to kill host process with sigint: $e', tag: 'BuiltinAgentEngine');
         _activeProcess!.kill(ProcessSignal.sigkill);
       }
       _activeProcess = null;
@@ -1053,7 +1071,8 @@ class BuiltinAgentEngine implements AgentEngine {
     if (_activePRootProcess != null) {
       try {
         _activePRootProcess!.kill(ProcessSignal.sigint);
-      } catch (_) {
+      } catch (e) {
+        AppLogger.debug('Failed to kill PRoot process on reset: $e', tag: 'BuiltinAgentEngine');
         _activePRootProcess!.kill(ProcessSignal.sigkill);
       }
       _activePRootProcess = null;
@@ -1062,7 +1081,8 @@ class BuiltinAgentEngine implements AgentEngine {
     if (_activeProcess != null) {
       try {
         _activeProcess!.kill(ProcessSignal.sigint);
-      } catch (_) {
+      } catch (e) {
+        AppLogger.debug('Failed to kill host process on reset: $e', tag: 'BuiltinAgentEngine');
         _activeProcess!.kill(ProcessSignal.sigkill);
       }
       _activeProcess = null;
