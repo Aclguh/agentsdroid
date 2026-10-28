@@ -43,7 +43,6 @@ class ChatBottomInputBar extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final isDark = theme.brightness == Brightness.dark;
-    final hasText = textController.text.trim().isNotEmpty;
 
     return Container(
       color: Colors.transparent,
@@ -225,29 +224,35 @@ class ChatBottomInputBar extends StatelessWidget {
 
                 const SizedBox(width: 8),
 
-                // Send / Stop Circular Button
-                Material(
-                  color: isWorking
-                      ? Colors.redAccent
-                      : (hasText
-                          ? theme.colorScheme.primary
-                          : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0))),
-                  shape: const CircleBorder(),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: isWorking ? onStop : (hasText ? onSend : null),
-                    child: SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: Icon(
-                        isWorking ? Icons.stop_rounded : Icons.arrow_upward_rounded,
-                        size: 18,
-                        color: isWorking || hasText
-                            ? Colors.white
-                            : (isDark ? Colors.white30 : Colors.black26),
+                // Send / Stop Circular Button (Fine-grained reactive via ValueListenableBuilder)
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: textController,
+                  builder: (context, textValue, _) {
+                    final hasText = textValue.text.trim().isNotEmpty;
+                    return Material(
+                      color: isWorking
+                          ? Colors.redAccent
+                          : (hasText
+                              ? theme.colorScheme.primary
+                              : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0))),
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: isWorking ? onStop : (hasText ? onSend : null),
+                        child: SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Icon(
+                            isWorking ? Icons.stop_rounded : Icons.arrow_upward_rounded,
+                            size: 18,
+                            color: isWorking || hasText
+                                ? Colors.white
+                                : (isDark ? Colors.white30 : Colors.black26),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ],
             ),

@@ -192,13 +192,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _isProjectsSectionExpanded = widget.keyVault.isProjectsSectionExpanded();
     _isConversationsSectionExpanded = widget.keyVault.isConversationsSectionExpanded();
     _refreshTreeData();
-    _textController.addListener(_onTextChanged);
     _initSessionService();
     _listenToEngineEvents();
-  }
-
-  void _onTextChanged() {
-    if (mounted) setState(() {});
   }
 
   Future<void> _initSessionService() async {
@@ -804,7 +799,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _foregroundManager.dispose();
     _subscription?.cancel();
     _coordinator.dispose();
-    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     _inputFocusNode.dispose();
     _scrollController.dispose();
